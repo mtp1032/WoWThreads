@@ -1,4 +1,4 @@
-# LibThreads (Code name Talon)
+# WoWThreads (Code name Talon)
 An Asynchronous Non-preemptive Multithread Library for World of Warcraft Addon Developers
 
 CURRENT VERSION: 
@@ -6,7 +6,7 @@ Prototype Version 1.0 (Pre-Alpha)
 GitHub: https://github.com/mtp1032/WoWThreads
 
 DESCRIPTION:
-LibThreads (code name Talon) is an API used to incorporate asynchronous, non-preemptive multithreading into WoW Addons. Talon provides the major features you would expect such as thread creation, joining, signaling, delay, yield, and so forth. Here is a summary of some of the services that are available in this release.
+WoWThreads (code name Talon) is an API used to incorporate asynchronous, non-preemptive multithreading into WoW Addons. Talon provides the major features you would expect such as thread creation, joining, signaling, delay, yield, and so forth. Here is a summary of some of the services that are available in this release.
 
 Threads - creation, yield, join, exit, thread:destroy, signal (set/get), state (active, suspended, terminated)
 Signals - SIG_NONE, SIG_RETURN, and SIG_WAKEUP.
