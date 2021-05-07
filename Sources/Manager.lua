@@ -4,7 +4,6 @@
 -- ORIGINAL DATE: 11 December, 2021 
 
 -- REFERENCES:
--- https://www.tutorialspoint.com/lua/lua_TimerThread.htm
 -- https://wow.gamepedia.com/Lua_functions
 
 local _, WoWThreads = ...
