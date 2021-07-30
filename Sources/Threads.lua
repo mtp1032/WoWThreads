@@ -19,7 +19,7 @@ local FAILURE   = errors.STATUS_FAILURE
 
 -- Indices into the thread handle table
 local TH_EXECUTABLE             = timer.TH_EXECUTABLE
-local TH_IDENTIFIER             = timer.TH_IDENTIFIER
+local TH_SEQUENCE_NUMBER             = timer.TH_SEQUENCE_NUMBER
 local TH_ADDRESS                = timer.TH_ADDRESS
 local TH_STATUS                 = timer.TH_STATUS
 local TH_FUNC_ARGS              = timer.TH_FUNC_ARGS
@@ -54,19 +54,17 @@ function thread:create( t, f, ... )
     local isValid = true
     local arg = ...
     -- Check the arguments -- THESE HAVE TO BE CORRECT.
-    if DEBUG then
-        assert( t ~= nil, L["ARG_NIL"])
-        assert( type(t) == "number", L["ARG_INVALID_TYPE"])
-        assert( f ~= nil, L["ARG_NIL"])
-        assert( type(f) == "function", L["INVALID ARG"] )
-    end
+    assert( t ~= nil, L["Input duration is nil."])
+    assert( type(t) == "number", L["ARG_INVALID_TYPE"])
+    assert( f ~= nil, L["ARG_NIL"])
+    assert( type(f) == "function", L["INVALID ARG"] )
 
     local thread_h = timer:initThreadHandle( t, f, arg )
     isValid, result = timer:checkIfValid( thread_h )
-    if not isValid then         return nil, result 
+    if not isValid then
+        return nil, result 
     end
 
-    -- mf:postMsg(sprintf("Thread %d created.\n", thread_h[TH_IDENTIFIER]))
     return thread_h, result
 end
 ----------------------------------------------------------
@@ -82,7 +80,11 @@ end
 ----------------------------------------------------------
 function thread:self()
     local thread_h = timer:getCurrentThreadHandle()
-    assert( thread_h ~= nil, L["THREAD_NOT_RUNNING"])
+    if thread_h == nil then 
+        E:setResult( L["THREAD_NOT_RUNNING"], debugstack() )
+        -- assert( thread_h ~= nil, L["THREAD_NOT_RUNNING"])
+        return
+    end
     return thread_h
 end
 ----------------------------------------------------------
@@ -120,25 +122,16 @@ end
 -- send a signal to a target thread
 function thread:sendSignal( thread_h, signal )
     local isValid = true
+    local result = {SUCCESS, nil, nil }
 
-    -- the target thread must be specified. Cannot send signals
-    -- to oneself especially since this service can be called from
-    -- non-threaded code.
-    if thread_h == nil then
-        local st = debugstack()
-        return false, E:setResult( L["ARG_NIL"], st )
-    end
-
-    local isValid, result = timer:checkIfValid( thread_h )
-    if not isValid then
-        return isValid, result
-    end
-
-    assert( signal ~= nil, L["ARG_NIL"] )
-    assert( type(signal) == "number", L["ARG_INVALID_TYPE"])
     if not sig:isValid( signal ) then
-        result = E:setResult(L["SIGNAL_INVALID"], debugstack() )
-        return isValid, result
+        E:setResult( L["SIGNAL_INVALD"], debugstack() )
+        -- assert( sig:isValid( signal ))
+    end
+
+    isValid, result = timer:checkIfValid( thread_h )
+    if IsValid == false then
+        return isValid, result        
     end
 
     isValid, result = sig:sendSignal( thread_h, signal)
@@ -146,6 +139,9 @@ function thread:sendSignal( thread_h, signal )
 end
 -- get the thead's pending signal, if any
 function thread:getSignal( thread_h )
+    local result = {SUCCESS, nil, nil }
+    local isValid = true
+
     if thread_h == nil then 
         thread_h = thread:self() 
     end
@@ -155,8 +151,12 @@ function thread:getSignal( thread_h )
     end
     local signal = SIG_NONE
 
+    local threadId = thread:getId()
+
     signal = thread_h[TH_SIGNAL]
     thread_h[TH_SIGNAL] = SIG_NONE
+    if signal ~= 1 then
+    end
     return signal, result
 end
 ---------------------------------------------------------
@@ -180,14 +180,11 @@ function thread:delay( seconds )
 end
 -- get the thread's unique identifier
 function thread:getId( thread_h ) 
+
     if thread_h == nil then
         thread_h = timer:getCurrentThreadHandle()
     end
-    local isValid, result = timer:checkIfValid( thread_h )
-    if not isValid then
-        return isValid, result
-    end
-    return thread_h[TH_IDENTIFIER]
+    return thread_h[TH_SEQUENCE_NUMBER]
 end
 function thread:getYieldInterval( thread_h )
     local isValid = true
@@ -202,6 +199,14 @@ function thread:getYieldInterval( thread_h )
     end
 
     return thread_h[TH_DURATION_TICKS]
+end
+function thread:exists( thread_h )
+    local isValid = false
+    if thread_h == nil then
+        thread_h = timer:getCurrentThreadHandle()
+    end
+    local isValid, result = timer:checkIfValid( thread_h )
+    return isValid
 end
 
 if E:isDebug() then

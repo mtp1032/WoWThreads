@@ -15,10 +15,8 @@ local E = errors
 INFO: Error handling
 https://www.tutorialspoint.com/lua/lua_error_handling.htm
  ]]
- 
- --                      Error messages associated with function parameters
 
---                      The Result Table
+ --                      The Result Table
 local DISPLAY_TIME = 20
 
 errors.STATUS_SUCCESS = 1
@@ -41,7 +39,7 @@ local INVALID_THREAD_HANDLE	= lang.INVALID_HANDLE
 local UNEQUAL_VALUES		= lang.UNEQUAL_VALUES
 local INCONSISTENT_STATE	= lang.INCONSISTENT_STATE
 
-errors.DEBUG = true
+errors.DEBUG = false
 local DEBUG = errors.DEBUG
 
 function errors:setDebug()

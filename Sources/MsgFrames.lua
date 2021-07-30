@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------------
--- WoWThreads.lua
+-- MsgFrames.lua
 -- AUTHOR: Michael Peterson
 -- ORIGINAL DATE: 27 August, 2020
 --------------------------------------------------------------------------------------
@@ -258,6 +258,7 @@ local function createPostMsgFrame()
     return f
 end
 function mf:postMsg( msg )
+    E:dbgPrint( msg )
     if msgFrame == nil then
         msgFrame = createPostMsgFrame()
     end
@@ -313,13 +314,13 @@ function mf:clearFrameText(f)
 	f.Text:ClearFocus()
 end
 function mf:postResult( result )
+
     assert( result ~= nil, L["ARG_NIL"])
     assert( type(result) == "table", L["ARG_INVALID_TYPE"])
     assert( #result == 3, sprintf("Expected 3 elements, got %d.", #result ))
-    assert( result[1] == FAILURE, L["ARG_INVALID_VALUE"])
 
     if errorFrame == nil then
-        errorFrame = mf:createErrorMsgFrame("Errors: WoW Threads")
+        errorFrame = mf:createErrorMsgFrame("Errors: WoWThreads")
     end
     local str = nil
     if result[3] ~= nil then

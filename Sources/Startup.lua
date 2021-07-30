@@ -20,7 +20,7 @@ local FAILURE   = errors.STATUS_FAILURE
 local function OnEvent( self, event, ... )
     local addonName = ...
     if event == "ADDON_LOADED" and addonName == "WoWThreads" then
-        mgmt:initWoWThreads()
+        timer:initDispatcher()
         DEFAULT_CHAT_FRAME:AddMessage( L["ADDON_LOADED_MESSAGE"], 1.0, 1.0, 0.0 )
     end
 

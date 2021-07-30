@@ -23,7 +23,7 @@ local sprintf   = _G.string.format
 
 -- Indices into the thread handle table
 local TH_EXECUTABLE             = timer.TH_EXECUTABLE
-local TH_IDENTIFIER             = timer.TH_IDENTIFIER
+local TH_SEQUENCE_NUMBER             = timer.TH_SEQUENCE_NUMBER
 local TH_ADDRESS                = timer.TH_ADDRESS
 local TH_STATUS                 = timer.TH_STATUS
 local TH_FUNC_ARGS              = timer.TH_FUNC_ARGS
@@ -55,19 +55,22 @@ local sigNames = {
 
 function sig:isValid( signal )
     local isValid = true
-    local result = {SUCCESS, nil, nil }
+
+    if signal == nil then
+        return false
+    end
+    if type( signal ) ~= "number" then
+        return false
+    end
 
     if signal < SIG_NONE then
-        isValid = false
+        return false
     end
     if signal > SIG_LAST then
-        isValid = false
-    end
-    if isValid == false then
-        return isValid, E:setResult( L["SIGNAL_INVALID"], debugstack() )
+        return false
     end
 
-    return isValid, result
+    return isValid
 end
 -- *************** GET SIGNAL NAME ***************
 function sig:getSigName( signal )
@@ -94,6 +97,9 @@ function sig:sendSignal( thread_h, signal )
     if signal == SIG_WAKEUP then
         timer:queueThread( thread_h, signal)
     end
+
+    -- local threadId = thread:getId()
+    -- local s = sprintf("thread %d set thread %d %d.", threadId, thread_h[TH_SEQUENCE_NUMBER], signal )
     return delivered, result
 end
 -- ************ GET/RETRIEVE SIGNAL **********

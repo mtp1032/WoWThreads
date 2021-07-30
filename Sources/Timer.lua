@@ -20,7 +20,7 @@ local sprintf   = _G.string.format
 
 ----------------------- THREAD HANDLE -------------------------------
 timer.TH_EXECUTABLE             = 1
-timer.TH_IDENTIFIER             = 2
+timer.TH_SEQUENCE_NUMBER             = 2
 timer.TH_ADDRESS                = 3
 timer.TH_STATUS                 = 4
 timer.TH_FUNC_ARGS              = 5
@@ -37,7 +37,7 @@ timer.TH_NUM_ELEMENTS           = timer.TH_REMAINING_TICKS
 
 -- Indices into the thread handle table
 local TH_EXECUTABLE             = timer.TH_EXECUTABLE
-local TH_IDENTIFIER             = timer.TH_IDENTIFIER
+local TH_SEQUENCE_NUMBER             = timer.TH_SEQUENCE_NUMBER
 local TH_ADDRESS                = timer.TH_ADDRESS
 local TH_STATUS                 = timer.TH_STATUS
 local TH_FUNC_ARGS              = timer.TH_FUNC_ARGS
@@ -110,16 +110,19 @@ function timer:checkIfValid( thread_h )
 
     elseif #thread_h ~= TH_NUM_ELEMENTS then
         result = E:setResult( L["THREAD_INVALID_HANDLE_SIZE"], debugstack() )
+        E:dbgPrint()
         return isValid, result
 
     elseif thread_h[TH_EXECUTABLE] ~= nil then
         if type( thread_h[TH_EXECUTABLE] ) ~= "thread" then
             result = E:setResult( L["THREAD_INVALID_EXE"], debugstack() )
+            E:dbgPrint()
             return isValid, result
         end
         local state = coroutine.status( thread_h[TH_EXECUTABLE] )
         if state == "dead" then
             result = E:setResult( L["THREAD_INVALID_EXE"], debugstack() )
+            E:dbgPrint()
             return isValid, result
         end
     end
@@ -134,7 +137,7 @@ end
 function timer:removeThread( remove_h )
 
     for i, thread_h in ipairs( threadControlBlock ) do
-        if thread_h[TH_IDENTIFIER] == remove_h[TH_IDENTIFIER] then
+        if thread_h[TH_SEQUENCE_NUMBER] == remove_h[TH_SEQUENCE_NUMBER] then
             table.remove( threadControlBlock, i )
             currentThreadCount = currentThreadCount - 1
         end
@@ -151,7 +154,7 @@ function timer:initThreadHandle( yieldInterval, f, args )
     threadSequenceNumber = threadSequenceNumber + 1
 
     local thread_h = {}
-    thread_h[TH_IDENTIFIER]             = threadSequenceNumber
+    thread_h[TH_SEQUENCE_NUMBER]        = threadSequenceNumber
     thread_h[TH_FUNC_ARGS]              = nil
     thread_h[TH_JOIN_RESULTS]           = nil
     thread_h[TH_SIGNAL]                = SIG_NONE
@@ -211,7 +214,7 @@ local function dispatchThreads()
             currentThreadCount = currentThreadCount - 1
 
             -- prepare the handle for garbage collection
-            -- mf:postMsg( sprintf("Reaping souls of the dearly departed - Thread %d removed.\n", dead_h[TH_IDENTIFIER]))
+            -- mf:postMsg( sprintf("Reaping souls of the dearly departed - Thread %d removed.\n", dead_h[TH_SEQUENCE_NUMBER]))
             -- dead_h[TH_EXECUTABLE] = nil
             -- dead_h = nil
         end
@@ -223,7 +226,7 @@ local function dispatchThreads()
         H[TH_STATUS]            = coroutine.status( coExe )
         if H[TH_STATUS] == "suspended" then
 
-            -- local threadId          = H[TH_IDENTIFIER] 
+            -- local threadId          = H[TH_SEQUENCE_NUMBER] 
             -- local remainingTicks    = H[TH_REMAINING_TICKS]    
             -- local totalTicks        = H[TH_DURATION_TICKS]
 
@@ -250,16 +253,22 @@ local function dispatchThreads()
 end
 function timer:getCurrentThreadHandle()
     local running_h = nil
+    local result = {SUCCESS, nil, nil}
 
     local threadStr = tostring( coroutine.running())
-    assert( threadStr ~= nil, L["THREAD_NOT_RUNNING"])
+    -- assert( threadStr ~= nil, L["THREAD_NOT_RUNNING"])
+    if threadStr == nil then
+        result = E:setResult( L["THREAD_NOT_RUNNING"], debugstack() )
+        return nil, result
+    end
+    
     local addrString = string.sub( threadStr, 14 )
     for _, running_h in ipairs( threadControlBlock ) do
         if running_h[TH_ADDRESS] == addrString then
-            return running_h
+            return running_h, result
         end
     end
-    return running_h
+    return running_h, result
 end
 function timer:getThreadState( thread_h )
     thread_h[TH_STATUS] = coproutine.status( thread_h[TH_EXECUTABLE] )

@@ -4,6 +4,7 @@
 -- ORIGINAL DATE: 11 December, 2021 
 
 -- REFERENCES:
+-- https://www.tutorialspoint.com/lua/lua_TimerThread.htm
 -- https://wow.gamepedia.com/Lua_functions
 
 local _, WoWThreads = ...
@@ -20,7 +21,7 @@ local sprintf   = _G.string.format
 ----------------------- THREAD HANDLE -------------------------------
 -- Indices into the thread handle table
 local TH_EXECUTABLE             = timer.TH_EXECUTABLE
-local TH_IDENTIFIER             = timer.TH_IDENTIFIER
+local TH_SEQUENCE_NUMBER             = timer.TH_SEQUENCE_NUMBER
 local TH_ADDRESS                = timer.TH_ADDRESS
 local TH_STATUS                 = timer.TH_STATUS
 local TH_FUNC_ARGS              = timer.TH_FUNC_ARGS
@@ -48,7 +49,7 @@ local SIG_FIRST     = timer.SIG_FIRST
 -- ***********************************************************************
 --                  PUBLIC MANAGEMENT SERVICES
 -- ***********************************************************************
-function mgmt:initWoWThreads()
+function mgmt:initWowThreads()
     timer:initDispatcher()
 end
 function mgmt:getYieldInterval( thread_h )
@@ -123,6 +124,27 @@ function mgmt:getMetrics( thread_h )
 end
 
 --------------------- SLASH COMMANDS ----------------------
+SLASH_INTERVAL_TESTS1 = "/go"
+SlashCmdList["INTERVAL_TESTS"] = function( msg )
+
+    local initialTickCount = totalTickCount
+    local startTime = debugprofilestop()
+    local delta = 0
+    while  delta < 100 do
+        delta = totalTickCount - initialTickCount
+    end
+    local elapsedTime = debugprofilestop() - startTime
+    mf:postMsg( sprintf("Elapsed time: %0.3f ms\n", elapsedTime ))    
+end
+
+SLASH_TICK_COMMAND_TESTS1 = "/count"
+SlashCmdList["TICK_COMMAND_TESTS"] = function( msg )
+    local current, max = mgmt:getThreadCount()
+    local suspended, running = mgmt:getCountByThreadState()
+    local s = sprintf("Current %d, Max %d, Suspended %d, Running %d.\n",
+                            current, max, suspended, running)
+    return
+end
 if E:isDebug() then
 	DEFAULT_CHAT_FRAME:AddMessage( sprintf("%s loaded", fileName), 1.0, 1.0, 0.0 )
 end
