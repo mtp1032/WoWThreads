@@ -20,4 +20,9 @@ Sources\Manager.lua
 Sources\Signals.lua
 Sources\Threads.lua
 Sources\Startup.lua
+##---------------------------------------------
+## Unit Tests
+##---------------------------------------------
+UnitTests\RegressionTests.lua
+UnitTests\PerformanceTests.lua
 
