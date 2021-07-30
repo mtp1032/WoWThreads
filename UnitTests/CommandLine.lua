@@ -31,7 +31,7 @@ SlashCmdList["TALON_MGMT_COMMANDS"] = function( msg )
     local thread_h = nil
 
     if msg == nil then
-        local prefix = E:prefix()
+        local prefix = E:prefix("Command line parameter is nil.")
         local errorMsg = sprintf("%s Invalid command", prefix )
         result = {FAILURE, errorMsg }
         mf:postResult( result )
@@ -44,7 +44,6 @@ SlashCmdList["TALON_MGMT_COMMANDS"] = function( msg )
         mf:postResult( result )
         return
     end
-
     local msg = strupper( msg )
 
     if msg == "DEBUGOFF" or msg == "OFF" then

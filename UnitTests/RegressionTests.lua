@@ -216,8 +216,10 @@ local function main()
 end
 
 local main_h = nil  
-SLASH_TESTS1 = "/talon"
-SlashCmdList["TESTS"] = function( msg )
+
+SLASH_REGRESSION_TESTS1 = "/regression"
+SLASH_REGRESSION_TESTS2 = "/rtest"
+SlashCmdList["REGRESSION_TESTS"] = function( msg )
     local result = {SUCCESS, nil, nil }
 
     msg = strupper( msg )
@@ -248,6 +250,6 @@ SlashCmdList["TESTS"] = function( msg )
 
 end
 
-if E:isDebug() then
+ if E:isDebug() then
 	DEFAULT_CHAT_FRAME:AddMessage( sprintf("%s loaded", fileName), 1.0, 1.0, 0.0 )
 end

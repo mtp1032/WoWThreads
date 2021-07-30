@@ -317,7 +317,8 @@ function mf:postResult( result )
 
     assert( result ~= nil, L["ARG_NIL"])
     assert( type(result) == "table", L["ARG_INVALID_TYPE"])
-    assert( #result == 3, sprintf("Expected 3 elements, got %d.", #result ))
+    -- E:dbgPrint()
+    -- assert( #result == 3, sprintf("Expected 3 elements, got %d.", #result ))
 
     if errorFrame == nil then
         errorFrame = mf:createErrorMsgFrame("Errors: WoWThreads")
