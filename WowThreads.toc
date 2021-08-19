@@ -1,4 +1,4 @@
-## Interface: 90100 
+## Interface: 11307
 ## Title: WoWThreads
 ## Notes: WowThreads (code name Talon) is an Asynchronous Multithreading library for WoW addon development
 ## Author: Michael Peterson
