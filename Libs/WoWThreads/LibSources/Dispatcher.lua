@@ -30,7 +30,7 @@ dispatch.TH_EXECUTION_STATE     = 13   -- running, suspended, waiting, completed
 dispatch.TH_NUM_ELEMENTS      = dispatch.TH_EXECUTION_STATE
 
 -- Indices into the thread handle table
-local TH_EXECUTABLE_IMAGE          = dispatch.TH_EXECUTABLE_IMAGE
+local TH_EXECUTABLE_IMAGE   = dispatch.TH_EXECUTABLE_IMAGE
 local TH_SEQUENCE_ID        = dispatch.TH_SEQUENCE_ID
 local TH_SIGNAL_QUEUE       = dispatch.TH_SIGNAL_QUEUE
 local TH_TICKS_PER_YIELD    = dispatch.TH_TICKS_PER_YIELD
