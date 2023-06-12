@@ -1,0 +1,26 @@
+## Interface: 100100
+##----------------------------------------------
+## Title: WoWThreads
+## Notes: An Asynchronous Multithreading Library for WoW
+## Author: Michael Peterson
+## SavedVariablesPerCharacter:
+## SavedVariables: 
+## Version: 1.0.0 
+## X-Expansion: WotLK, Retail
+## 24 May, 2023
+## OptionalDeps:
+
+##---------------------------------------------
+## WoW Thread Library Code
+##---------------------------------------------
+Libs\WoWThreads\LibStub.lua
+Libs\WoWThreads\LibSources\EnUS_WoWThreads.lua
+Libs\WoWThreads\LibSources\Frames.lua 
+Libs\WoWThreads\LibSources\Core.lua
+Libs\WoWThreads\LibSources\Dispatcher.lua
+Libs\WoWThreads\LibSources\Manager.lua
+WoWThreads.lua
+
+##Tests\ThreadTest1.lua
+##Tests\ThreadTest2.lua
+##Tests\ThreadTest3.lua
