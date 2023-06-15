@@ -1,16 +1,18 @@
 ----------------------------------------------------------------------------------------
 -- FILE NAME:		WoWThreads.Lua
--- AUTHOR:          Michael Peterson
--- ORIGINAL DATE:   13 June, 2023
+-- ORIGINAL DATE:   14 March, 2023
 ----------------------------------------------------------------------------------------
-local ADDON_NAME, _ = ...
+-- local ADDON_NAME, _ = ...
+local _, WoWThreads = ...
+
 -- Initialize the library
+
+local ADDON_NAME = "WoWThreads"
 local libName = "WoWThreads-1.0"
 local version = 1
 
 local thread = LibStub:NewLibrary( libName, version)
 if not thread then return end
-
 
 local L = setmetatable({}, { __index = function(t, k) 
 	local v = tostring(k)
@@ -92,7 +94,7 @@ if LOCALE == "enUS" then
 	L["ENTRY_NOT_FOUND"]	= "[ERROR] Entry in thread performance table not found. " 
 
 	-- Thread specific messages
-	L["THREAD_HANDLE_NIL"] 				= "[ERROR] Thread handle nil. "
+	L["HANDLE_NIL"] 				    = "[ERROR] Thread handle nil. "
 	L["HANDLE_ELEMENT_IS_NIL"]			= "[ERROR] Thread handle element is nil. "
 	L["HANDLE_NOT_TABLE"] 				= "[ERROR] Thread handle not a table. "
 	L["HANDLE_NOT_FOUND"]				= "[ERROR] handle not found in thread control block."
@@ -106,17 +108,43 @@ if LOCALE == "enUS" then
 	L["SIGNAL_OUT_OF_RANGE"]			= "[ERROR] Signal is invalid (out of range) "
 	L["SIGNAL_ILLEGAL_OPERATION"]		= "[WARNING] Cannot signal a completed thread. "
 	L["RUNNING_THREAD_NOT_FOUND"]		= "[ERROR] Failed to retrieve running thread. "
-	L["THREAD_INVALID_CONTEXT"] 		= "[ERROR] Operation requires thread context. "
+	L["THREAD_INVALID_CONTEXT"] 		= "[ERROR] Operation requires thread context "
 	L["DEBUGGING_NOT_ENABLED"]			= "[ERROR] Debugging has not been enabled. "
 	L["DATA_COLLECTION_NOT_ENABLED"]	= "[ERROR] Data collection has not been enabled. "
 
 	L["ASSERT"]	= "ASSERT FAILED: "
 end
---------------------------------------------------------------------------------------
--- Frames.lua
--- AUTHOR: Michael Peterson
--- ORIGINAL DATE: 16 April, 2023
---------------------------------------------------------------------------
+local TH_EXECUTABLE_IMAGE   = 1   -- the coroutine created to execute the thread's function
+local TH_SEQUENCE_ID        = 2   -- a number representing the order in which the thread was created 
+local TH_SIGNAL_QUEUE       = 3   -- a table of all currently pending signals
+local TH_TICKS_PER_YIELD    = 4   -- the time in clock ticks a thread is supendend after a yield
+local TH_REMAINING_TICKS    = 5   -- decremented on every clock tick. When 0 the thread is queued.
+local TH_YIELD_COUNT        = 6   -- the number of times the coroutine has been resumed by the dispatcher.
+local TH_LIFETIME           = 7
+local TH_ACCUM_YIELD_TIME   = 8
+local TH_JOIN_DATA          = 9
+local TH_JOIN_QUEUE         = 10
+local TH_CHILD_THREADS      = 11
+local TH_PARENT_THREAD      = 12
+local TH_EXECUTION_STATE    = 13   -- running, suspended, waiting, completed
+
+local TH_NUM_ELEMENTS       = TH_EXECUTION_STATE
+
+-- Each thread has a signal queue. Each element in the signal queue
+-- consists of 3 elements: the signal, the sending thread, and data.
+-- the data element, for the moment is unused.
+thread.SIG_ALERT           = 1
+thread.SIG_JOIN_DATA_READY = 2
+thread.SIG_TERMINATE       = 3
+thread.SIG_METRICS         = 4
+thread.SIG_NONE_PENDING    = 5
+
+local SIG_ALERT           = thread.SIG_ALERT
+local SIG_JOIN_DATA_READY = thread.SIG_JOIN_DATA_READY
+local SIG_TERMINATE       = thread.TERMINATE
+local SIG_METRICS         = thread.METRICS
+local SIG_NONE_PENDING    = thread.SIG_NONE_PENDING
+
 local function createResizeButton( f )
 	f:SetResizable( true )
 	local resizeButton = CreateFrame("Button", nil, f)
@@ -251,11 +279,6 @@ local function createErrorMsgFrame(title)
     createReloadButton(f, "BOTTOMLEFT",f, 5, 5)
     return f
 end
---------------------------------------------------------------------------------------
--- FILE NAME:		Core.lua
--- AUTHOR:          Michael Peterson
--- ORIGINAL DATE:   25 May, 2023
---------------------------------------------------------------------------
 local function dbgPrefix( stackTrace )
 	if stackTrace == nil then stackTrace = debugstack(2) end
 	
@@ -304,22 +327,6 @@ local function setResult( errMsg, stackTrace )
 	end
 	return result
 end
-local function postResult( result )
-	if errorMsgFrame == nil then
-		errorMsgFrame = createErrorMsgFrame("Error Message")
-	end
-
-	if result[1] ~= FAILURE then 
-		return
-	end
-
-	local resultMsg = sprintf("%s:\n%s\n", result[2], result[3])
-	errorMsgFrame.Text:Insert( resultMsg )
-	errorMsgFrame:Show()
-end
-local function displayInfoMsg( msg )
-	UIErrorsFrame:AddMessage( msg, 0.0, 1.0, 0.0, 20 ) 
-end
 local function dataCollectionIsEnabled()
     return DATA_COLLECTION_ENABLED
 end
@@ -342,55 +349,10 @@ end
 local function debuggingIsEnabled()
 	return DEBUGGING_ENABLED
 end
---------------------------------------------------------------------------------------
--- Dispatcher.lua 
--- AUTHOR: Michael Peterson
--- ORIGINAL DATE: 23 May, 2023
---------------------------------------------------------------------------------------
-local TH_EXECUTABLE_IMAGE   = 1   -- the coroutine created to execute the thread's function
-local TH_SEQUENCE_ID        = 2   -- a number representing the order in which the thread was created 
-local TH_SIGNAL_QUEUE       = 3   -- a table of all currently pending signals
-local TH_TICKS_PER_YIELD    = 4   -- the time in clock ticks a thread is supendend after a yield
-local TH_REMAINING_TICKS    = 5   -- decremented on every clock tick. When 0 the thread is queued.
-local TH_YIELD_COUNT        = 6   -- the number of times the coroutine has been resumed by the dispatcher.
-local TH_LIFETIME           = 7
-local TH_ACCUM_YIELD_TIME   = 8
-local TH_JOIN_DATA          = 9
-local TH_JOIN_QUEUE         = 10
-local TH_CHILD_THREADS      = 11
-local TH_PARENT_THREAD      = 12
-local TH_EXECUTION_STATE    = 13   -- running, suspended, waiting, completed
-
-local TH_NUM_ELEMENTS       = TH_EXECUTION_STATE
-
--- Each thread has a signal queue. Each element in the signal queue
--- consists of 3 elements: the signal, the sending thread, and data.
--- the data element, for the moment is unused.
-thread.SIG_ALERT           = 1
-thread.SIG_JOIN_DATA_READY = 2
-thread.SIG_TERMINATE       = 3
-thread.SIG_METRICS         = 4
-thread.SIG_NONE_PENDING    = 5
-
-local SIG_ALERT           = thread.SIG_ALERT
-local SIG_JOIN_DATA_READY = thread.SIG_JOIN_DATA_READY
-local SIG_TERMINATE       = thread.TERMINATE
-local SIG_METRICS         = thread.METRICS
-local SIG_NONE_PENDING    = thread.SIG_NONE_PENDING
 
 -- ***********************************************************************
 -- *                               LOCAL FUNCTIONS                       *
 -- ***********************************************************************
-local function removeFromTCB( thread_h )
-    local threadId = thread_h[TH_SEQUENCE_ID]
-    for i, H in ipairs( threadControlBlock ) do 
-        if H[TH_SEQUENCE_ID] == threadId then 
-            assert( H[TH_EXECUTION_STATE] == "completed", "ASSERT FAILED: Thread (%d) has not completed.", H[TH_SEQUENCE_ID])
-            return (table.remove( threadControlBlock, i ))
-        end
-    end
-    return nil
-end
 -- RETURNS: state - "completed", "running", "queued", "suspended"
 local function getThreadState( H )
     local state = coroutine.status( H[TH_EXECUTABLE_IMAGE])
@@ -401,8 +363,7 @@ local function getThreadState( H )
     if state == "normal" then state = "queued" end
     return state
 end
-
-    -- RETURNS: Handle metrics entry = { threadId, ticksPerYield, yieldCount, timeSuspended, lifetime }
+-- RETURNS: Handle metrics entry = { threadId, ticksPerYield, yieldCount, timeSuspended, lifetime }
 local function convertHandleToEntry( H )
 
     local threadId         = H[TH_SEQUENCE_ID]
@@ -518,7 +479,16 @@ local function startTimer( clockInterval )
         end)
     return
 end
--- RETURNS: running thread, threadId. nil, 0 if thread not found.
+local function checkRunningHandle(H, entryPoint )
+    if H == nil then
+        local errMsg = sprintf("%s (%s)", L["THREAD_INVALID_CONTEXT"], entryPoint )
+        local result = setResult( errMsg, debugstack(1))
+        thread:postResult( result )
+        local n = nil
+        n[1] = 1
+    end
+end
+-- RETURNS: running thread, threadId. nil, -1 if thread not found.
 local function getRunningHandle()
     local H = nil
 
@@ -529,12 +499,14 @@ local function getRunningHandle()
             return H, H[TH_SEQUENCE_ID]
         end
     end
+    -- if we're here, it's because the WoW Client has issued
+    -- this call. That's why there is not "running" thread
+    -- in the TCB.
     return nil, -1
 end
 -- RETURNS: void
-local function yield()
+local function yield( H)
 
-    local H, threadId = getRunningHandle()
     local startTime = 0
     if dataCollectionIsEnabled() then
         startTime = debugprofilestop()
@@ -549,18 +521,12 @@ local function yield()
     end
 end        
 -- RETURNS: void
-local function setDelay( H, delayTicks )
-    H[TH_REMAINING_TICKS] = delayTicks
-end
--- RETURNS: signal name
-local function getSignalName( signal )
-    return signalNameTable[signal]
-end
--- RETURNS: void
 local function deliverSignal( H, signal )
     local sender_h = nil
 
     sender_h = getRunningHandle()
+    checkRunningHandle(H, "deliverSignal")
+
     local sigEntry = {signal, sender_h, EMPTY_STR }
 
     if  signal == SIG_ALERT or 
@@ -570,6 +536,10 @@ local function deliverSignal( H, signal )
     end
 
     table.insert( H[TH_SIGNAL_QUEUE], sigEntry )
+end
+-- RETURNS: signal name
+local function getSignalName( signal )
+    return signalNameTable[signal]
 end
 -- RETURNS: signal, sender_h (SIG_NONE_PENDING if thread's signal queue is empty.)
 -- NOTE: signals are returned in the order they are received (FIFO)
@@ -602,78 +572,46 @@ local function insertHandleIntoTCB( H )
 end 
 -- RETURNS: Handle's coroutine 
 local function getCoroutine( H )
-    if debuggingIsEnabled() then
-        assert( H ~= nil, sprintf("ASSERT FAILED: %s\n", L["THREAD_HANDLE_NIL"]), debugstack(1))
-        assert( H[TH_EXECUTABLE_IMAGE] ~= nil, L["HANDLE_COROUTINE_NIL"], debugstack(1) )
-        assert( type(H[TH_EXECUTABLE_IMAGE]) == "thread", L["INVALID_COROUTINE_TYPE"], debugstack(1))
-    end
     return H[TH_EXECUTABLE_IMAGE]
 end
+-- RETURNS; true / false
+local function inThreadContext()
+    if H == nil then return false else return true end
+end
 -- RETURNS: result
-local function validateSignal( signal )
+local function handleIsNil( H )
+    if H == nil then return true else return false end
+end
+-- RETURNS: result
+local function checkIfHandleDataValid( H )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
 
     if debuggingIsEnabled() then
-        if signal == nil then
-            result = setResult(L["INPUT_PARM_NIL"],debugstack(1))
-            return result    
-        end
-        assert( signal ~= nil, sprintf("%s\n    %s\n", L["INPUT_PARM_NIL"], debugstack(1) ))
-        assert( type(signal) == "number",L["INVALID_TYPE"])
-        assert( signal >= SIG_ALERT, L["SIGNAL_OUT_OF_RANGE"])
-        assert( signal <= SIG_NONE_PENDING, L["SIGNAL_OUT_OF_RANGE"])
-        return result
-    end
-
-    -- validate the signal
-    if signal == nil then
-        result = setResult(L["INPUT_PARM_NIL"], debugstack(1))
-        return result
-    end
-    if type( signal ) ~= "number" then
-        result = setResult(L["INVALID_TYPE"], debugstack(1) )
-        return result
-    end
-
-    -- return signal <= SIG_ALERT  and signal >= SIG_NONE_PENDING
-    if signal < SIG_ALERT and signal > SIG_NONE_PENDING then 
-        result = setResult( L["SIGNAL_OUT_OF_RANGE"] )
-        return isValid, result
-    end
-    return result
-end
--- RETURNS: result
-local function checkIfHandleValid( H )
-    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
-
-    -- if debuggingIsEnabled() then
         assert(#H == TH_NUM_ELEMENTS, L["HANDLE_INVALID_TABLE_SIZE"])
         assert( type(H) == "table", L["HANDLE_NOT_TABLE"])
         assert( H[TH_EXECUTABLE_IMAGE] ~= nil, L["HANDLE_COROUTINE_NIL"] )
         assert( type(H[TH_EXECUTABLE_IMAGE]) == "thread", L["INVALID_COROUTINE_TYPE"] )
-    --     return result
-    -- end
-
-    if type(H[TH_EXECUTABLE_IMAGE]) ~= "thread" then
-        result = setResult(L["INVALID_TYPE"] .. " Expected type == 'thread'", debugstack(1))
-        return result
-    end
-    if type(H) ~= "table" then
-        result = setResult(L["HANDLE_NOT_TABLE"], debugstack(1) )
-        return result
-    end        
-    if #H ~= TH_NUM_ELEMENTS then
-        result = setResult(L["HANDLE_INVALID_TABLE_SIZE"], debugstack(1) )
-        return result
-    end
-    for i = 1, TH_NUM_ELEMENTS do
-        if H[i] == nil then
-            local s = sprintf("H[%d] is nil.", i)
-            result = setResult( s, debugstack(1) )
+    else
+        if type(H[TH_EXECUTABLE_IMAGE]) ~= "thread" then
+            result = setResult(L["INVALID_TYPE"] .. " Expected type == 'thread'", debugstack(1))
             return result
         end
+        if type(H) ~= "table" then
+            result = setResult(L["HANDLE_NOT_TABLE"], debugstack(1) )
+            return result
+        end        
+        if #H ~= TH_NUM_ELEMENTS then
+            result = setResult(L["HANDLE_INVALID_TABLE_SIZE"], debugstack(1) )
+            return result
+        end
+        for i = 1, TH_NUM_ELEMENTS do
+            if H[i] == nil then
+                local s = sprintf("H[%d] is nil.", i)
+                result = setResult( s, debugstack(1) )
+                return result
+            end
+        end
     end
-    
     return result        
 end
 -- RETURNS: partial handle, result
@@ -711,100 +649,22 @@ local function createHandle( durationTicks, func )
 
     return H, result
 end
--- RETURNS: void
-local function insertJoinQueue( producer_h, caller_h )
-    local caller_h, callerId = getRunningHandle()
-    table.insert( producer_h[TH_JOIN_QUEUE], caller_h )
-end
--- RETURNS: void
-local function insertJoinData( joinData )
-    local self_h = getRunningHandle()
-    self_h[TH_JOIN_DATA] = joinData
-end
--- RETURNS; joinData
-local function getJoinData( H )
-    return H[TH_JOIN_DATA]
-end
--- RETURNS: void
-local function signalJoiners()
-    local self_h, selfId = getRunningHandle()
-    local joinerThreads = self_h[TH_JOIN_QUEUE]
-
-    for _, joiner_h in ipairs( self_h[TH_JOIN_QUEUE] ) do
-        local wasSent = deliverSignal( joiner_h, SIG_JOIN_DATA_READY )
-        if debuggingIsEnabled() then
-            if not wasSent then
-                local threadId = joiner_h[TH_SEQUENCE_ID]
-            end
-        end
-    end
-    wipe( self_h[TH_JOIN_QUEUE] )
-end
---------------------------------------------------------------------------------------
--- FILE NAME:       Manager.lua 
---------------------------------------------------------------------------------------
-local function getCongestionEntry( H )
-    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
-    local count = 0
-    local entry = nil
-    if H == nil then
-        result = setResult(L["THREAD_HANDLE_NIL"], debugstack(2) )
-        return nil, count, result
-    end  
-    if not dataCollectionIsEnabled() then
-        result = setResult( L["DATA_COLLECTION_NOT_ENABLED"], debugstack(1) )
-        return nil, count, result
-    end
-    result = checkIfHandleValid( H )
-    if not result[1] then return result end
-
-    local entry, count, result = getThreadMetrics(H)
-    if not result[1] then return nil, remainingEntries, result end
-    return entry, count, result
-end
-
-local WoWThreadsStarted = false
-local function WoWThreadLibInit()
-    if not WoWThreadsStarted then 
-        local clockInterval = (1/GetFramerate())
-        startTimer( clockInterval )
-        WoWThreadsStarted = true
-    end
-end
-local eventFrame = CreateFrame("Frame")
-eventFrame:RegisterEvent("ADDON_LOADED")
-
-local function OnEvent( self, event, ... )
-    local addonName = ...
-
-    if event == "ADDON_LOADED" and ADDON_NAME == addonName then
-        
-		WoWThreadLibInit()
-
-        DEFAULT_CHAT_FRAME:AddMessage( L["ADDON_LOADED_MESSAGE"], 0.0, 1.0, 1.0 )
-        DEFAULT_CHAT_FRAME:AddMessage( L["MS_PER_TICK"], 0.0, 1.0, 1.0 )
-        eventFrame:UnregisterEvent("ADDON_LOADED")  
-    end
-    return
-end
-eventFrame:SetScript( "OnEvent", OnEvent )
---------------------------------------------------------------------------------------
--- FILE NAME:       WoWThreads.Lua 
--- AUTHOR:          Michael Peterson
--- ORIGINAL DATE:   25 May, 2023 
---------------------------------------------------------------------------------------
 local function validateThreadHandle( thread_h )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
 
-    if thread_h == nil then
-        local errMsg = sprintf("Input thread handle nil - %s\n", L["THREAD_HANDLE_NIL"])
-        result = setResult(L["THREAD_HANDLE_NIL"], debugstack(1) )
-        return result
-    end  
+    if debuggingIsEnabled() then
+        assert( thread_h ~= nil, L["HANDLE_NIL"])
+    else
+        if thread_h == nil then
+            local errMsg = sprintf("Input thread handle nil - %s\n", L["HANDLE_NIL"])
+            result = setResult(L["HANDLE_NIL"], debugstack(1) )
+            return result
+        end 
+    end 
     -- validate the thread handle's elements
-    result = checkIfHandleValid( thread_h )
+    result = checkIfHandleDataValid( thread_h )
     if not result[1] then return result end
-    
+   
     return result
 end
 -- DESCRIPTION:
@@ -859,25 +719,22 @@ function thread:create( ticks, func, ... )
     assert( result[1] == SUCCESS, sprintf( "%s: Expected 'true', got %s", "ASSERT_FAILED", tostring(result[1]) ))
     return H, result
 end 
--- DESCRIPTION: Delays the calling thread for specified number of ticks
--- RETURNS: void
-function thread:delay( ticks )
-    assert( ticks ~= nil, "ticks: " ..L["INPUT_PARM_NIL"] .. "in thread:delay()." )
-    assert( type(ticks) == "number", L["INVALID_TYPE"])
-
-    -- Get the handle of the calling thread
-    local thread_h = getRunningHandle()
-
-    setDelay( thread_h, ticks )    
-    yield()
-end
 -- DESCRIPTION: yields execution of the number of ticks specified in thread:create()
 -- RETURNS; void
 function thread:yield()
-    local self_h = getRunningHandle()
-    yield(self_h)
+    local H = getRunningHandle()
+    checkRunningHandle(H, "thread:yield")
+    yield(H)
+end
+function thread:delay( delayTicks )
+    local H = getRunningHandle()
+    checkRunningHandle(H, "thread:delay")
+
+    H[TH_REMAINING_TICKS] = delayTicks
+    yield(H)
 end
 -- DESCRIPTION: returns the thread numerical Id
+-- REQUIRES: thread context
 -- RETURNS: (number) threadId, result
 function thread:getId( thread_h )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
@@ -885,9 +742,10 @@ function thread:getId( thread_h )
 
     if thread_h == nil then
         thread_h, threadId = getRunningHandle()
+        checkRunningHandle(thread_h, "thread:getId")
         return threadId, result
     else -- thread_h was not nil
-        result = checkIfHandleValid( thread_h )
+        result = checkIfHandleDataValid( thread_h )
         if not result[1] then return nil, result end
     end
     if threadId == nil then
@@ -899,29 +757,28 @@ end
 -- RETURNS: (handle) thread_h, (number) threadId
 function thread:self()
     local self_h, selfId = getRunningHandle()
+    checkRunningHandle(self_h, "thread:self")
     return self_h, selfId
 end
 -- DESCRIPTION: determines whether two threads are the same
+-- REQUIRES: WoW client or thread context
 -- RETURNS: (boolean) true if equal, result
-function thread:areEqual( th1, th2 )
+function thread:areEqual( H1, H2 )
     local areEqual = false
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
 
-    assert( th1 ~= nil, sprintf("ASSERT FAILED: Param 1 - %s", L["THREAD_HANDLE_NIL"] ))
-    assert( th2 ~= nil, sprintf("ASSERT FAILED: Param 2 - %s", L["THREAD_HANDLE_NIL"] ))
+    result = validateThreadHandle( H1 )
+    if not result[1] then return nil, result end
+    result = validateThreadHandle( H2 )
+    if not result[1] then return nil, result end
 
-    result = validateThreadHandle( th1 )
-    if not result[1] then return areEqual, result end
-    result = validateThreadHandle( th2 )
-    if not result[1] then return areEqual, result end
+    local H1Id = H1[TH_SEQUENCE_ID]
+    local H2Id = H2[TH_SEQUENCE_ID]
 
-    local th1Id = getThreadId( th1 )
-    local th2Id = getThreadId( th2)
-
-    areEqual = th1Id == th2Id
-    return areEqual, result
+    return H1Id == H2Id
 end
 -- DESCRIPTION: gets the specified thread's parent
+-- REQUIRES: thread context
 -- RETURNS: (handle) parent_h, result
 function thread:getParent( thread_h )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
@@ -929,9 +786,9 @@ function thread:getParent( thread_h )
     -- if thread_h is nil then this is equivalent to "getMyParent"
     if thread_h == nil then
         thread_h = getRunningHandle()
-        assert( thread_h ~= nil )
+        checkRunningHandle( thread_h, "thread:getParent")
     else
-        result = checkIfHandleValid( thread_h ) 
+        result = checkIfHandleDataValid( thread_h ) 
         if not result[1] then 
             return nil, result 
         end
@@ -941,6 +798,7 @@ function thread:getParent( thread_h )
     return parent_h, result
 end
 -- DESCRIPTION: gets a table of the specified thread's children.
+-- REQUIRES: thread context
 -- RETURNS: (table) childThreads, result
 function thread:getChildThreads( thread_h )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
@@ -950,8 +808,9 @@ function thread:getChildThreads( thread_h )
     -- if thread_h is nil then this is equivalent to "getMyParent"
     if thread_h == nil then
         thread_h, threadId = getRunningHandle()
+        checkRunningHandle( thread_h, "thread:getChildThreads")
     else
-        result = checkIfHandleValid( thread_h )
+        result = checkIfHandleDataValid( thread_h )
         if not result[1] then 
             return nil, result 
         end
@@ -963,24 +822,48 @@ function thread:getChildThreads( thread_h )
     end
     return children, result
 end 
--- DESCRIPTION: gets the specified thread's execution state
+-- DESCRIPTION: gets the specified thread's execution state. If nil, the
+-- thread is currently executing and "running" is returned.
 -- RETURNS: (string) state ( = "completed", "suspended", "queued", ), result.
 function thread:getState( thread_h )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
 
-    if thread_h == nil then
-        result = setResult( L["THREAD_HANDLE_NIL"], debugstack(1))
-        return nil, result
-    end
     result = validateThreadHandle( thread_h )
     if not result[1] then return nil, result end
             
     local state = getThreadState( thread_h )
     return state, result
 end
------------------------------------------------------------
---                   SIGNAL FUNCTIONS                      -
------------------------------------------------------------
+-- RETURNS: result
+local function validateSignal( signal )
+    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
+
+    if debuggingIsEnabled() then
+        assert( signal ~= nil, sprintf("%s\n    %s\n", L["INPUT_PARM_NIL"], debugstack(1) ))
+        assert( type(signal) == "number",L["INVALID_TYPE"])
+        assert( signal >= SIG_ALERT, L["SIGNAL_OUT_OF_RANGE"])
+        assert( signal <= SIG_NONE_PENDING, L["SIGNAL_OUT_OF_RANGE"])
+        return result
+    else
+        -- validate the signal
+        if signal == nil then
+            result = setResult(L["INPUT_PARM_NIL"], debugstack(1))
+            return result
+        end
+        if type( signal ) ~= "number" then
+            result = setResult(L["INVALID_TYPE"], debugstack(1) )
+            return result
+        end
+
+        -- return signal <= SIG_ALERT  and signal >= SIG_NONE_PENDING
+        if signal < SIG_ALERT and signal > SIG_NONE_PENDING then 
+            result = setResult( L["SIGNAL_OUT_OF_RANGE"] )
+            return isValid, result
+        end
+    end
+
+    return result
+end
 -- DESCRIPTION: gets the string name of the specified signal
 -- RETURNS: (string) signalName. result
 function thread:getSignalName( signal )
@@ -997,10 +880,6 @@ end
 function thread:sendSignal( thread_h, signal )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
 
-    if thread_h == nil then
-        result = setResult( L["THREAD_HANDLE_NIL"], debugstack(2) )
-        return result
-    end
     result = validateThreadHandle( thread_h )
     if not result[1] then return result end
     
@@ -1018,23 +897,30 @@ function thread:sendSignal( thread_h, signal )
     return result
 end
 -- DESCRIPTION: retrieves a signal sent to the calling thread.
--- RETURNS: (number) signal, (handle) sender_h NOTE: sender_h 
--- will be "" (EMPTY_STR) if sent from Blizzard code.
---
--- EXAMPLE: More than one signal in the thread's queue.
--- signal, sender_h = thread:getSignal()
--- while signal ~= SIG_NONE_PENDING do
---     <process signal>
---     signal, sender_h = thread:getSignal()
--- end
+-- RETURNS: (number) signal, (handle) sender_h
 function thread:getSignal()
     signal, sender_h = getSignal()
     local thread_h, threadId = getRunningHandle() 
+    checkRunningHandle( thread_h, "thread:getSignal")
     return signal, sender_h
 end
--------------------------------------------------------------------
---                  UTILITIES
--------------------------------------------------------------------
+function thread:getCongestionEntry( H )
+    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
+    local count = 0
+    local entry = nil
+    result = validateThreadHandle(H)
+    if not result[1] then return result end
+    
+    if not dataCollectionIsEnabled() then
+        result = setResult( L["DATA_COLLECTION_NOT_ENABLED"], debugstack(1) )
+        return nil, count, result
+    end
+
+    local entry, count, result = getThreadMetrics(H)
+    if not result[1] then return nil, remainingEntries, result end
+    return entry, count, result
+end
+
 function thread:prefix( stackTrace )
 	if stackTrace == nil then stackTrace = debugstack(2) end
 	
@@ -1088,33 +974,37 @@ function thread:postResult( result )
 	errorMsgFrame.Text:Insert( resultMsg )
 	errorMsgFrame:Show()
 end
-
---[[ 
-
------------------------ TESTS -----------------------------------
-local main_h = nil
-local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
-local function main( ... )
-    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
-    local DONE = false
-
-    local self_h, selfId = thread:self()
-    -- print( thread:prefix(), "selfId", selfId )
-    
-    while not DONE do
-        thread:yield()
-        local signal, sender_h = thread:getSignal()
-        if signal == SIG_TERMINATE then
-            thread:print(sprintf("Thread %d Received SIG_TERMINATE", selfId ))
-            DONE = true
-        end
+function thread:enableDebugging()
+    enableDebugging()
+end
+function thread:disableDebugging()
+    disableDebugging()
+end
+function thread:debuggingIsEnabled()
+    debuggingIsEnabled()
+end
+local WoWThreadsStarted = false
+local function WoWThreadLibInit()
+    if not WoWThreadsStarted then 
+        local clockInterval = (1/GetFramerate())
+        startTimer( clockInterval )
+        WoWThreadsStarted = true
     end
 end
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("ADDON_LOADED")
 
+local function OnEvent( self, event, ... )
+    local addonName = ...
 
-local main_h, result = thread:create( 60, main )
-if not result[1] then thread:postResult( result ) end
+    if event == "ADDON_LOADED" and ADDON_NAME == addonName then
+        
+		WoWThreadLibInit()
 
-result = thread:sendSignal( main_h, SIG_TERMINATE )
-
- ]]
+        DEFAULT_CHAT_FRAME:AddMessage( L["ADDON_LOADED_MESSAGE"], 0.0, 1.0, 1.0 )
+        DEFAULT_CHAT_FRAME:AddMessage( L["MS_PER_TICK"], 0.0, 1.0, 1.0 )
+        eventFrame:UnregisterEvent("ADDON_LOADED")  
+    end
+    return
+end
+eventFrame:SetScript( "OnEvent", OnEvent )
