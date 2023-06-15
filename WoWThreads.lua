@@ -2,17 +2,14 @@
 -- FILE NAME:		WoWThreads.Lua
 -- ORIGINAL DATE:   14 March, 2023
 ----------------------------------------------------------------------------------------
--- local ADDON_NAME, _ = ...
 local _, WoWThreads = ...
 
 -- Initialize the library
 
-local ADDON_NAME = "WoWThreads"
-local libName = "WoWThreads-1.0"
-local version = 1
-
-local thread = LibStub:NewLibrary( libName, version)
+local thread = LibStub:NewLibrary( "WoWThreads-1.0", 1 )
 if not thread then return end
+
+local ADDON_NAME = "WoWThreads"
 
 local L = setmetatable({}, { __index = function(t, k) 
 	local v = tostring(k)
@@ -42,7 +39,6 @@ local errorMsgFrame = nil
 local threadControlBlock = {}
 local graveyard = {}
 local signalNameTable       = { "SIG_ALERT", "SIG_JOIN_DATA_READY", "SIG_TERMINATE", "SIG_METRICS", "SIG_NONE_PENDING"}
-
 
 local function getExpansionName()
 	local expansionName = nil
@@ -983,6 +979,17 @@ end
 function thread:debuggingIsEnabled()
     debuggingIsEnabled()
 end
+
+function thread:enableDataCollection()
+    enableDataCollection()
+end
+function thread:disableDataCollection()
+    disableDataCollection()
+end
+function thread:dataCollectionIsEnabled()
+    dataCollectionIsEnabled()
+end
+
 local WoWThreadsStarted = false
 local function WoWThreadLibInit()
     if not WoWThreadsStarted then 
