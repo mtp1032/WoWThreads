@@ -13,14 +13,5 @@
 ##---------------------------------------------
 ## WoW Thread Library Code
 ##---------------------------------------------
-Libs\WoWThreads\LibStub.lua
-Libs\WoWThreads\LibSources\EnUS_WoWThreads.lua
-Libs\WoWThreads\LibSources\Frames.lua 
-Libs\WoWThreads\LibSources\Core.lua
-Libs\WoWThreads\LibSources\Dispatcher.lua
-Libs\WoWThreads\LibSources\Manager.lua
-WoWThreads\WoWThreads.lua
-
-##Tests\ThreadTest1.lua
-##Tests\ThreadTest2.lua
-##Tests\ThreadTest3.lua
+Libs\LibStub.lua
+WoWThreads.lua
