@@ -5,6 +5,7 @@ local thread = LibStub:GetLibrary( Major )
 if not thread then 
     return 
 end
+
 ------------------ BEGIN Options Panel -----------------------------
 local sprintf = _G.string.format
 
@@ -49,6 +50,9 @@ if LOCALE == "enUS" then
     L["TOOLTIP_DEBUGGING"]      = "If checked, most errors are not returned to the calling thread. Instead, the thread fails in place and generates an error message and a stack trace."
 end
 
+local strictDebugging   = false
+local dataCollection    = false
+
 --------------------------------------------------------------------------
 --                         CREATE THE VARIOUS BUTTONS
 --------------------------------------------------------------------------
@@ -73,9 +77,6 @@ local function drawLine( f, yPos)
 	line:SetEndPoint("RIGHT", X_START_POINT, Y_START_POINT)
 	lineFrame:Show() 
 end
-local strictDebugging   = false
-local dataCollection    = false
-
 local function showExecutionOptions( frame, yPos )
 
     -- Create check button to toggle strict debugging
@@ -147,7 +148,7 @@ local function createOptionsPanel()
         local messageText = frame:CreateFontString(nil, "ARTWORK","GameFontNormal")
         messageText:SetJustifyH("LEFT")
         messageText:SetPoint("TOP", 0, -40) -- was -70
-        messageText:SetText(sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s", 
+        messageText:SetText(sprintf("%s\n%s\n%s\n%s", 
         L["LINE1"], L["LINE2"], L["LINE3"], L["LINE4"] ))
       
     showExecutionOptions( frame, -200 ) -- was -250
