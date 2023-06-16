@@ -4,7 +4,6 @@
 ----------------------------------------------------------------------------------------
 local _, WoWThreads = ...
 local ADDON_NAME = "WoWThreads"
-
 -- Initialize the library
 local thread = LibStub:NewLibrary( "WoWThreads-1.0", 1 )
 if not thread then return end
@@ -39,26 +38,30 @@ local graveyard = {}
 local signalNameTable       = { "SIG_ALERT", "SIG_JOIN_DATA_READY", "SIG_TERMINATE", "SIG_METRICS", "SIG_NONE_PENDING"}
 
 local function getExpansionName()
-	local expansionName = nil
-	local expansionLevel = GetServerExpansionLevel()
+    local expansionName = nil
 
-	if expansionLevel == LE_EXPANSION_CLASSIC then
-		expansionName = "Classic (Vanilla)"
-	end
-	if expansionLevel == LE_EXPANSION_WRATH_OF_THE_LICH_KING then
-		expansionName = "Classic (WotLK)"
-	end
-	if expansionLevel == LE_EXPANSION_DRAGONFLIGHT then
-		expansionName = "Dragon Flight"
-	end
+    local expansionLevel = GetServerExpansionLevel()
+    if expansionLevel == LE_EXPANSION_LEVEL_CLASSIC then
+        expansionName = "Classic( Vanilla)"
+    end
+    if expansionLevel == LE_EXPANSION_BURNING_CRUSADE then
+        expansionName = "Classic (TBC)"
+    end
+    if expansionLevel == LE_EXPANSION_WRATH_OF_THE_LICH_KING then
+        expansionName = "Classic (WotLK)"
+    end
+    if expansionLevel == LE_EXPANSION_DRAGONFLIGHT then
+        expansionName = "Dragonflight"
+    end
 
-	if isValid == false then
-		local errMsg = sprintf("Invalid Expansion Code, %d", expansionLevel )
-		DEFAULT_CHAT_FRAME:AddMessage( sprintf("%s", errMsg), 1.0, 1.0, 0.0 )
-	end
 	return expansionName
 end
-
+local function getAddonName()
+    local st = debugstack(2)
+    local chunks = strsplittable( "\/", st )
+    return chunks[12]
+end
+local ADDON_NAME    = "WoWThreads"
 local addonVersion	= GetAddOnMetadata( ADDON_NAME, "Version")
 local expansionName = getExpansionName()
 local clockInterval	= 1/GetFramerate() * 1000
@@ -92,7 +95,7 @@ if LOCALE == "enUS" then
 	L["HANDLE_ELEMENT_IS_NIL"]			= "[ERROR] Thread handle element is nil. "
 	L["HANDLE_NOT_TABLE"] 				= "[ERROR] Thread handle not a table. "
 	L["HANDLE_NOT_FOUND"]				= "[ERROR] handle not found in thread control block."
-	L["HANDLE_INVALID_TABLE_SIZE"] 		= "[ERROR] Thread handle size invalid. "
+	L["HANDLE_INVALID_TABLE_SIZE"] 		= "[ERROR] Invalid handle size. "
 	L["HANDLE_COROUTINE_NIL"]			= "[ERROR] Thread coroutine in handle is nil. "
 	L["INVALID_COROUTINE_TYPE"]			= "[ERROR] Thread coroutine is not a thread. "
 	L["INVALID_COROUTINE_STATE"]		= "[ERROR] Unknown or invalid coroutine state. "
@@ -118,9 +121,11 @@ local TH_LIFETIME           = 7
 local TH_ACCUM_YIELD_TIME   = 8
 local TH_JOIN_DATA          = 9
 local TH_JOIN_QUEUE         = 10
-local TH_CHILD_THREADS      = 11
-local TH_PARENT_THREAD      = 12
-local TH_EXECUTION_STATE    = 13   -- running, suspended, waiting, completed
+local TH_CHILDREN           = 11
+local TH_PARENT             = 12
+local TH_ADDON              = 13
+local TH_FAILURE_RESULT     = 14
+local TH_EXECUTION_STATE    = 15   -- running, suspended, waiting, completed
 
 local TH_NUM_ELEMENTS       = TH_EXECUTION_STATE
 
@@ -267,8 +272,8 @@ local function createErrorMsgFrame(title)
     f.title:SetPoint("CENTER", f.TitleBg, "CENTER", 5, 0)
 	f.title:SetText( title)
 	
-    createResizeButton(f)
     createTextDisplay(f)
+    createResizeButton(f)
     createSelectButton(f, "BOTTOMRIGHT",f, 5, 5)
     createReloadButton(f, "BOTTOMLEFT",f, 5, 5)
     return f
@@ -321,6 +326,25 @@ local function setResult( errMsg, stackTrace )
 	end
 	return result
 end
+-- ***********************************************************************
+-- *                               LOCAL FUNCTIONS                       *
+-- ***********************************************************************
+local function postInfo( msg )
+    if errorMsgFrame == nil then
+		errorMsgFrame = createErrorMsgFrame("Error Message")
+	end
+	errorMsgFrame.Text:Insert( msg )
+	errorMsgFrame:Show()
+end
+local function printDirTree()
+        local st = debugstack(2)
+        local chunks = strsplittable( "\/", st )
+        for i = 1, #chunks do
+            postInfo( sprintf( "[%d] %s\n",i, chunks[i]))
+        end
+        return "not yet known"
+end    
+
 local function dataCollectionIsEnabled()
     return DATA_COLLECTION_ENABLED
 end
@@ -344,15 +368,19 @@ local function debuggingIsEnabled()
 	return DEBUGGING_ENABLED
 end
 
--- ***********************************************************************
--- *                               LOCAL FUNCTIONS                       *
--- ***********************************************************************
--- RETURNS: state - "completed", "running", "queued", "suspended"
-local function getThreadState( H )
-    local state = coroutine.status( H[TH_EXECUTABLE_IMAGE])
+-- RETURNS: state - "completed", "running", "queued", "suspended", "failed"
+local function getThreadState( thread_h )
+    local state = coroutine.status( thread_h[TH_EXECUTABLE_IMAGE])
 
-    if state == "dead" then 
+    if state == "dead" then -- check whether it is dead because it failed.
         state = "completed" 
+        for i, H in ipairs( graveyard ) do
+            if thread_h[TH_SEQUENCE_ID] == H[TH_SEQUENCE_ID] then
+                if thread_h[TH_EXECUTION_STATE] == "failed" then
+                    state = "failed"
+                end
+            end
+        end
     end
     if state == "normal" then state = "queued" end
     return state
@@ -401,19 +429,19 @@ local function scheduleThreads()
                 -- move the thread from the TCB to the graveyard.
                 local wasResumed, retValue = coroutine.resume( H[TH_EXECUTABLE_IMAGE] )
                 if not wasResumed then
-                    local errMsg = sprintf("Thread[%d] faulted in the thread's function: Stack trace follows:\n%s\n", H[TH_SEQUENCE_ID], retValue )
-                    print( errMsg )
                     local state = coroutine.status( H[TH_EXECUTABLE_IMAGE])
-                    if state == "dead" then
-                        -- remove from TCB
-                        for i, h in ipairs( threadControlBlock ) do
-                            if H[TH_SEQUENCE_ID] == h[TH_SEQUENCE_ID] then
-                                table.remove( threadControlBlock, i )
-                                table.insert( graveyard, H )
-                                if dataCollectionIsEnabled() then
-                                    local lifetime = debugprofilestop() - H[TH_LIFETIME]
-                                    H[TH_LIFETIME] = lifetime
-                                end
+                    if state == "dead" then state = "failed" end
+                    local errorMsg = sprintf("%s (Thread[%d] from %s)\n", L["THREAD_RESUME_FAILED"], threadId, H[TH_ADDON] )
+                    H[TH_FAILURE_RESULT] = setResult( errorMsg, val )
+
+                    -- remove from TCB and insert into the graveyard
+                    for i, thread_h in ipairs( threadControlBlock ) do
+                        if H[TH_SEQUENCE_ID] == thread_h[TH_SEQUENCE_ID] then
+                            table.remove( threadControlBlock, i )
+                            table.insert( graveyard, H )
+                            if dataCollectionIsEnabled() then
+                                local lifetime = debugprofilestop() - H[TH_LIFETIME]
+                                H[TH_LIFETIME] = lifetime
                             end
                         end
                     end
@@ -433,8 +461,8 @@ local function getThreadMetrics( H )
 
     local numInGrave = #graveyard
     for i = 1, numInGrave do
-        local h = graveyard[i]
-        if H[TH_SEQUENCE_ID] == h[TH_SEQUENCE_ID] then
+        local thread_h = graveyard[i]
+        if H[TH_SEQUENCE_ID] == thread_h[TH_SEQUENCE_ID] then
             entry = convertHandleToEntry( H )
             wipe( H )
             return entry, #graveyard, result
@@ -446,8 +474,8 @@ end
 local function getThreadParent( H )
     local parent_h = nil
 
-    if H[TH_PARENT_THREAD] ~= EMPTY_STR then
-        parent_h = H[TH_PARENT_THREAD]
+    if H[TH_PARENT] ~= EMPTY_STR then
+        parent_h = H[TH_PARENT]
     end
     return parent_h
 end
@@ -456,9 +484,9 @@ local function getThreadChildren( H )
     local childTable = nil
     local childCount = 0
 
-    local childCount = #H[TH_CHILD_THREADS]
+    local childCount = #H[TH_CHILDREN]
     if childCount ~= 0 then
-        childTable = H[TH_CHILD_THREADS]
+        childTable = H[TH_CHILDREN]
     end
     return childTable, childCount
 end
@@ -573,15 +601,11 @@ local function inThreadContext()
     if H == nil then return false else return true end
 end
 -- RETURNS: result
-local function handleIsNil( H )
-    if H == nil then return true else return false end
-end
--- RETURNS: result
 local function checkIfHandleDataValid( H )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
 
     if debuggingIsEnabled() then
-        assert(#H == TH_NUM_ELEMENTS, L["HANDLE_INVALID_TABLE_SIZE"])
+        assert(#H == TH_NUM_ELEMENTS, L["HANDLE_INVALID_TABLE_SIZE"] )
         assert( type(H) == "table", L["HANDLE_NOT_TABLE"])
         assert( H[TH_EXECUTABLE_IMAGE] ~= nil, L["HANDLE_COROUTINE_NIL"] )
         assert( type(H[TH_EXECUTABLE_IMAGE]) == "thread", L["INVALID_COROUTINE_TYPE"] )
@@ -627,21 +651,21 @@ local function createHandle( durationTicks, func )
     H[TH_ACCUM_YIELD_TIME]  = 0
     H[TH_JOIN_DATA]         = EMPTY_STR
     H[TH_JOIN_QUEUE]        = {}
-    H[TH_CHILD_THREADS]     = {}
-    H[TH_PARENT_THREAD]     = EMPTY_STR
+    H[TH_CHILDREN]          = {}
+    H[TH_PARENT]            = EMPTY_STR
+    H[TH_ADDON]             = getAddonName()
+    H[TH_FAILURE_RESULT]    = {SUCCESS, EMPTY_STR, EMPTY_STR}
     H[TH_EXECUTION_STATE]   = EMPTY_STR
 
-    local running_h, runningId = getRunningHandle() 
-    if running_h ~= nil then
-
+    local parent_h, parentId = getRunningHandle() 
+    if parent_h ~= nil then
         -- this call is being executed by a WoW Thread. Therefore,
         -- the running thread is the parent and this handle will be 
         -- the child of the running thread.
-        table.insert( running_h[TH_CHILD_THREADS], H )
-        H[TH_PARENT_THREAD] = running_h
+        table.insert( parent_h[TH_CHILDREN], H )
+        H[TH_PARENT] = parent_h
     end
-
-    return H, result
+    return H
 end
 local function validateThreadHandle( thread_h )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
@@ -684,35 +708,60 @@ local function validateThreadCreateParms( ticks, func )
     end    
     return result
 end
+
 -- DESCRIPTION: Create a new thread.
 -- RETURNS: (handle) thread_h, result
 function thread:create( ticks, func, ... )
     local result = { SUCCESS, EMPTY_STR, EMPTY_STR } 
+
     result = validateThreadCreateParms( ticks, func )
     if not result[1] then return nil, result end
 
     -- Create a handle with a suspended coroutine
-    local H, result = createHandle( ticks, func )
-    if not result[1] then 
-        dbgPrint()
-        return nil, result 
-    end
+    local H = createHandle( ticks, func )
 
     local co = getCoroutine( H )
     insertHandleIntoTCB(H)
     local resumed, val = coroutine.resume( co, ... )
     if not resumed then
-        dbgPrint()
-        local threadId = getThreadId( H )
+
+        local threadId = H[TH_SEQUENCE_ID]
         local threadState = coroutine.status( co )
-        local msg = sprintf("Thread[%d] %s: %s,\n%s\n", threadId, threadState, L["THREAD_RESUME_FAILED"], val)
+        if threadState == "dead" then threadState = "failed" end
+
+        for i, H in ipairs( threadControlBlock ) do  
+            if threadId == H[TH_SEQUENCE_ID] then
+                table.remove( threadControlBlock, i )
+                table.insert( graveyard, H )
+                local errorMsg = sprintf("%s (Thread[%d] from %s)\n", L["THREAD_RESUME_FAILED"], threadId, H[TH_ADDON])
+                H[TH_FAILURE_RESULT] = setResult( errorMsg, val )
+                if dataCollectionIsEnabled() then
+                    local lifetime = debugprofilestop() - H[TH_LIFETIME]
+                    H[TH_LIFETIME] = lifetime
+                end
+            end
+        end
+    
+        local msg = sprintf("%s (Thread[%d] from %s)\n%s\n", L["THREAD_RESUME_FAILED"], threadId, H[TH_ADDON], val)
         result = setResult( msg, debugstack(2) )
+        if debuggingIsEnabled() then
+            assert( result[1], result[2] )
+        end
         return nil, result
     end
-    assert( H ~= nil, "ASSERT FAILED")
-    assert( result[1] == SUCCESS, sprintf( "%s: Expected 'true', got %s", "ASSERT_FAILED", tostring(result[1]) ))
+
     return H, result
 end 
+-- DESCRIPTION: Registration is required for data collection
+-- RETURNS: result
+function thread:register( thread_h, addonName )
+    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
+
+    result = validateThreadHandle( thread_h )
+    if not result[1] then return result end
+    thread_h[TH_ADDON] = addonName
+    return result
+end
 -- DESCRIPTION: yields execution of the number of ticks specified in thread:create()
 -- RETURNS; void
 function thread:yield()
@@ -818,7 +867,7 @@ function thread:getChildThreads( thread_h )
 end 
 -- DESCRIPTION: gets the specified thread's execution state. If nil, the
 -- thread is currently executing and "running" is returned.
--- RETURNS: (string) state ( = "completed", "suspended", "queued", ), result.
+-- RETURNS: (string) state ( = "completed", "suspended", "queued", "failed" ), result.
 function thread:getState( thread_h )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
 
@@ -914,7 +963,6 @@ function thread:getCongestionEntry( H )
     if not result[1] then return nil, remainingEntries, result end
     return entry, count, result
 end
-
 function thread:prefix( stackTrace )
 	if stackTrace == nil then stackTrace = debugstack(2) end
 	
@@ -975,9 +1023,8 @@ function thread:disableDebugging()
     disableDebugging()
 end
 function thread:debuggingIsEnabled()
-    debuggingIsEnabled()
+    return debuggingIsEnabled()
 end
-
 function thread:enableDataCollection()
     enableDataCollection()
 end
@@ -985,9 +1032,8 @@ function thread:disableDataCollection()
     disableDataCollection()
 end
 function thread:dataCollectionIsEnabled()
-    dataCollectionIsEnabled()
+    return dataCollectionIsEnabled()
 end
-
 local WoWThreadsStarted = false
 local function WoWThreadLibInit()
     if not WoWThreadsStarted then 
