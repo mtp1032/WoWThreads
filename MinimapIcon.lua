@@ -20,6 +20,40 @@ local FRAME_HEIGHT = 400
 local DEFAULT_XPOS = 0
 local DEFAULT_YPOS = 200
 
+local L = setmetatable({}, { __index = function(t, k)
+	local v = tostring(k)
+	rawset(t, k, v)
+	return v
+end })
+
+local sprintf = _G.string.format
+
+-- English translations
+local LOCALE = GetLocale()      -- BLIZZ
+if LOCALE == "enUS" then 
+    L["OPTIONS"] = "WoWThreads Options"
+    L["OPTIONS_MENUS"]= sprintf("%s %s", L["OPTIONS"], "Menu")
+
+    L["LINE1"] = "WoWThreads is a library of services that enable developers"
+    L["LINE2"] = "add asynchronous, non-preemptve multithreading to their addons."
+    L["LINE3"] =  "  "
+    L["LINE4"] = "One of the most common uses of threads in gaming environments like WoW,"
+    L["LINE5"] = "is to use threads to handle events. When an event is received, a thread"
+    L["LINE6"] = "is signaled to handle/process the event or its payload."
+    L["LINE7"] =  "        "
+    L["LINE8"] = "You can read more about thread programming in the WoW Threads Libary"
+    L["LINE9"] = "in the Docs directory."
+
+    L["ACCEPT_BUTTON_LABEL"]    = "Accept"
+    L["DISMISS_BUTTON_LABEL"]   = "Dismiss"
+
+    L["ENABLE_DATA_COLLECTION"]     = "Check to collect thread congestion data."
+    L["TOOTIP_DATA_COLLECTION"]     = "If checked, per thread congestion data will be collected."
+
+    L["ENABLE_DEBUGGING"]           = "Check to enable strict debugging."
+    L["TOOLTIP_DEBUGGING"]         = "If checked, most errors are not returned to the calling thread. Instead, the thread fails in place and generates an error message and a stack trace."
+end
+
 --------------------------------------------------------------------------
 --                         CREATE THE VARIOUS BUTTONS
 --------------------------------------------------------------------------
@@ -52,8 +86,8 @@ local function showExecutionOptions( frame, yPos )
     -- Create check button to toggle strict debugging
     local debuggingButton = CreateFrame("CheckButton", "Toggle_DebuggingButton", frame, "ChatConfigCheckButtonTemplate")
 	debuggingButton:SetPoint("TOPLEFT", 20, yPos )
-    debuggingButton.tooltip = "If checked, errors are not returned to the calling thread. Instead, the thread fails in place and generates an error message and a stack trace."
-	_G[debuggingButton:GetName().."Text"]:SetText("Check to enable strict debugging" )
+    debuggingButton.tooltip = L["TOOLTIP_DEBUGGING"]
+	_G[debuggingButton:GetName().."Text"]:SetText(L["ENABLE_DEBUGGING"])
     strictDebugging = thread:debuggingIsEnabled()
     debuggingButton:SetChecked( strictDebugging )
 	debuggingButton:SetScript("OnClick", 
@@ -63,8 +97,8 @@ local function showExecutionOptions( frame, yPos )
     -- Create check button to toggle data collection
     local dataCollectionButton = CreateFrame("CheckButton", "Toggle_DataCollectionButton", frame, "ChatConfigCheckButtonTemplate")
     dataCollectionButton:SetPoint("TOPLEFT", 290, yPos)
-    dataCollectionButton.tooltip = "If checked, per thread congestion data will be collected."
-	_G[dataCollectionButton:GetName().."Text"]:SetText("Check to collect thread congestion data.")
+    dataCollectionButton.tooltip = L["TOOTIP_DATA_COLLECTION"]
+	_G[dataCollectionButton:GetName().."Text"]:SetText(L["ENABLE_DATA_COLLECTION"])
     dataCollection = thread:dataCollectionIsEnabled()
 	dataCollectionButton:SetChecked( dataCollection )
 	dataCollectionButton:SetScript("OnClick", 
@@ -75,7 +109,7 @@ end
 
 local function createOptionsPanel()
 		
-	local frame = CreateFrame("Frame", "WoWThreads Options", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+	local frame = CreateFrame("Frame", L["OPTIONS"], UIParent, BackdropTemplateMixin and "BackdropTemplate")
 	frame:SetFrameStrata("HIGH")
 	frame:SetToplevel(true)
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -101,7 +135,7 @@ local function createOptionsPanel()
 
 	frame.title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	frame.title:SetPoint("TOP", 0, 4)
-	frame.title:SetText("WoWThreads Options Menus")
+	frame.title:SetText(L["OPTIONS_MENUS"])
 
     -- Title text
 	frame.text = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
@@ -116,20 +150,20 @@ local function createOptionsPanel()
         local messageText = frame:CreateFontString(nil, "ARTWORK","GameFontNormal")
         messageText:SetJustifyH("LEFT")
     
-        local str2 = sprintf("WoWThreads is a library of services that enable developers")
-        local str3 = sprintf("add asynchronous, non-preemptve multithreading to their addons.")
-        local str4 = sprintf("   ")
-        local str5 = sprintf("One of the most common uses of threads in gaming environments like WoW,")
-        local str6 = sprintf("is to use threads to handle events. When an event is received, a thread")
-        local str7 = sprintf("is signaled to handle/process the event or its payload.")
-        local str8 = sprintf("         ")
-        local str9 = sprintf("You can read more about thread programming in the WoW Threads Libary")
-        local str10 = sprintf("in the Docs directory.")
+        -- local str2 = sprintf("WoWThreads is a library of services that enable developers")
+        -- local str3 = sprintf("add asynchronous, non-preemptve multithreading to their addons.")
+        -- local str4 = sprintf("   ")
+        -- local str5 = sprintf("One of the most common uses of threads in gaming environments like WoW,")
+        -- local str6 = sprintf("is to use threads to handle events. When an event is received, a thread")
+        -- local str7 = sprintf("is signaled to handle/process the event or its payload.")
+        -- local str8 = sprintf("         ")
+        -- local str9 = sprintf("You can read more about thread programming in the WoW Threads Libary")
+        -- local str10 = sprintf("in the Docs directory.")
         local messageText = frame:CreateFontString(nil, "ARTWORK","GameFontNormal")
         messageText:SetJustifyH("LEFT")
         messageText:SetPoint("TOP", 0, -40) -- was -70
         messageText:SetText(sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s", 
-        str2, str3, str4, str5, str6, str7, str8, str9, str10 ))
+        L["LINE1"], L["LINE2"], L["LINE3"], L["LINE4"], L["LINE5"], L["LINE6"], L["LINE7"], L["LINE8"], L["LINE9"]))
       
     showExecutionOptions( frame, -200 ) -- was -250
 	-- drawLine( frame, 110 )	
@@ -137,7 +171,7 @@ local function createOptionsPanel()
 
     -- Accept buttom, bottom right corner
 	frame.hide = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	frame.hide:SetText("Accept")
+	frame.hide:SetText( L["ACCEPT_BUTTON_LABEL"] )
 	frame.hide:SetHeight(20)
 	frame.hide:SetWidth(80)
 	frame.hide:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
@@ -150,7 +184,7 @@ local function createOptionsPanel()
 
     -- Dismiss Button at bottom left corner
 	frame.hide = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	frame.hide:SetText("Dismiss")
+	frame.hide:SetText(L["DISMISS_BUTTON_LABEL"])
 	frame.hide:SetHeight(20)
 	frame.hide:SetWidth(80)
 	frame.hide:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8)
@@ -239,7 +273,7 @@ eventFrame:RegisterEvent("ADDON_LOADED")
 local function OnEvent( self, event, ... )
     local addonName = ...
 
-    if event == "ADDON_LOADED" and ADDON_NAME == addonName then
+    if event == "ADDON_LOADED" and addonName == ADDON_NAME then
         addon:OnInitialize()
         eventFrame:UnregisterEvent("ADDON_LOADED")  
     end
