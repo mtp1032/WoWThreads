@@ -3,13 +3,11 @@
 -- ORIGINAL DATE:   14 March, 2023
 ----------------------------------------------------------------------------------------
 local _, WoWThreads = ...
+local ADDON_NAME = "WoWThreads"
 
 -- Initialize the library
-
 local thread = LibStub:NewLibrary( "WoWThreads-1.0", 1 )
 if not thread then return end
-
-local ADDON_NAME = "WoWThreads"
 
 local L = setmetatable({}, { __index = function(t, k) 
 	local v = tostring(k)
