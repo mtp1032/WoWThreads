@@ -34,24 +34,19 @@ if LOCALE == "enUS" then
     L["OPTIONS"] = "WoWThreads Options"
     L["OPTIONS_MENUS"]= sprintf("%s %s", L["OPTIONS"], "Menu")
 
-    L["LINE1"] = "WoWThreads is a library of services that enable developers"
-    L["LINE2"] = "add asynchronous, non-preemptve multithreading to their addons."
-    L["LINE3"] =  "  "
-    L["LINE4"] = "One of the most common uses of threads in gaming environments like WoW,"
-    L["LINE5"] = "is to use threads to handle events. When an event is received, a thread"
-    L["LINE6"] = "is signaled to handle/process the event or its payload."
-    L["LINE7"] =  "        "
-    L["LINE8"] = "You can read more about thread programming in the WoW Threads Libary"
-    L["LINE9"] = "in the Docs directory."
+    L["LINE1"] = "    WoWThreads is a library of services that enable developers"
+    L["LINE2"] = "to incorporate asynchronous, non-preemptive multithreading into"
+    L["LINE3"] = "their addons. You can read more about thread programming generally"
+    L["LINE4"] = "and WoWThreads specifically in the Docs directory."
 
     L["ACCEPT_BUTTON_LABEL"]    = "Accept"
     L["DISMISS_BUTTON_LABEL"]   = "Dismiss"
 
-    L["ENABLE_DATA_COLLECTION"]     = "Check to collect thread congestion data."
-    L["TOOTIP_DATA_COLLECTION"]     = "If checked, per thread congestion data will be collected."
+    L["ENABLE_DATA_COLLECTION"] = "Check to collect thread congestion data."
+    L["TOOTIP_DATA_COLLECTION"] = "If checked, per thread congestion data will be collected."
 
-    L["ENABLE_DEBUGGING"]           = "Check to enable strict debugging."
-    L["TOOLTIP_DEBUGGING"]         = "If checked, most errors are not returned to the calling thread. Instead, the thread fails in place and generates an error message and a stack trace."
+    L["ENABLE_DEBUGGING"]       = "Check to enable strict debugging."
+    L["TOOLTIP_DEBUGGING"]      = "If checked, most errors are not returned to the calling thread. Instead, the thread fails in place and generates an error message and a stack trace."
 end
 
 --------------------------------------------------------------------------
@@ -149,21 +144,11 @@ local function createOptionsPanel()
         local DescrSubHeader = frame:CreateFontString(nil, "ARTWORK","GameFontNormalLarge")
         local messageText = frame:CreateFontString(nil, "ARTWORK","GameFontNormal")
         messageText:SetJustifyH("LEFT")
-    
-        -- local str2 = sprintf("WoWThreads is a library of services that enable developers")
-        -- local str3 = sprintf("add asynchronous, non-preemptve multithreading to their addons.")
-        -- local str4 = sprintf("   ")
-        -- local str5 = sprintf("One of the most common uses of threads in gaming environments like WoW,")
-        -- local str6 = sprintf("is to use threads to handle events. When an event is received, a thread")
-        -- local str7 = sprintf("is signaled to handle/process the event or its payload.")
-        -- local str8 = sprintf("         ")
-        -- local str9 = sprintf("You can read more about thread programming in the WoW Threads Libary")
-        -- local str10 = sprintf("in the Docs directory.")
         local messageText = frame:CreateFontString(nil, "ARTWORK","GameFontNormal")
         messageText:SetJustifyH("LEFT")
         messageText:SetPoint("TOP", 0, -40) -- was -70
         messageText:SetText(sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s", 
-        L["LINE1"], L["LINE2"], L["LINE3"], L["LINE4"], L["LINE5"], L["LINE6"], L["LINE7"], L["LINE8"], L["LINE9"]))
+        L["LINE1"], L["LINE2"], L["LINE3"], L["LINE4"] ))
       
     showExecutionOptions( frame, -200 ) -- was -250
 	-- drawLine( frame, 110 )	
@@ -209,7 +194,6 @@ end
 ---------------------- MinimapIcon.lua -----------------------------
 local ICON_WOWTHREADS = 3528459
 local dataObject = "WoWThreadsLib"
-local savedVarDB = bunnyLDP
 
 local addon = LibStub("AceAddon-3.0"):NewAddon("Bunnies", "AceConsole-3.0")
 
@@ -226,8 +210,7 @@ local WoWThreadsIconDB = LibStub("LibDataBroker-1.1"):NewDataObject(dataObject,
     text = dataObject,
     icon = ICON_WOWTHREADS,
     OnTooltipShow = function( tooltip )
-        tooltip:AddLine( "Hello" )
-        tooltip:AddLine( "Goodbye")
+        tooltip:AddLine( "Left Click to open options window" )
     end,
     OnClick = function(self, button ) 
         -- LEFT CLICK - Displays the options menu
