@@ -24,7 +24,7 @@ local EMPTY_STR 		        = thread.EMPTY_STR
 local SUCCESS 		            = thread.SUCCESS
 local FAILURE 		            = thread.FAILURE
 local DEBUGGING_ENABLED         = true
-local DATA_COLLECTION_ENABLED   = false
+local DATA_COLLECTION_ENABLED   = true
 local DEFAULT_YIELD_TICKS       = 5
 local threadSequenceNumber      = 5
 
@@ -374,28 +374,26 @@ local function getThreadState( thread_h )
 
     if state == "dead" then -- check whether it is dead because it failed.
         state = "completed" 
-        for i, H in ipairs( graveyard ) do
-            if thread_h[TH_SEQUENCE_ID] == H[TH_SEQUENCE_ID] then
-                if thread_h[TH_EXECUTION_STATE] == "failed" then
-                    state = "failed"
-                end
-            end
-        end
     end
     if state == "normal" then state = "queued" end
     return state
 end
--- RETURNS: Handle metrics entry = { threadId, ticksPerYield, yieldCount, timeSuspended, lifetime }
+-- RETURNS: Handle metrics entry = { threadId, fractionCongested }
 local function convertHandleToEntry( H )
 
-    local threadId         = H[TH_SEQUENCE_ID]
-    local ticksPerYield    = H[TH_TICKS_PER_YIELD]
-    local yieldCount       = H[TH_YIELD_COUNT]
-    local timeSuspended    = H[TH_ACCUM_YIELD_TIME]
-    local lifetime         = H[TH_LIFETIME]
-	local congestion = (1 - (timeSuspended / lifetime))
+    local threadId          = H[TH_SEQUENCE_ID]
+    local ticksPerYield     = H[TH_TICKS_PER_YIELD] -- specified in thread:create()
+    local numYields         = H[TH_YIELD_COUNT]
+    local idealTimeYielded  = ticksPerYield * numYields * clockInterval
+    local actualTimeYielded = H[TH_ACCUM_YIELD_TIME]
+    local lifetime          = H[TH_LIFETIME]
 
-    local entry = { threadId, ticksPerYield, yieldCount, timeSuspended, lifetime, congestion }
+    local fractionCongested = 0.0
+    if actualTimeYielded > idealTimeYielded then 
+        fractionCongested  = ((actualTimeYielded - idealTimeYielded) / actualTimeYielded)
+    end
+    
+    local entry = { threadId, fractionCongested }
     return entry
 end
 -- RETURNS void
@@ -458,17 +456,13 @@ local function getThreadMetrics( H )
     if #graveyard == 0 then 
         return nil, #graveyard, result 
     end
-
-    local numInGrave = #graveyard
-    for i = 1, numInGrave do
-        local thread_h = graveyard[i]
-        if H[TH_SEQUENCE_ID] == thread_h[TH_SEQUENCE_ID] then
-            entry = convertHandleToEntry( H )
-            wipe( H )
-            return entry, #graveyard, result
+    for i, handle in ipairs(graveyard) do
+        if handle[TH_SEQUENCE_ID] == H[TH_SEQUENCE_ID] then
+            local entry = convertHandleToEntry( H )
+            return entry, result
         end
     end
-    return entry, numInGrave, result
+    return nil, result
 end
 -- RETURNS: the parent thread of H. if H is a top level thread, then nil is returned
 local function getThreadParent( H )
@@ -947,22 +941,38 @@ function thread:getSignal()
     checkRunningHandle( thread_h, "thread:getSignal")
     return signal, sender_h
 end
-function thread:getCongestion( H )
+function thread:getAddon( thread_h )
+    if thread_h == nil then 
+        thread_h = getRunningHandle() 
+    end
+    local result = validateThreadHandle(thread_h)
+    return thread_h[TH_ADDON], result
+end
+-- RETURNS: entry = { threadId, ticksPerYield, yieldCount, timeSuspended, lifetime, congestion }
+function thread:getCongestionEntry( H )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
     local count = 0
     local entry = nil
     result = validateThreadHandle(H)
     if not result[1] then return result end
-    
+
+    local Id = H[TH_SEQUENCE_ID]
+
     if not dataCollectionIsEnabled() then
         result = setResult( L["DATA_COLLECTION_NOT_ENABLED"], debugstack(1) )
         return nil, count, result
     end
-
-    local entry, count, result = getThreadMetrics(H)
+    local running_h = getRunningHandle()
+    if running_h[TH_ADDON] ~= H[TH_ADDON] then
+        result = setResult( L["ILLEGAL_OPERATION"], debugstack() )
+        return nil, result
+    end
+    
+    local entry, result = getThreadMetrics(H)
     if not result[1] then return nil, remainingEntries, result end
-    return entry, count, result
+    return entry, result
 end
+
 function thread:prefix( stackTrace )
 	if stackTrace == nil then stackTrace = debugstack(2) end
 	
@@ -1015,6 +1025,9 @@ function thread:postResult( result )
 	local resultMsg = sprintf("%s:\n%s\n", result[2], result[3])
 	errorMsgFrame.Text:Insert( resultMsg )
 	errorMsgFrame:Show()
+end
+function thread:postMsg( msg )
+    postInfo( msg )
 end
 function thread:enableDebugging()
     enableDebugging()
