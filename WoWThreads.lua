@@ -947,7 +947,7 @@ function thread:getSignal()
     checkRunningHandle( thread_h, "thread:getSignal")
     return signal, sender_h
 end
-function thread:getCongestionEntry( H )
+function thread:getCongestion( H )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
     local count = 0
     local entry = nil
