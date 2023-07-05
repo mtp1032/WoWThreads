@@ -506,10 +506,6 @@ end
 local function getCoroutine( H )
     return H[TH_EXECUTABLE_IMAGE]
 end
--- RETURNS; true / false
-local function inThreadContext()
-    if H == nil then return false else return true end
-end
 -- RETURNS: result
 local function checkIfHandleDataValid( H )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
@@ -639,7 +635,7 @@ local function setResult( errMsg, stackTrace )
     assert( type( stackTrace) == "string", "ASSERT FAILURE: Param 2 - Bad type. Expected string")
 
     local prefix = dbgPrefix( stackTrace )
-	local errMsg = sprintf("[%s] %s\n   %s:\n", prefix, errMsg, stackTrace )
+	local errMsg = sprintf("[%s] %s\n STACK TRACE:\n", prefix, errMsg )
 
     local result = {FAILURE, errMsg, stackTrace  }
 	return result
@@ -720,6 +716,7 @@ function thread:create( ticks, func, ... )
     return H, result
 end 
 -- DESCRIPTION: yields execution of the number of ticks specified in thread:create()
+-- REQUIRES: thread context
 -- RETURNS; void
 function thread:yield()
     local H = getRunningHandle()
@@ -750,6 +747,7 @@ function thread:getId( thread_h )
     return threadId, result
 end
 -- DESCRIPTION: Returns the handle of the calling thread.
+-- REQUIRES: thread context
 -- RETURNS: (handle) thread_h, (number) threadId
 function thread:self()
     local self_h, selfId = getRunningHandle()
@@ -816,14 +814,10 @@ function thread:getChildThreads( thread_h )
     return children, result
 end 
 -- DESCRIPTION: gets the specified thread's execution state. If nil, the
--- thread is currently executing and "running" is returned.
--- RETURNS: (string) state ( = "completed", "suspended", "queued", "failed" ), result.
+--      thread is currently executing and "running" is returned.
+-- RETURNS: (string) state ( = "completed", "suspended", "queued", "failed", "running" ), result.
 function thread:getState( thread_h )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
-
-    if thread_h == nil then
-        thread_h, threadId = getRunningHandle()
-    end
 
     result = validateThreadHandle( thread_h )
     if not result[1] then return nil, result end
@@ -870,14 +864,6 @@ function thread:getSignal()
     signal, sender_h = getSignal()
     local thread_h, threadId = getRunningHandle() 
     return signal, sender_h, data
-end
-
-function thread:getAddon( thread_h )
-    if thread_h == nil then 
-        thread_h = getRunningHandle() 
-    end
-    local result = validateThreadHandle(thread_h)
-    return thread_h[TH_ADDON_NAME], result
 end
 function thread:prefix( stackTrace )
 	if stackTrace == nil then stackTrace = debugstack(2) end
@@ -954,7 +940,13 @@ function thread:dataCollectionIsEnabled()
     return dataCollectionIsEnabled()
 end
 ------------------------- MANAGEMENT INTERFACE --------------------
+function thread:mgmtGetAddonName( thread_h )
+    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
+    local result = validateThreadHandle(thread_h)
+    if not result[1] then return nil, result end
 
+    return thread_h[TH_ADDON_NAME], result
+end
 -- RETURNS: table of metric entries were each entry is
 --      entry = { threadId, addonName, runtime, suspendedTime, lifetime }
 --      result:
@@ -986,7 +978,6 @@ function thread:mgmtGetMetricsByAddon( addonName )
     end    
     return threadTable, entry
 end
-
 -- RETURNS: entry = { threadId, addonName, runtime, suspendedTime, lifetime }
 -- result
 function thread:mgmtGetMetricsByThread( thread_h )
@@ -1020,7 +1011,6 @@ function thread:mgmtGetMetricsByThread( thread_h )
         return entry, result
     end
 end
-
 -- RETURNS: table of metric entries for each thread in the TCB where each
 --          entry = { threadId, addonName, runtime, suspendedTime, lifetime }
 --          result:
@@ -1032,7 +1022,6 @@ function thread:mgmtGetThreadTable()
     end
     return metricsTable
 end
-
 local WoWThreadsStarted = false
 local function WoWThreadLibInit()
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
