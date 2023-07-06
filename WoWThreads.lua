@@ -106,6 +106,7 @@ if LOCALE == "enUS" then
 	L["SIGNAL_OUT_OF_RANGE"]			= "[ERROR] Signal is invalid (out of range) "
 	L["SIGNAL_ILLEGAL_OPERATION"]		= "[WARNING] Cannot signal a completed thread. "
 	L["RUNNING_THREAD_NOT_FOUND"]		= "[ERROR] Failed to retrieve running thread. "
+    L["THREAD_NOT_FOUND"]               = "[ERROR] Failed to find thread in Morgue or TCB."
 	L["THREAD_INVALID_CONTEXT"] 		= "[ERROR] Operation requires thread context "
 	L["DEBUGGING_NOT_ENABLED"]			= "[ERROR] Debugging has not been enabled. "
 	L["DATA_COLLECTION_NOT_ENABLED"]	= "[ERROR] Data collection has not been enabled. "
@@ -309,7 +310,7 @@ local function dbgPrint( msg )
 	end
 	DEFAULT_CHAT_FRAME:AddMessage( str, 0.0, 1.0, 1.0 )
 end	
-local function dbgPrintx( ... )
+local function dbgPrintX( ... )
 	local prefix = dbgPrefix( debugstack(2) )
 	DEFAULT_CHAT_FRAME:AddMessage( prefix, ... , 0.0, 1.0, 1.0 )
 
@@ -371,142 +372,20 @@ local function getThreadState( thread_h )
     if state == "normal" then state = "queued" end
     return state
 end
--- RETURNS void
-local function scheduleThreads()
-    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
-    for i, H in ipairs( threadControlBlock ) do  
-        H[TH_CURRENT_LIFETIME] = debugprofilestop() - H[TH_CREATION_TIME]
+--------------- BEGIN VALIDATE FUNCTIONS -------------------
+local function setResult( errMsg, stackTrace )
+    assert( errMsg ~= nil, "ASSERT FAILURE: input error message was nil")
+    assert( stackTrace ~= nil, "ASSERT FAILURE: input stack trace was nil")
+    assert( type( errMsg) == "string", "ASSERT FAILURE: Param 1 - Bad type. Expected string")
+    assert( type( stackTrace) == "string", "ASSERT FAILURE: Param 2 - Bad type. Expected string")
 
-        -- remove any/all dead threads from the TCB and move
-        -- them into the Morgue
-        H[TH_EXECUTION_STATE] = coroutine.status( H[TH_EXECUTABLE_IMAGE])
-        
-        if H[TH_EXECUTION_STATE] == "dead" then
-            table.remove( threadControlBlock, i )
-            table.insert( Morgue, H)
-        end
+    local prefix = dbgPrefix( stackTrace )
+	local errMsg = sprintf("[%s] %s\n STACK TRACE:\n", prefix, errMsg )
 
-        if H[TH_EXECUTION_STATE] == "suspended" then
-
-            -- decrement the remaining tick count. If equal
-            -- to 0 then the coroutine will be resumed.
-            H[TH_REMAINING_TICKS] = H[TH_REMAINING_TICKS] - 1
-        end
-        
-        if H[TH_REMAINING_TICKS] == 0 then
-
-            -- replenish the remaining ticks counter and resume this thread.
-            H[TH_REMAINING_TICKS] = H[TH_TICKS_PER_YIELD]
-            
-            -- resume the thread
-            local co = H[TH_EXECUTABLE_IMAGE]
-            
-            local wasResumed, retValue = coroutine.resume( co ) 
-            if not wasResumed then
-                local state = coroutine.status( H[TH_EXECUTABLE_IMAGE])
-                if state == "dead" then state = "failed" end
-                local errorMsg = sprintf("%s (Thread[%d] from %s)\n", L["THREAD_RESUME_FAILED"], H[TH_SEQUENCE_ID], H[TH_ADDON_NAME] )
-                result = setResult( errorMsg, debugstack(2) )
-
-                -- remove from TCB and insert into the Morgue
-                table.remove( threadControlBlock, i )
-                table.insert( Morgue, H )
-                return result
-            end
-        end
-    end
-    return result
-    end
--- RETURNS: childTable, childCount. nil, 0 if no child threads
-local function getThreadChildren( H )
-    local childTable = nil
-    local childCount = 0
-
-    local childCount = #H[TH_CHILDREN]
-    if childCount ~= 0 then
-        childTable = H[TH_CHILDREN]
-    end
-    return childTable, childCount
+    local result = {FAILURE, errMsg, stackTrace  }
+	return result
 end
--- RETURNS: void
-local function startTimer( CLOCK_INTERVAL )
-    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
-    result = scheduleThreads()
-    if not result[1] then return result end
-   
-    C_Timer.After( CLOCK_INTERVAL, 
-        function() 
-            result = startTimer( CLOCK_INTERVAL )
-            if not result[1] then return result end
-        end)
-    return result
-end
--- RETURNS: running thread, threadId. nil, -1 if thread not found.
-local function getRunningHandle()
-    -- only one thread can be "running"
-    for _, H in ipairs( threadControlBlock ) do
-        local state = coroutine.status( H[TH_EXECUTABLE_IMAGE] )
-        if state == "running" then
-            return H, H[TH_SEQUENCE_ID]
-        end
-    end
-    -- if we're here, it's because the WoW Client has issued
-    -- this call. That's why there is not A "running" thread
-    -- in the TCB.
-    return nil, -1
-end
--- RETURNS: void
-local function yield( H )
 
-    local beforeYield = debugprofilestop()
-    H[TH_ACCUM_RUNTIME]   = H[TH_ACCUM_RUNTIME] + (beforeYield - H[TH_TIMESTAMP])
-    H[TH_TIMESTAMP] = beforeYield
-    
-    coroutine.yield()
-    
-    local afterYield = debugprofilestop()
-    H[TH_ACCUM_SUSPEND_TIME] = H[TH_ACCUM_SUSPEND_TIME] + afterYield - H[TH_TIMESTAMP]
-    H[TH_TIMESTAMP]          = afterYield
-end
--- RETURNS: signal name
-local function getSignalName( signal )
-    return signalNameTable[signal]
-end
--- RETURNS: signal, sender_h (SIG_NONE_PENDING if thread's signal queue is empty.)
--- NOTE: signals are returned in the order they are received (FIFO)
-local function getSignal()
-    local signal    = SIG_NONE_PENDING
-    local sender_h  = nil
-    local data      = nil
-
-    local H, threadId = getRunningHandle()
-    local signalQueue = H[TH_SIGNAL_QUEUE]
-    local addon = H[TH_ADDON_NAME]
-
-    if #signalQueue == 0 then
-        return signal, sender_h, data
-    end
-
-    local sigEntry = table.remove(H[TH_SIGNAL_QUEUE], 1 )
-    signal = sigEntry[1]
-    sender_h = sigEntry[2]
-    local data = sigEntry[3]
-    return signal, sender_h, data
-end
--- RETURNS: Thread Id
-local function getThreadId( H )
-    return H[TH_SEQUENCE_ID]
-end
--- RETURNS: TCB thread count.
-local function insertHandleIntoTCB( H )
-    table.insert( threadControlBlock, H)
-    return #threadControlBlock
-end 
--- RETURNS: Handle's coroutine 
-local function getCoroutine( H )
-    return H[TH_EXECUTABLE_IMAGE]
-end
--- RETURNS: result
 local function checkIfHandleDataValid( H )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
 
@@ -628,19 +507,144 @@ local function validateResult( result )
         assert( type(result[3]) == "string", "ASSERT FAILURE: result[3] not a string")
     end
 end
-local function setResult( errMsg, stackTrace )
-    assert( errMsg ~= nil, "ASSERT FAILURE: input error message was nil")
-    assert( stackTrace ~= nil, "ASSERT FAILURE: input stack trace was nil")
-    assert( type( errMsg) == "string", "ASSERT FAILURE: Param 1 - Bad type. Expected string")
-    assert( type( stackTrace) == "string", "ASSERT FAILURE: Param 2 - Bad type. Expected string")
 
-    local prefix = dbgPrefix( stackTrace )
-	local errMsg = sprintf("[%s] %s\n STACK TRACE:\n", prefix, errMsg )
+-- RETURNS void
+local function scheduleThreads()
+    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
+    for i, H in ipairs( threadControlBlock ) do  
+        H[TH_CURRENT_LIFETIME] = debugprofilestop() - H[TH_CREATION_TIME]
 
-    local result = {FAILURE, errMsg, stackTrace  }
-	return result
+        -- remove any/all dead threads from the TCB and move
+        -- them into the Morgue
+        H[TH_EXECUTION_STATE] = coroutine.status( H[TH_EXECUTABLE_IMAGE])
+        
+        if H[TH_EXECUTION_STATE] == "dead" then
+            table.remove( threadControlBlock, i )
+            table.insert( Morgue, H)
+        end
+
+        if H[TH_EXECUTION_STATE] == "suspended" then
+
+            -- decrement the remaining tick count. If equal
+            -- to 0 then the coroutine will be resumed.
+            H[TH_REMAINING_TICKS] = H[TH_REMAINING_TICKS] - 1
+        end
+        
+        if H[TH_REMAINING_TICKS] == 0 then
+
+            -- replenish the remaining ticks counter and resume this thread.
+            H[TH_REMAINING_TICKS] = H[TH_TICKS_PER_YIELD]
+            
+            -- resume the thread
+            local co = H[TH_EXECUTABLE_IMAGE]
+            
+            local wasResumed, retValue = coroutine.resume( co ) 
+            if not wasResumed then
+                local state = coroutine.status( H[TH_EXECUTABLE_IMAGE])
+                if state == "dead" then state = "failed" end
+                local errorMsg = sprintf("%s (Thread[%d] from %s)\n", L["THREAD_RESUME_FAILED"], H[TH_SEQUENCE_ID], H[TH_ADDON_NAME] )
+                result = setResult( errorMsg, debugstack(2) )
+
+                -- remove from TCB and insert into the Morgue
+                table.remove( threadControlBlock, i )
+                table.insert( Morgue, H )
+                H[TH_CURRENT_LIFETIME] = debugprofilestop() - H[TH_CREATION_TIME]
+                print( dbgPrefix(), H[TH_SEQUENCE_ID], "Inserted into Morgue")
+                return result
+            end
+        end
+    end
+    return result
+    end
+-- RETURNS: childTable, childCount. nil, 0 if no child threads
+local function getThreadChildren( H )
+    local childTable = nil
+    local childCount = 0
+
+    local childCount = #H[TH_CHILDREN]
+    if childCount ~= 0 then
+        childTable = H[TH_CHILDREN]
+    end
+    return childTable, childCount
 end
+-- RETURNS: void
+local function startTimer( CLOCK_INTERVAL )
+    local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
+    result = scheduleThreads()
+    if not result[1] then return result end
+   
+    C_Timer.After( CLOCK_INTERVAL, 
+        function() 
+            result = startTimer( CLOCK_INTERVAL )
+            if not result[1] then return result end
+        end)
+    return result
+end
+-- RETURNS: running thread, threadId. nil, -1 if thread not found.
+local function getRunningHandle()
+    -- only one thread can be "running"
+    for _, H in ipairs( threadControlBlock ) do
+        local state = coroutine.status( H[TH_EXECUTABLE_IMAGE] )
+        if state == "running" then
+            return H, H[TH_SEQUENCE_ID]
+        end
+    end
+    -- if we're here, it's because the WoW Client has issued
+    -- this call. That's why there is not A "running" thread
+    -- in the TCB.
+    return nil, -1
+end
+-- RETURNS: void
+local function yield( H )
 
+    local beforeYield = debugprofilestop()
+    H[TH_ACCUM_RUNTIME]   = H[TH_ACCUM_RUNTIME] + (beforeYield - H[TH_TIMESTAMP])
+    H[TH_TIMESTAMP] = beforeYield
+    
+    coroutine.yield()
+    
+    local afterYield = debugprofilestop()
+    H[TH_ACCUM_SUSPEND_TIME] = H[TH_ACCUM_SUSPEND_TIME] + afterYield - H[TH_TIMESTAMP]
+    H[TH_TIMESTAMP]          = afterYield
+end
+-- RETURNS: signal name
+local function getSignalName( signal )
+    return signalNameTable[signal]
+end
+-- RETURNS: signal, sender_h (SIG_NONE_PENDING if thread's signal queue is empty.)
+-- NOTE: signals are returned in the order they are received (FIFO)
+local function getSignal()
+    local signal    = SIG_NONE_PENDING
+    local sender_h  = nil
+    local data      = nil
+
+    local H, threadId = getRunningHandle()
+    local signalQueue = H[TH_SIGNAL_QUEUE]
+    local addon = H[TH_ADDON_NAME]
+
+    if #signalQueue == 0 then
+        return signal, sender_h, data
+    end
+
+    local sigEntry = table.remove(H[TH_SIGNAL_QUEUE], 1 )
+    signal = sigEntry[1]
+    sender_h = sigEntry[2]
+    local data = sigEntry[3]
+    return signal, sender_h, data
+end
+-- RETURNS: Thread Id
+local function getThreadId( H )
+    return H[TH_SEQUENCE_ID]
+end
+-- RETURNS: TCB thread count.
+local function insertHandleIntoTCB( H )
+    table.insert( threadControlBlock, H)
+    return #threadControlBlock
+end 
+-- RETURNS: Handle's coroutine 
+local function getCoroutine( H )
+    return H[TH_EXECUTABLE_IMAGE]
+end
 local function createHandle( durationTicks, func )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR }
 
@@ -706,6 +710,8 @@ function thread:create( ticks, func, ... )
             if threadId == H[TH_SEQUENCE_ID] then
                 table.remove( threadControlBlock, i )
                 table.insert( Morgue, H )
+                H[TH_CURRENT_LIFETIME] = debugprofilestop() - H[TH_CREATION_TIME]
+                print( dbgPrefix(), H[TH_SEQUENCE_ID], "Inserted into Morgue")
                 local errorMsg = sprintf("%s thread[%d] failed to start. Inserted into Morgue ", dbgPrefix(), threadId, addon )
                 print( dbgPrefix(), "val = " .. val )
                 result = {FAILURE, errorMsg, val }
@@ -838,9 +844,12 @@ function thread:getSignalName( signal )
 end
 -- DESCRIPTION: sends a signal to the specified thread. 
 -- RETURNS: result 
-function thread:sendSignal( thread_h, signal, data )
+function thread:sendSignal( thread_h, signal, ... )
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
-    if data == nil then data = EMPTY_STR end
+    local data = ...
+    if data == nil then 
+        data = EMPTY_STR 
+    end
 
     result = validateThreadHandle( thread_h )
     if not result[1] then return result, nil end
@@ -891,7 +900,7 @@ function thread:print( msg )
 	DEFAULT_CHAT_FRAME:AddMessage( str, 0.0, 1.0, 1.0 )
 end	
 function thread:printx( ... )
-	local prefix = thread:prefix( debugstack(2) )
+	local prefix = dbgPrefix( debugstack(2) )
     print( prefix, ... )
 end	
 function thread:postResult( result )
@@ -960,6 +969,7 @@ function thread:mgmtGetMetricsByAddon( addonName )
     local state = nil
     local lifetime = nil
     local threadTable = {}
+
     for _, H in ipairs( threadControlBlock ) do
         if addonName == H[TH_ADDON_NAME] then
             
@@ -967,61 +977,44 @@ function thread:mgmtGetMetricsByAddon( addonName )
             addonName     = H[TH_ADDON_NAME]
             runtime       = H[TH_ACCUM_RUNTIME]
             suspendedTime = H[TH_ACCUM_SUSPEND_TIME]
-            state = getThreadState( H )
             lifetime = H[TH_CURRENT_LIFETIME]
-            if state ~= "completed" then
-                lifetime = debugprofilestop() - H[TH_CREATION_TIME]
-            end
+            entry = { threadId, addonName, runtime, suspendedTime, lifetime }
+            table.insert( threadTable, entry )
+        end
+    end
+    for _, H in ipairs( Morgue ) do
+        if addonName == H[TH_ADDON_NAME] then
+            
+            threadId      = H[TH_SEQUENCE_ID]
+            addonName     = H[TH_ADDON_NAME]
+            runtime       = H[TH_ACCUM_RUNTIME]
+            suspendedTime = H[TH_ACCUM_SUSPEND_TIME]
+            lifetime      = H[TH_CURRENT_LIFETIME]
+
             entry = { threadId, addonName, runtime, suspendedTime, lifetime }
             table.insert( threadTable, entry )
         end
     end    
     return threadTable, entry
 end
--- RETURNS: entry = { threadId, addonName, runtime, suspendedTime, lifetime }
--- result
-function thread:mgmtGetMetricsByThread( thread_h )
+function thread:mgmtGetMetrics()
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
-    local entry = nil
 
-    result = validateThreadHandle( thread_h )
-    if not result[1] then return nil, result end
+    local completedThreads = {}
 
-    local threadId = nil
-    local addonName = nil
-    local runtime = nil
-    local suspendedTime = nil
-    local state = nil
-    local lifetime = nil
-
-    for _, H in ipairs( threadControlBlock ) do
-        if thread_h[TH_SEQUENCE_ID] == H[TH_SEQUENCE_ID] then
-            
-            threadId      = H[TH_SEQUENCE_ID]
-            addonName     = H[TH_ADDON_NAME]
-            runtime       = H[TH_ACCUM_RUNTIME]
-            suspendedTime = H[TH_ACCUM_SUSPEND_TIME]
-            state = getThreadState( H )
-            lifetime = H[TH_CURRENT_LIFETIME]
-            if state ~= "completed" then
-                lifetime = debugprofilestop() - H[TH_CREATION_TIME]
-            end
+    for _, H in ipairs( Morgue ) do
+        local threadId      = H[TH_SEQUENCE_ID]
+        local addonName     = H[TH_ADDON_NAME]
+        local runtime       = H[TH_ACCUM_RUNTIME]
+        local suspendedTime = H[TH_ACCUM_SUSPEND_TIME]
+        local lifetime      = H[TH_CURRENT_LIFETIME]
+        
+        entry = { threadId, addonName, runtime, suspendedTime, lifetime }   
+        table.insert( completedThreads, entry) 
         end
-        local entry = { threadId, addonName, runtime, suspendedTime, lifetime }
-        return entry, result
-    end
+    return completedThreads, result
 end
--- RETURNS: table of metric entries for each thread in the TCB where each
---          entry = { threadId, addonName, runtime, suspendedTime, lifetime }
---          result:
-function thread:mgmtGetThreadTable()
-    local metricsTable = {}
-    for _, H in ipairs( threadControlBlock) do
-        local entry = thread:mgmtGetMetricsByThread(H)
-        table.insert( metricsTable, entry)
-    end
-    return metricsTable
-end
+
 local WoWThreadsStarted = false
 local function WoWThreadLibInit()
     local result = {SUCCESS, EMPTY_STR, EMPTY_STR}
