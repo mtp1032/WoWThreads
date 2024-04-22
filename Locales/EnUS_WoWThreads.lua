@@ -38,7 +38,7 @@ if LOCALE == "enUS" then
 
  	-- Generic Error MessageS
 	L["INPUT_PARM_NIL"]		= "[ERROR] Input parameter nil. "
-	L["INVALID_TYPE"]		= "[ERROR] Input datatype invalid. Expected %s. Got %s "
+	L["INVALID_TYPE"]		= "[ERROR] Input datatype invalid, %s. Expected %s."
 
 	-- Thread specific messages
 	L["HANDLE_NIL"] 		= "[ERROR] Thread handle nil. "
