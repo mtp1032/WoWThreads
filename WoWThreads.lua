@@ -199,7 +199,7 @@ local function signalIsValid(signal)
     end
     if type(signal) ~= "number" then
         isValid = false
-        errorMsg = sprintf(L["INVALID_TYPE"], type(signal))
+        errorMsg = sprintf(L["INVALID_TYPE"], type(signal), "number")
     end
     if not signalInRange(signal) then
         isValid = false
@@ -299,11 +299,11 @@ function thread:create(yieldTicks, threadFunction, ...)
     local errorMsg = nil
     if utils:debuggingIsEnabled() then
         if type(yieldTicks) ~= "number" then
-            errorMsg = sprintf(L["INVALID_TYPE"], type(ticks))
+            errorMsg = sprintf(L["INVALID_TYPE"], type(ticks), "number")
             error(errorMsg)
         end
         if type(threadFunction) ~= "function" then
-            errorMsg = sprintf(L["INVALID_TYPE"], type(threadFunction))
+            errorMsg = sprintf(L["INVALID_TYPE"], type(threadFunction), "function")
             error(errorMsg)
         end
     end
