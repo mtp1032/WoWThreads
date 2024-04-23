@@ -341,7 +341,36 @@ function calculateStats(values)
 
     return mean, variance, stdDev
 end
+--[[ 
+-- Check if a file path is provided
+local inputFilePath = arg[1]
+if not inputFilePath then
+    print("Error: No input file provided.")
+    print("Usage: lua " .. arg[0] .. " <path_to_lua_file>")
+    os.exit(1)
+end
 
+function utils:lua_filter( inputFile )
+-- Read the entire file content
+local content = inputFile
+
+-- Process the Lua file to format comments for Doxygen
+content = content:gsub("-%-%-%- @brief", "/** \\brief")
+content = content:gsub("-%-%-%- @", "/** @")
+content = content:gsub("-%-%- @param ([^%s]+) ([^:]+):", " * \\param %1 %2")
+content = content:gsub("-%-%- @return", " * \\return")
+content = content:gsub("-%-%-%-", " * ")
+content = content:gsub("([^\\])%s*%* %/", "%1 */") -- Adjust line ends to close Doxygen comments
+
+-- Save the modified content back to file or output it directly
+-- Uncomment the following lines to write back to the file, or use another output method as needed
+-- file = io.open(inputFilePath, "w")
+-- file:write(content)
+-- file:close()
+
+-- For debugging, you might want to print the content to stdout
+print(content)
+ ]]
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end

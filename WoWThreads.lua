@@ -95,7 +95,7 @@ local signalNameTable = {
 -- ***********************************************************************
 -- *                    LOCAL FUNCTIONS                                  *
 -- ***********************************************************************
--- Returns: running thread, threadId. nil, -1 if thread not found.
+-- @returns running thread, threadId. nil, -1 if thread not found.
 local function getRunningHandle()
     -- only one thread can be "running"
     for _, H in ipairs(threadControlBlock) do
@@ -109,9 +109,6 @@ local function getRunningHandle()
     -- in the TCB.
     return nil, nil
 end
--- @Description: Creates a table of thread attributes called a thread handle.
--- @params:
--- @returns: the table of thread attributes.
 local function createHandle(ticks, threadFunction )
 
     if ticks < DEFAULT_YIELD_TICKS then
@@ -263,7 +260,7 @@ local function getSignal()
     end
     return sigEntry[1], sigEntry[2], nil
 end
--- Returns: void
+-- @returns void
 local function startTimer(CLOCK_INTERVAL)
     scheduleThreads()
 
@@ -274,12 +271,12 @@ local function startTimer(CLOCK_INTERVAL)
         end
     )
 end
--- Returns: TCB thread count.
+-- @returns TCB thread count.
 local function insertHandleIntoTCB(H)
     table.insert(threadControlBlock, H)
     return #threadControlBlock
 end
--- Returns: Handle's coroutine
+-- @returns Handle's coroutine
 local function getCoroutine(H)
     return H[TH_COROUTINE]
 end
@@ -293,8 +290,10 @@ end
 -- ============================================================================
 --              PUBLIC (EXPORTED) METHODS
 -- ============================================================================
--- Description: Create a new thread. Thread context not required.
--- Returns: (handle) thread_h
+--- @brief Creates a thread handle. Thread context not required.
+-- @param ticks (number) the number of clock ticks for which the thread
+-- @param threadFunction (function) the function to be executed by the thread
+-- @returnsThe thread handle (table) or nil if the handle could not be created
 function thread:create(yieldTicks, threadFunction, ...)
     local errorMsg = nil
     if utils:debuggingIsEnabled() then
@@ -319,9 +318,9 @@ function thread:create(yieldTicks, threadFunction, ...)
     utils:dbgPrint( "NUM_HANDLE_ENTRIES", #H )
     return H, H[TH_UNIQUE_ID]
 end
--- Description: yields execution of the number of ticks by the yieldTicks
--- parameter specified in thread:create()
--- RETURNS; void
+--- @brief yields the processor to the next thread. Thread context required.
+-- @param specified in thread:create()
+-- @returnsNone
 function thread:yield()
     local beforeYieldTicks = ACCUMULATED_TICKS
 
@@ -338,23 +337,20 @@ function thread:yield()
     H[TH_ACCUM_YIELD_TICKS] = H[TH_ACCUM_YIELD_TICKS] + numYieldTicks
     beforeTicks = 0
 end
--- Description: delays a thread by the specified number of ticks. Thread
--- context required.
--- Returns: None 
+--- @brief delays a thread by the specified number of ticks. Thread context required.
+-- @returnsNone 
 function thread:delay(delayTicks)
     local H = getRunningHandle()
     H[TH_REMAINING_TICKS] = delayTicks + H[TH_REMAINING_TICKS]
     coroutine.suspend(H[TH_COROUTINE])
 end
--- Description: returns the callingthread's handle. Thread context
--- required
--- Returns the calling thread's handle.
+--- @brief returns the callingthread's handle. Thread context required
+-- @returns the calling thread's handle.
 function thread:getSelf()
     return getRunningHandle()
 end
--- @Description: returns the thread's numerical Id. Thread
--- contxt is required.
--- Returns: (number) threadId
+--- @brief returns the thread's numerical Id. Thread context required.
+-- @returns (number) threadId
 function thread:getId(thread_h)
     local threadId = nil
 
@@ -367,16 +363,14 @@ function thread:getId(thread_h)
 
     return thread_h[TH_UNIQUE_ID]
 end
--- Description: Returns the handle of the calling thread. Thread
--- context required.
--- Returns: (handle) thread_h, (number) threadId
+--- @brief Returns the handle of the calling thread. Thread context required.
+-- @returns (handle) thread_h, (number) threadId
 function thread:self()
     local self_h, selfId = getRunningHandle()
     return self_h, selfId
 end
--- Description: determines whether two threads are the same.
--- Thread context required.
--- Returns: (boolean) true if equal
+--- @brief determines whether two threads are the same. Thread context required.
+-- @returns (boolean) true if equal
 function thread:areEqual(H1, H2)
     local errorMsg = nil
     if H1 == nil or H2 == nil then
@@ -388,9 +382,8 @@ function thread:areEqual(H1, H2)
     handleIsValid(H2)
     return H1[TH_UNIQUE_ID] == H2[TH_UNIQUE_ID]
 end
--- Description: gets the specified thread's parent. Thread context
--- required.
--- Returns: nil if thread has no parent.
+--- @brief gets the specified thread's parent. Thread context required.
+-- @returns nil if thread has no parent.
 function thread:getParent(thread_h)
     -- if thread_h is nil then this is equivalent to "getMyParent"
     if thread_h ~= nil then
@@ -401,9 +394,8 @@ function thread:getParent(thread_h)
 
     return thread_h[TH_PARENT]
 end
--- Description: gets a table of the specified thread's children.
--- Thread context required.
--- Returns: (table) childThreads
+--- @brief gets a table of the specified thread's children. Thread context required.
+-- @returns (table) childThreads
 function thread:getChildThreads(thread_h)
     -- if thread_h is nil then this is equivalent to "getMyParent"
     if thread_h ~= nil then
@@ -414,10 +406,9 @@ function thread:getChildThreads(thread_h)
 
     return thread_h[TH_CHILDREN]
 end
--- Description: gets the specified thread's execution state. If nil, the
--- thread is currently executing and "running" is returned. Thread
+--- @brief gets the thread handle and state of the specified thread. Thread context required..
 -- context required.
--- Returns: (string) state ( = "completed", "suspended", "queued", "failed", "running" ).
+-- @returns thread state (string) = "completed", "suspended", "queued", "failed", "running" .
 function thread:getExecutionState(thread_h)
     if thread_h ~= nil then
         handleIsValid(thread_h)
@@ -427,11 +418,11 @@ function thread:getExecutionState(thread_h)
     local status = coroutine.status(H[TH_COROUTINE])
     return status
 end
--- Description: sends a signal to the specified thread.
--- Thread context required.
--- Returns: signal, sender_h (SIG_NONE_PENDING if thread's signal queue is empty.)
--- NOTE: signals are returned in the order they are received (FIFO).
-function thread:sendSignal(receiver_h, signal, ...)
+--- @brief sends a signal to the specified thread. Thread context NOT required.
+-- @param (handle) target_h: the thread to which the signal is to be sent. 
+-- @param (number) signal
+-- @returns None
+function thread:sendSignal( target_h, signal, ...)
     local isValid, errorMsg = signalIsValid(signal)
     if not isValid then
         error(errorMsg)
@@ -444,9 +435,8 @@ function thread:sendSignal(receiver_h, signal, ...)
     receiver_h[TH_SIGNAL_STACK]:push(sigEntry)
 end
 
--- Description: retrieves a signal sent to the calling thread.
--- Thread context required.
--- Returns: (number) signal, (handle) sender_h, data
+--- @brief retrieves a signal sent to the calling thread. Thread context required.
+-- @returns (number) signal, (handle) sender_h, data
 function thread:getSignal()
     local signal = SIG_NONE_PENDING
     local sender_h = ""
@@ -454,9 +444,8 @@ function thread:getSignal()
     signal, sender_h, data = getSignal()
     return signal, sender_h, data
 end
--- Description: gets the string name of the specified signal.
--- Thread context required.
--- Returns: (string) signalName.
+--- @brief gets the string name of the specified signal. Thread context NOT required.
+-- @returns (string) signalName.
 function thread:getSignalName(signal)
     local isValid, errorMsg = signalIsValid(signal)
     if not isValid then
@@ -465,8 +454,8 @@ function thread:getSignalName(signal)
     end
     return signalNameTable[signal]
 end
--- Description: gets the thread's execution state.
--- Returns: the specified thread's state as either "dead", "running", "suspended"
+--- @brief gets the thread's execution state.
+-- @returns the specified thread's state as either "dead", "running", "suspended"
 function thread:getState(thread_h)
     if thread_h ~= nil then
         handleIsValid(thread_h)
@@ -476,20 +465,22 @@ function thread:getState(thread_h)
     return coroutine.status(thread_h[TH_COROUTINE])
 end
 ------------------------- MANAGEMENT INTERFACE --------------------
--- Returns: table of metric entries were each entry is
---      entry = { threadId, runtime, suspendedTime, lifetime }
-function thread:getCongestion(H)
-    local threadId = H[TH_UNIQUE_ID]
-    local suspendedTicks = H[TH_ACCUM_YIELD_TICKS]
-    local lifetimeTicks = H[TH_LIFETIME_TICKS]
-    local yieldCount = H[TH_YIELD_COUNT]
+--- @brief get the metrics required to calculate overhead.
+-- @param (handle) thread_h
+-- @returns entry = { threadId, idealTotalYieldTicks, realTotalYieldTicks }
+function thread:getCongestion(thread_h)
+    local threadId          = thread_h[TH_UNIQUE_ID]
+    local suspendedTicks    = thread_h[TH_ACCUM_YIELD_TICKS]
+    local lifetimeTicks     = thread_h[TH_LIFETIME_TICKS]
+    local yieldCount        = thread_h[TH_YIELD_COUNT]
 
-    local runtimeTicks = lifetimeTicks - suspendedTicks
-    local yieldInterval = H[TH_DURATION_TICKS]
-    idealTotalYieldTicks = yieldCount * yieldInterval
-    realTotalYieldTicks = yieldCount * suspendedTicks
+    local runtimeTicks  = lifetimeTicks - suspendedTicks
+    local yieldInterval     = thread_h[TH_DURATION_TICKS]
+    idealTotalYieldTicks    = yieldCount * yieldInterval
+    realTotalYieldTicks     = yieldCount * suspendedTicks
+
     efficiency = idealTotalYieldTicks - (1 - (idealTotalYieldTicks) / realTotalYieldTicks)
-    -- CALCULATE THE CONGESTION METRIC
+
     local entry = {}
 
     return entry
