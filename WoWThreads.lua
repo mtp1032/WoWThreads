@@ -293,6 +293,7 @@ end
 --- @brief Creates a thread handle. Thread context not required.
 -- @param ticks (number) the number of clock ticks for which the thread
 -- @param threadFunction (function) the function to be executed by the thread
+-- @param ... (any) any arguments to be passed to the thread's function
 -- @returnsThe thread handle (table) or nil if the handle could not be created
 function thread:create(yieldTicks, threadFunction, ...)
     local errorMsg = nil
@@ -319,7 +320,7 @@ function thread:create(yieldTicks, threadFunction, ...)
     return H, H[TH_UNIQUE_ID]
 end
 --- @brief yields the processor to the next thread. Thread context required.
--- @param specified in thread:create()
+-- @param None
 -- @returnsNone
 function thread:yield()
     local beforeYieldTicks = ACCUMULATED_TICKS
@@ -338,6 +339,7 @@ function thread:yield()
     beforeTicks = 0
 end
 --- @brief delays a thread by the specified number of ticks. Thread context required.
+-- @param delayTicks (number): the number of ticks to delay
 -- @returnsNone 
 function thread:delay(delayTicks)
     local H = getRunningHandle()
@@ -345,11 +347,13 @@ function thread:delay(delayTicks)
     coroutine.suspend(H[TH_COROUTINE])
 end
 --- @brief returns the callingthread's handle. Thread context required
+-- @param None
 -- @returns the calling thread's handle.
 function thread:getSelf()
     return getRunningHandle()
 end
 --- @brief returns the thread's numerical Id. Thread context required.
+-- @param thread_h (handle)
 -- @returns (number) threadId
 function thread:getId(thread_h)
     local threadId = nil
@@ -364,12 +368,15 @@ function thread:getId(thread_h)
     return thread_h[TH_UNIQUE_ID]
 end
 --- @brief Returns the handle of the calling thread. Thread context required.
+-- @param None
 -- @returns (handle) thread_h, (number) threadId
 function thread:self()
     local self_h, selfId = getRunningHandle()
     return self_h, selfId
 end
---- @brief determines whether two threads are the same. Thread context required.
+--- @brief determines whether two thread handles are identical. Thread context required.
+-- @param H1 (handle)
+-- @param H2 (handle)
 -- @returns (boolean) true if equal
 function thread:areEqual(H1, H2)
     local errorMsg = nil
@@ -383,6 +390,7 @@ function thread:areEqual(H1, H2)
     return H1[TH_UNIQUE_ID] == H2[TH_UNIQUE_ID]
 end
 --- @brief gets the specified thread's parent. Thread context required.
+-- @param thread_h (handle)
 -- @returns nil if thread has no parent.
 function thread:getParent(thread_h)
     -- if thread_h is nil then this is equivalent to "getMyParent"
@@ -395,6 +403,7 @@ function thread:getParent(thread_h)
     return thread_h[TH_PARENT]
 end
 --- @brief gets a table of the specified thread's children. Thread context required.
+-- @param thread_h (handle)
 -- @returns (table) childThreads
 function thread:getChildThreads(thread_h)
     -- if thread_h is nil then this is equivalent to "getMyParent"
@@ -406,8 +415,8 @@ function thread:getChildThreads(thread_h)
 
     return thread_h[TH_CHILDREN]
 end
---- @brief gets the thread handle and state of the specified thread. Thread context required..
--- context required.
+--- @brief gets the thread handle and state of the specified thread. Thread context required.
+-- @param thread_h (handle)
 -- @returns thread state (string) = "completed", "suspended", "queued", "failed", "running" .
 function thread:getExecutionState(thread_h)
     if thread_h ~= nil then
@@ -421,8 +430,11 @@ end
 --- @brief sends a signal to the specified thread. Thread context NOT required.
 -- @param (handle) target_h: the thread to which the signal is to be sent. 
 -- @param (number) signal
+-- @param ... (varargs). data to be passed to the receiving thread
 -- @returns None
 function thread:sendSignal( target_h, signal, ...)
+    local args = {...}
+
     local isValid, errorMsg = signalIsValid(signal)
     if not isValid then
         error(errorMsg)
@@ -431,11 +443,12 @@ function thread:sendSignal( target_h, signal, ...)
         return
     end
 
-    local sigEntry = {signal, receiver_h, nil}
-    receiver_h[TH_SIGNAL_STACK]:push(sigEntry)
+    local sigEntry = {signal, target_h, args }
+    target_h[TH_SIGNAL_STACK]:push(sigEntry)
 end
 
 --- @brief retrieves a signal sent to the calling thread. Thread context required.
+-- @param None
 -- @returns (number) signal, (handle) sender_h, data
 function thread:getSignal()
     local signal = SIG_NONE_PENDING
@@ -445,6 +458,7 @@ function thread:getSignal()
     return signal, sender_h, data
 end
 --- @brief gets the string name of the specified signal. Thread context NOT required.
+-- @param (number) signal
 -- @returns (string) signalName.
 function thread:getSignalName(signal)
     local isValid, errorMsg = signalIsValid(signal)
@@ -455,6 +469,7 @@ function thread:getSignalName(signal)
     return signalNameTable[signal]
 end
 --- @brief gets the thread's execution state.
+-- @param (handle) thread_h
 -- @returns the specified thread's state as either "dead", "running", "suspended"
 function thread:getState(thread_h)
     if thread_h ~= nil then
