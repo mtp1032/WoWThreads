@@ -10,7 +10,7 @@ local ADDON_NAME, WoWThreads = ...
 -- Access the Utilities Library
 local sprintf = _G.string.format
 local stackLib = _G.StackLib
-local fifoQueue = _G.FifoQueue
+local queue = _G.FifoQueue
 
 local fileName = "WoWThreads.lua"
 local LibName = "UtilsLib-1.0"
@@ -121,7 +121,8 @@ local function createHandle(ticks, threadFunction )
     H[TH_COROUTINE] = coroutine.create(threadFunction)
     H[TH_STATUS] = coroutine.status(H[TH_COROUTINE])
     H[TH_UNIQUE_ID] = THREAD_SEQUENCE_ID
-    H[TH_SIGNAL_STACK] = stackLib.Create()
+    -- H[TH_SIGNAL_STACK] = stackLib.Create()
+    H[TH_SIGNAL_STACK] = FifoQueue.new()
     H[TH_DURATION_TICKS] = ticks
     H[TH_REMAINING_TICKS] = ticks
     H[TH_ACCUM_YIELD_TICKS] = 0
@@ -254,7 +255,7 @@ local function getSignal()
 
     local sigEntry = nil
     if not H[TH_SIGNAL_STACK]:isEmpty() then
-        sigEntry = H[TH_SIGNAL_STACK]:pop()
+        sigEntry = H[TH_SIGNAL_STACK]:dequeue()
     else
         sigEntry = {SIG_NONE_PENDING, nil, nil}
     end
@@ -445,7 +446,7 @@ function thread:sendSignal( target_h, signal, ...)
     end
 
     local sigEntry = {signal, target_h, args }
-    target_h[TH_SIGNAL_STACK]:push(sigEntry)
+    target_h[TH_SIGNAL_STACK]:enqueu(sigEntry)
 end
 
 --- @brief retrieves a signal sent to the calling thread. Thread context required.
