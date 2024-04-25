@@ -1,8 +1,12 @@
 -- Stack.lua
 local Filename = "Stack.lua"
 
+local sprintf = _G.string.format
 local StackLib = {}
 
+_G.StackLib = StackLib  -- Add into the Global table
+
+-- Implements a LIFO table. Inserts and removes from the end of the table.
 function StackLib.Create()
     local stack = {items = {}, size = 0}
 
@@ -26,10 +30,6 @@ function StackLib.Create()
     return stack
 end
 
--- This is how you would expose StackLib to other parts of your addon.
--- In World of Warcraft addons, you usually directly assign to a globally accessible table.
--- For example:
-
--- USAGE
-_G.StackLib = StackLib
-
+if utils:debuggingIsEnabled() then
+    DEFAULT_CHAT_FRAME:AddMessage(fileName, 0.0, 1.0, 1.0)
+end

@@ -9,7 +9,7 @@ PROJECT_NUMBER         =
 PROJECT_BRIEF          = "Enables WoW AddOns to run asynchronously from the WoW Client"
 PROJECT_LOGO           =
 PROJECT_ICON           =
-OUTPUT_DIRECTORY       = "C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/WoWThreads"
+OUTPUT_DIRECTORY       = "C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/WoWThreads/TestDoc"
 CREATE_SUBDIRS         = NO
 CREATE_SUBDIRS_LEVEL   = 8
 ALLOW_UNICODE_NAMES    = NO
@@ -125,7 +125,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # Configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = "C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/WoWThreads"
+INPUT                  = "C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/WoWThreads/TestDoc"
 INPUT_ENCODING         = UTF-8
 INPUT_FILE_ENCODING    =
 FILE_PATTERNS          = *.lua

@@ -10,7 +10,7 @@ local ADDON_NAME, WoWThreads = ...
 -- Access the Utilities Library
 local sprintf = _G.string.format
 local stackLib = _G.StackLib
--- local UtilsLIb = _G.UtilsLib-1.0
+local fifoQueue = _G.FifoQueue
 
 local fileName = "WoWThreads.lua"
 local LibName = "UtilsLib-1.0"
