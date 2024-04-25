@@ -290,12 +290,13 @@ end
 -- ============================================================================
 --              PUBLIC (EXPORTED) METHODS
 -- ============================================================================
---- @brief Creates a thread handle. Thread context not required.
--- @param ticks (number) the number of clock ticks for which the thread
--- @param threadFunction (function) the function to be executed by the thread
--- @param ... (any) any arguments to be passed to the thread's function
--- @returnsThe thread handle (table) or nil if the handle could not be created
-function thread:create(yieldTicks, threadFunction, ...)
+--- Creates a table of thread attributes called a thread handle.
+-- @Description: This function creates a table of thread attributes called a thread handle.
+-- @params:
+--   - ticks (number): The number of ticks for the thread.
+--   - threadFunction (function): The function to be executed by the thread.
+--   - ... (any): Additional arguments to be passed to the thread function.
+-- @returns: thread handle (table):
     local errorMsg = nil
     if utils:debuggingIsEnabled() then
         if type(yieldTicks) ~= "number" then
