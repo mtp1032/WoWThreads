@@ -33,10 +33,63 @@ const searchResults = new SearchResults();
           storing this instance.  Is needed to be able to set timeouts.
    resultPath - path to use for external files
 */
+/**
+ * @description Manages the search panel's state, including hiding or showing the
+ * results window, resetting search field value, and activating or deactivating the
+ * search box based on its display style.
+ * 
+ * @param { object } name - name of the form element that triggered the `searchFunction`
+ * function, and it is used to identify the source of the search query and process
+ * its results accordingly.
+ * 
+ * @param { string } resultsPath - path where the search results are stored, and it
+ * is used to load the search results from the corresponding file when a search query
+ * is entered, by calling the `createResults` function with the correct path.
+ * 
+ * @param { string } extension - extension of the search query, and it is used to
+ * filter the search results by changing the query based on the inputted extension.
+ * 
+ * @returns { undefined` because no return statement has been defined } a JavaScript
+ * function that performs a search and displays the results in a popup window.
+ * 
+ * 		- `searchIndex`: The index of the currently selected search result.
+ * 		- `resultsPath`: A path to the directory containing the search results files.
+ * 		- `searchValue`: The value of the search field, used for searching the database.
+ * 		- `searchResults`: An instance of the `SearchResults` class, which represents
+ * the search results.
+ * 		- `lastSearchValue`: The last value entered in the search field.
+ * 		- `lastResultsPage`: The page number of the last searched results page.
+ * 		- `DOMSearchBox`: A reference to the search box HTML element.
+ * 		- `DOMPopupSearchResultsWindow`: A reference to the popup window containing the
+ * search results.
+ * 		- `DOMSearchClose`: A reference to the close button inside the popup window.
+ * 		- `DOMSearchField`: A reference to the search field HTML element.
+ * 
+ * 	The following attributes are also defined:
+ * 
+ * 		- `keyTimeout`: A variable used to handle keyboard events.
+ * 		- `isActive`: A flag indicating whether the search panel is active or not.
+ * 		- `searchActive`: A flag indicating whether the search box is in use or not.
+ */
 function SearchBox(name, resultsPath, extension) {
   if (!name || !resultsPath) {  alert("Missing parameters to SearchBox."); }
   if (!extension || extension == "") { extension = ".html"; }
 
+  /**
+   * @description Calculates the x-coordinate of an element based on its offsetWidth
+   * property and parent-child relationships.
+   * 
+   * @param { `HTMLElement`. } item - element for which the left offset position is to
+   * be calculated.
+   * 
+   * 		- `offsetWidth`: A boolean property that indicates whether the `item` has an
+   * explicit width defined or not.
+   * 		- `offsetLeft`: A number property representing the left position of the `item`
+   * relative to its parent element in the Document Object Model (DOM).
+   * 		- `offsetParent`: A reference to the parent element of the `item` in the DOM.
+   * 
+   * @returns { integer } the total offset left of the element from the starting point.
+   */
   function getXPos(item) {
     let x = 0;
     if (item.offsetWidth) {
@@ -48,6 +101,16 @@ function SearchBox(name, resultsPath, extension) {
     return x;
   }
 
+  /**
+   * @description Calculates the position of an element relative to the document's body
+   * by traversing the element's parents and adding up their offset top values.
+   * 
+   * @param { object } item - element whose `offsetTop` value is calculated to determine
+   * its position on the page.
+   * 
+   * @returns { integer } the sum of the top positions of all parent elements until the
+   * document body is reached.
+   */
   function getYPos(item) {
     let y = 0;
     if (item.offsetWidth) {
@@ -348,8 +411,24 @@ function SearchBox(name, resultsPath, extension) {
 // -----------------------------------------------------------------------
 
 // The class that handles everything on the search results page.
+/**
+ * @description Manages a search results window's navigation through children elements
+ * based on arrow key presses. It handles keyboard input and calls child element's
+ * `Focus` method to focus on the appropriate element.
+ * 
+ * @returns { boolean } a boolean indicating whether the Enter key was pressed.
+ */
 function SearchResults() {
 
+  /**
+   * @description Takes a string `search` and converts each character to an identifier
+   * using a specific algorithm. The resulting string is returned as the converted identifier.
+   * 
+   * @param { string } search - search term that the function will convert into an identifier.
+   * 
+   * @returns { string } a unique identifier formed by concatenating uppercase letters,
+   * digits, and underscores based on the input search string.
+   */
   function convertToId(search) {
     let result = '';
     for (let i=0;i<search.length;i++) {
@@ -594,14 +673,49 @@ function SearchResults() {
   }
 }
 
+/**
+ * @description Generates and appends HTML elements containing search results to an
+ * existing `div` element with the id `SRResults`.
+ * 
+ * @param { string } resultsPath - URL path where the search results links should
+ * lead to when clicked.
+ */
 function createResults(resultsPath) {
 
+  /**
+   * @description Sets attribute values for an element based on an action string provided.
+   * It adds `onkeydown`, `onkeypress`, and `onkeyup` attributes with the given action
+   * value.
+   * 
+   * @param { element. } elem - HTML element for which the key actions are to be set.
+   * 
+   * 		- `elem`: This is the HTML element to which actions will be set for key events.
+   * 		- `action`: This is the action that will be triggered when a key event occurs
+   * on the `elem`.
+   * 
+   * @param { string } action - onkeydown, onkeypress and onkeyup event actions for the
+   * specified HTML element, which are added to the element's attribute list through
+   * the setKeyActions function call.
+   */
   function setKeyActions(elem,action) {
     elem.setAttribute('onkeydown',action);
     elem.setAttribute('onkeypress',action);
     elem.setAttribute('onkeyup',action);
   }
 
+  /**
+   * @description Sets the `class` or `className` attribute of an element to a given
+   * value, `attr`.
+   * 
+   * @param { HTML Element. } elem - HTML element to which the class attribute will be
+   * set.
+   * 
+   * 		- `attr`: A string that represents the value to be assigned as the class attribute
+   * for the element.
+   * 
+   * @param { string } attr - new value of the element's `class` attribute, which is
+   * then assigned to the element using the `setAttribute()` method.
+   */
   function setClassAttr(elem,attr) {
     elem.setAttribute('class',attr);
     elem.setAttribute('className',attr);
@@ -660,6 +774,12 @@ function createResults(resultsPath) {
   });
 }
 
+/**
+ * @description 1) creates links for search results and sets their `tabIndex`, 2)
+ * adds an event listener to a search input field, 3) handles keyboard inputs to
+ * toggle the search selection window, 4) retrieves the selected name from cookies
+ * and 5) calls the `OnSelectItem` method with the corresponding ID.
+ */
 function init_search() {
   const results = document.getElementById("MSearchSelectWindow");
 

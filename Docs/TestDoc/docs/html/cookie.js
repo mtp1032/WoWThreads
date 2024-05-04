@@ -6,6 +6,19 @@
 let Cookie = {
   cookie_namespace: 'doxygen_',
 
+  /**
+   * @description Retrieves a setting value from either local storage or the document
+   * cookie, and returns it if found, or a default value otherwise.
+   * 
+   * @param { string } cookie - name of the cookie to be looked up in local or session
+   * storage.
+   * 
+   * @param { string } defVal - default value returned if the function fails to find
+   * the cookie value in the storage.
+   * 
+   * @returns { string } the value of a cookie setting, or the default value if the
+   * cookie is not found.
+   */
   readSetting(cookie,defVal) {
     if (window.chrome) {
       const val = localStorage.getItem(this.cookie_namespace+cookie) ||
@@ -28,6 +41,19 @@ let Cookie = {
     return defVal;
   },
 
+  /**
+   * @description Sets a cookie with a given name, value, and expiration time. It stores
+   * the cookie in either session storage or local storage, depending on the value of
+   * `days`.
+   * 
+   * @param { string } cookie - name of the cookie being set or updated in the documentation.
+   * 
+   * @param { string } val - value to be stored in the cookie.
+   * 
+   * @param { binary_expression } days - number of days that the cookie should be stored
+   * for, with values of 0 indicating a session cookie, -1 meaning deletion, and any
+   * other value specifying a specific storage time in milliseconds.
+   */
   writeSetting(cookie,val,days=10*365) { // default days='forever', 0=session cookie, -1=delete
     if (window.chrome) {
       if (days==0) {
@@ -44,6 +70,12 @@ let Cookie = {
     }
   },
 
+  /**
+   * @description Removes a setting from local or session storage based on the namespace
+   * and cookie provided.
+   * 
+   * @param { string } cookie - cookie to be erased from local or session storage.
+   */
   eraseSetting(cookie) {
     if (window.chrome) {
       if (localStorage.getItem(this.cookie_namespace+cookie)) {

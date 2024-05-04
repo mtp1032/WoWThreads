@@ -23,6 +23,21 @@
  @licend  The above is the entire license notice for the JavaScript code in this file
  */
 
+/**
+ * @description 1) parses a markdown file to build a navigation tree, 2) sets up event
+ * listeners for hashchange and TOC links, and 3) initializes the main layout of the
+ * navigation tree.
+ * 
+ * @param { string } toroot - 0-based index of the root node in the Nav Tree structure,
+ * which is used to determine the appropriate breadcrumbs and children data for the
+ * current page.
+ * 
+ * @param { string } relpath - path to the current page relative to the root directory,
+ * and it is used to determine the appropriate child node to expand when clicking on
+ * a navigation link.
+ * 
+ * @returns { object } a navigable tree of HTML links to pages and subpages.
+ */
 function initNavTree(toroot,relpath) {
   let navTreeSubIndices = [];
   const ARROW_DOWN = '&#9660;';

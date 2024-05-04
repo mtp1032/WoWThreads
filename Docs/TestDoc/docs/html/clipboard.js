@@ -50,6 +50,10 @@ $(function() {
         navigator.clipboard.writeText(text);
         this.classList.add("success")
         this.innerHTML = clipboard_successIcon
+        /**
+         * @description Removes the "success" class from an element and replaces its innerHTML
+         * with a clipart icon of a computer file.
+         */
         window.setTimeout(() => { // switch back to normal icon after timeout
             this.classList.remove("success")
             this.innerHTML = clipboard_icon
