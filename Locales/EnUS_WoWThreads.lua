@@ -1,24 +1,25 @@
 -- Filename: EnUs_WoWThreads.lua
 local ADDON_NAME, _ = ...
-
-local sprintf = _G.string.format
 local fileName = "EnUS_WoWThreads.lua"
+local sprintf = _G.string.format
 
-local version = utils:getVersion()
-local libraryName = sprintf("EnUSlib-%s", version)
+-- get the uitls library
+local UtilsLib = LibStub("UtilsLib")
+local utils = UtilsLib
 
+-- Create a new library instance, or get the existing one
 local LibStub = LibStub
-local MAJOR, MINOR = libraryName, 1             -- Major and minor version numbers
-local EnUSlib, _ = LibStub:NewLibrary(MAJOR, MINOR)
-if not EnUSlib then return end   
+local LIBSTUB_MAJOR, LIBSTUB_MINOR = "EnUSlib", 1
+local LibStub = LibStub -- If LibStub is not global, adjust accordingly
+local EnUSlib, oldVersion = LibStub:NewLibrary(LIBSTUB_MAJOR, LIBSTUB_MINOR)
+if not EnUSlib then return end
+local enUs = EnUSlib
 
 local expansionName = utils:getExpansionName()
 local version = utils:getVersion()
 
-function EnUSlib:getLIbName()
-	return libraryName
-end
-
+local version = utils:getVersion()
+local clockInterval = 1 / GetFramerate() * 1000
 -- =====================================================================
 --                      LOCALIZATION
 -- =====================================================================
@@ -33,26 +34,27 @@ local LOCALE = GetLocale()
 if LOCALE == "enUS" then
 
 	-- WoWThreads Localizations
+    L["CLOCK_INTERVAL"]     = sprintf("Clock Interval: %0.3f ms", clockInterval )
 	L["VERSION"] 			= version
-	L["ADDON_MESSAGE"]		= sprintf("%s (%s) loaded. ",  libraryName, expansionName )
-
+	L["ADDON_MESSAGE"]		= sprintf("%s (%s) loaded. ",  "WoWThreads-1.0", expansionName )
+    L["ERROR_MSG_FRAME_TITLE"] = "Error Messages - WoWThreads-1.0"
  	-- Generic Error MessageS
-	L["INPUT_PARM_NIL"]		= "[ERROR] Input parameter nil. "
-	L["INVALID_TYPE"]		= "[ERROR] Input datatype invalid, %s. Expected %s."
+	L["INPUT_PARM_NIL"]		= "%s ERROR: Input parameter nil. "
+	L["INVALID_TYPE"]		= "%s ERROR: Input datatype invalid, %s. Expected %s."
 
 	-- Thread specific messages
-	L["HANDLE_NIL"] 		= "[ERROR] Thread handle nil. "
-	L["INVALID_EXE_STATE"]	= "[ERROR] Thread[%d] is %s. "
-	L["HANDLE_ILL_FORMED"]	= "[ERROR] Thread handle ill-formed."
-	L["HANDLE_NOT_A_THREAD"] = "[ERROR] Specified Thread handle does not reference a coroutine."
+	L["HANDLE_NIL"] 		= "%s ERROR: Thread handle nil. "
+	L["INVALID_EXE_STATE"]	= "%s ERROR: Thread[%d] is %s. "
+	L["HANDLE_ILL_FORMED"]	= "%s ERROR: Thread handle ill-formed."
+	L["HANDLE_NOT_A_THREAD"] = "%s ERROR: Specified Thread handle does not reference a coroutine."
 
-	L["INVALID_EXE_CONTEXT"] = "[ERROR] Operation requires thread context. "
-	L["HANDLE_INVALID"]		= "[ERROR] Invalid handle. Handle is likely 'dead.' "
-    L["RESUME_FAILED"]      = "[ERROR] Failed to resume thread[%d]: "
+	L["INVALID_EXE_CONTEXT"] = "%s ERROR: Operation requires thread context. "
+	L["HANDLE_INVALID"]		= "%s ERROR: Invalid handle. Handle is likely 'dead.' "
+    L["RESUME_FAILED"]      = "%s ERROR: Failed to resume thread[%d]: "
 	
-	L["SIGNAL_QUEUE_INVALID"]	= "[ERROR] Thread[%d] Invalid signal queue. "
-	L["SIGNAL_OUT_OF_RANGE"]	= "[ERROR] Signal is out of range. "
-    L["SIGNAL_INVALID"]			= "[ERROR] Signal is unknown."
+	L["SIGNAL_QUEUE_INVALID"]	= "%s ERROR: Thread[%d] Invalid signal queue. "
+	L["SIGNAL_OUT_OF_RANGE"]	= "%s ERROR: Signal is out of range. "
+    L["SIGNAL_INVALID"]			= "%s ERROR: Signal is unknown."
 end
 if LOCALE == "frFR" then
 	-- WoWThreads Localizations
@@ -227,22 +229,22 @@ if LOCALE == "esES" then
     L["ADDON_MESSAGE"]        = sprintf("%s (%s) cargado. ", libraryName, expansionName )
 
     -- Mensajes de Error Genéricos
-    L["INPUT_PARM_NIL"]       = "[ERROR] Parámetro de entrada nulo. "
-    L["INVALID_TYPE"]         = "[ERROR] Tipo de dato de entrada inválido. Se esperaba %s "
+    L["INPUT_PARM_NIL"]       = "%s ERROR: Parámetro de entrada nulo. "
+    L["INVALID_TYPE"]         = "%s ERROR: Tipo de dato de entrada inválido. Se esperaba %s "
 
     -- Mensajes específicos de hilos
-    L["HANDLE_NIL"]           = "[ERROR] Identificador del hilo nulo. "
-    L["INVALID_EXE_STATE"]    = "[ERROR] Hilo[%d] está %s. "
-    L["HANDLE_ILL_FORMED"]    = "[ERROR] Identificador del hilo mal formado."
-    L["HANDLE_NOT_A_THREAD"]  = "[ERROR] El identificador de hilo especificado no hace referencia a una coroutina."
+    L["HANDLE_NIL"]           = "%s ERROR: Identificador del hilo nulo. "
+    L["INVALID_EXE_STATE"]    = "%s ERROR: Hilo[%d] está %s. "
+    L["HANDLE_ILL_FORMED"]    = "%s ERROR: Identificador del hilo mal formado."
+    L["HANDLE_NOT_A_THREAD"]  = "%s ERROR: El identificador de hilo especificado no hace referencia a una coroutina."
 
-    L["INVALID_EXE_CONTEXT"]  = "[ERROR] La operación requiere contexto de hilo. "
-    L["HANDLE_INVALID"]       = "[ERROR] Identificador inválido. El identificador probablemente esté 'muerto'. "
-    L["RESUME_FAILED"]        = "[ERROR] Fallo al reanudar el hilo[%d]: "
+    L["INVALID_EXE_CONTEXT"]  = "%s ERROR: La operación requiere contexto de hilo. "
+    L["HANDLE_INVALID"]       = "%s ERROR: Identificador inválido. El identificador probablemente esté 'muerto'. "
+    L["RESUME_FAILED"]        = "%s ERROR: Fallo al reanudar el hilo[%d]: "
     
-    L["SIGNAL_QUEUE_INVALID"] = "[ERROR] Hilo[%d] Cola de señales inválida. "
-    L["SIGNAL_OUT_OF_RANGE"]  = "[ERROR] Señal fuera de rango. "
-    L["SIGNAL_INVALID"]       = "[ERROR] Señal desconocida."
+    L["SIGNAL_QUEUE_INVALID"] = "%s ERROR: Hilo[%d] Cola de señales inválida. "
+    L["SIGNAL_OUT_OF_RANGE"]  = "%s ERROR: Señal fuera de rango. "
+    L["SIGNAL_INVALID"]       = "%s ERROR: Señal desconocida."
 end
 
 if utils:debuggingIsEnabled() then

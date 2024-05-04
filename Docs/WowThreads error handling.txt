@@ -1,0 +1,53 @@
+WowThreads error handling
+To effectively manage error handling in your World of Warcraft coroutine-based threads library, you should aim for a strategy that 
+provides clarity and control to the client while maintaining the robustness of your library. Here’s a step-by-step plan:
+
+Error Propagation: Since an error in the coroutine causes it to stop executing and enter a dead state, you should catch these errors at the 
+point they occur and then propagate them to the client. This can be done using pcall or xpcall in Lua to handle exceptions safely.
+Return Status and Messages: 
+Modify your threading functions to return a status flag and an error message if applicable. This dual-return approach (status and optional 
+error message) is a common pattern in Lua and is very useful for error handling without causing abrupt stops in the client application.
+Status Flag: 
+The status returned should be a boolean indicating success (true) or failure (false).
+Error Message: In case of an error, alongside the false status, return a descriptive error message that the client can use to determine 
+the nature of the problem and decide on the appropriate response.
+Handling Dead Coroutines: Provide a mechanism to either restart or cleanly terminate dead coroutines, based on the client's choice. This 
+could be through an API function like restartCoroutine(coroutineId) or cleanupCoroutine(coroutineId).
+Documentation and Examples: Clearly document how errors are handled and provide examples showing how clients can use the status and error 
+messages to manage errors gracefully in their applications.
+Utility Functions: Optionally, provide utility functions that can check the state of a coroutine (isCoroutineActive(coroutineId)) or 
+retrieve the last error message without needing to run the coroutine again.
+Here is a simplified code example to illustrate how you might implement these recommendations:
+
+function safeThreadFunction(func, ...)
+    local function threadErrorHandler(err)
+        return false, "Error in coroutine: " .. tostring(err)
+    end
+
+    local co = coroutine.create(func)
+    -- Wrap coroutine.resume to catch errors safely
+    local status, result = xpcall(coroutine.resume, threadErrorHandler, co, ...)
+    if not status then
+        return false, result  -- result contains the error message from threadErrorHandler
+    else
+        if coroutine.status(co) == "dead" then
+            return false, "Coroutine has unexpectedly terminated."
+        end
+        return true, result  -- result from coroutine function
+    end
+end
+
+-- Example of client code handling errors
+local success, resultOrError = safeThreadFunction(targetFunction, arg1, arg2)
+if not success then
+    print("Failed to execute thread function:", resultOrError)
+else
+    print("Thread function executed successfully:", resultOrError)
+end
+
+This setup empowers the client to handle errors according to their specific needs, enhances the reliability of your library, and maintains the non-preemptive, cooperative multitasking model typical of Lua coroutines.
+
+Suggestions for your next steps:
+a. Implement the error handling strategy and test it with various coroutine functions to ensure reliability.
+b. Document the error handling approach and update your API documentation accordingly.
+c. Gather feedback from early adopters to refine the error handling if necessary.

@@ -1,15 +1,12 @@
 local ADDON_NAME, _ = ...
 
 local sprintf = _G.string.format
-local libName = utils:getLibName()
 
-local Major =libName
-local thread = LibStub:GetLibrary( Major )
-if not thread then 
-    return 
-end
------------------- BEGIN Options Panel -----------------------------
-local sprintf = _G.string.format
+-- These are the two libraries supporting WoWThreads
+local UtilsLib = LibStub("UtilsLib")
+local utils = UtilsLib
+
+local EnUSlib = LibStub("EnUSlib")
 
 -- https://wow.gamepedia.com/API_Frame_SetBackdrop
 -- https://wow.gamepedia.com/EdgeFiles
@@ -83,7 +80,7 @@ local function showExecutionOptions( frame, yPos )
 	debuggingButton:SetPoint("TOPLEFT", 20, yPos )
     debuggingButton.tooltip = L["TOOLTIP_DEBUGGING"]
 	_G[debuggingButton:GetName().."Text"]:SetText(L["ENABLE_DEBUGGING"])
-    strictDebugging = thread:debuggingIsEnabled()
+    strictDebugging = utils:debuggingIsEnabled()
     debuggingButton:SetChecked( strictDebugging )
 	debuggingButton:SetScript("OnClick", 
 		function(self)
@@ -94,7 +91,7 @@ local function showExecutionOptions( frame, yPos )
     dataCollectionButton:SetPoint("TOPLEFT", 290, yPos)
     dataCollectionButton.tooltip = L["TOOTIP_DATA_COLLECTION"]
 	_G[dataCollectionButton:GetName().."Text"]:SetText(L["ENABLE_DATA_COLLECTION"])
-    dataCollection = thread:dataCollectionIsEnabled()
+    dataCollection = utils:dataCollectionIsEnabled()
 	dataCollectionButton:SetChecked( dataCollection )
 	dataCollectionButton:SetScript("OnClick", 
 		function(self)
@@ -162,8 +159,8 @@ local function createOptionsPanel()
 	frame.hide:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
 	frame.hide:SetScript("OnClick",
 		function( self )
-            if strictDebugging then thread:enableDebugging() else thread:disableDebugging() end
-            if dataCollection then thread:enableDataCollection() else thread:disableDataCollection() end
+            if strictDebugging then utils:enableDebugging() else utils:disableDebugging() end
+            if dataCollection then utils:enableDataCollection() else utils:disableDataCollection() end
 			frame:Hide()
 		end)
 

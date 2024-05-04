@@ -1,9 +1,14 @@
 -- Filename: UtilsLib.lua
 local ADDON_NAME, _ = ...
 
--- local UtilsLib = {}
--- local utils = UtilsLib
+-- Make sure the LibStub is available
+local LIBSTUB_MAJOR, LIBSTUB_MINOR = "UtilsLib", 1
+local LibStub = LibStub -- If LibStub is not global, adjust accordingly
 
+-- Create a new library instance, or get the existing one
+local UtilsLib, oldVersion = LibStub:NewLibrary(LIBSTUB_MAJOR, LIBSTUB_MINOR)
+if not UtilsLib then return end -- No need to update if the version loaded is newer
+local utils = UtilsLib
 -- =================================================
 --              PROLOGUE
 -- =================================================
@@ -25,16 +30,11 @@ local function getExpansionName( )
     return expansionNames[expansionLevel] -- Directly return the mapped name
 end
 
+local libName = "UtilsLib"
 local expansionName = getExpansionName()
 local version       = C_AddOns.GetAddOnMetadata( ADDON_NAME, "Version")
-local libraryName   = sprintf("%s-%s", "UtilsLib", version )
+local libraryName   = sprintf("%s-%s", libName, version )
 --                      Initialize the library
-local LibStub = LibStub                     -- Assuming LibStub is globally available
-local MAJOR, MINOR = libraryName, 1             -- Major and minor version numbers
-local UtilsLib, oldMinor = LibStub:NewLibrary(MAJOR, MINOR)
-if not UtilsLib then return end             -- No need to update if the loaded version is newer or the same
-utils = UtilsLib
-
 function utils:getVersion()
     return version
 end
@@ -283,12 +283,12 @@ local function createMsgFrame(title)
 end
 function utils:postMsg( msg )
     if userMsgFrame == nil then
-        userMsgFrame = createMsgFrame( "WowThreads-1.0" )
+        userMsgFrame = createMsgFrame( "Error Message (WoWThreads-1.0)" )
     end
 	userMsgFrame.Text:Insert( msg )
 	userMsgFrame:Show()
 end
-local function dbgPrefix( stackTrace )
+function utils:dbgPrefix( stackTrace )
 	if stackTrace == nil then stackTrace = debugstack(2) end
 	
 	local pieces = {strsplit( ":", stackTrace, 5 )}
@@ -300,11 +300,12 @@ local function dbgPrefix( stackTrace )
 	local fileName = string.sub( fileName, 1, strLen - 2 )
 	local names = strsplittable( "\/", fileName )
 	local lineNumber = tonumber(pieces[2])
+
 	local location = sprintf("[%s:%d] ", names[#names], lineNumber)
 	return location
 end
 function utils:dbgPrint(...)
-    dbgPrefix( debugstack(2) )
+    local prefix = utils:dbgPrefix( debugstack(2) )
 
     -- The '...' collects all extra arguments passed to the function
     local args = {...}  -- This creates a table 'args' containing all extra arguments
@@ -341,39 +342,32 @@ function calculateStats(values)
 
     return mean, variance, stdDev
 end
---[[ 
--- Check if a file path is provided
-local inputFilePath = arg[1]
-if not inputFilePath then
-    print("Error: No input file provided.")
-    print("Usage: lua " .. arg[0] .. " <path_to_lua_file>")
-    os.exit(1)
+local function parseErrorMsg( inputString )
+    if inputString == nil then
+        return "No Error String Provided"
+    end
+    -- Lua script to find the position of the last colon in a string
+    local inputString = "your:string:with:colons" -- Example string
+    local pos = 0  -- Start search position
+    local lastColon = -1  -- Default position if no colons are found
+
+    -- Loop to find the last colon
+    while true do
+        local start, ends = string.find(inputString, ":", pos + 1) -- Find ':' starting from pos+1
+        if not start then 
+            break -- If no more colons, exit the loop
+        end  
+        lastColon = start  -- Update lastColon with the new found position
+        pos = start        -- Update pos to move the search start point forward
+    end
 end
 
-function utils:lua_filter( inputFile )
--- Read the entire file content
-local content = inputFile
-
--- Process the Lua file to format comments for Doxygen
-content = content:gsub("-%-%-%- @brief", "/** \\brief")
-content = content:gsub("-%-%-%- @", "/** @")
-content = content:gsub("-%-%- @param ([^%s]+) ([^:]+):", " * \\param %1 %2")
-content = content:gsub("-%-%- @return", " * \\return")
-content = content:gsub("-%-%-%-", " * ")
-content = content:gsub("([^\\])%s*%* %/", "%1 */") -- Adjust line ends to close Doxygen comments
-
--- Save the modified content back to file or output it directly
--- Uncomment the following lines to write back to the file, or use another output method as needed
--- file = io.open(inputFilePath, "w")
--- file:write(content)
--- file:close()
-
--- For debugging, you might want to print the content to stdout
-print(content)
- ]]
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
---======================================================================
---                          PROTOTYPE FUNCTIONS
--- =====================================================================
+
+--================================================
+--                  TESTS
+-- =================================================
+
+

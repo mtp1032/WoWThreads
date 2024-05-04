@@ -1,15 +1,19 @@
--- FifoQueue.lua
+ -- FifoQueue.lua
 local fileName = "FifoQueue.lua"
-
 local sprintf = _G.string.format
 
+-- Get the UtilLIb library
+local UtilsLib = LibStub("UtilsLib")
+local utils = UtilsLib
+-- Create a new library instance, or get the existing one
 local FifoQueue = {}
-_G.FifoQueue = FifoQueue    -- Add to the Global space
+local LIBSTUB_MAJOR, LIBSTUB_MINOR = "FifoQueue", 1
+local LibStub = LibStub -- If LibStub is not global, adjust accordingly
+local FifoQueue, oldVersion = LibStub:NewLibrary(LIBSTUB_MAJOR, LIBSTUB_MINOR)
+if not FifoQueue then return end -- No need to update if the version loaded is newer
+local fifo = FifoQueue
 
 -- Define the FifoQueue type with its methods
-local FifoQueue = {}
-FifoQueue.__index = FifoQueue
-
 function FifoQueue.new()
     local self = setmetatable({}, FifoQueue)
     self.front = 1
@@ -29,7 +33,7 @@ end
 -- @returns: see above
 function FifoQueue:dequeue()
     if self:isEmpty() then
-        error("FifoQueue is empty")
+        return true
     else
         local value = self.items[self.front]
         self.items[self.front] = nil  -- Optional: clear the slot
