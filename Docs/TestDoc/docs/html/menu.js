@@ -22,7 +22,42 @@
 
  @licend  The above is the entire license notice for the JavaScript code in this file
  */
+/**
+ * @description Adds a search bar to the top navigation menu and sets up a checkbox
+ * for hiding the main menu when the search bar is opened.
+ * 
+ * @param { string } relPath - current URL path of the menu and is used to construct
+ * the search URL for searching submenus within the menu.
+ * 
+ * @param { boolean } searchEnabled - enablement of the search functionality within
+ * the menu.
+ * 
+ * @param { boolean } serverSide - server-side processing capability for search
+ * functionality, which affects the implementation of the search box and its associated
+ * events.
+ * 
+ * @param { string } searchPage - page to which the search functionality should be
+ * linked when the search box is clicked.
+ * 
+ * @param { string } search - search term that users will enter into a search box
+ * displayed within the main navigation menu.
+ * 
+ * @returns { string } HTML code that adds a search menu to a website's main navigation.
+ */
 function initMenu(relPath,searchEnabled,serverSide,searchPage,search) {
+  /**
+   * @description Generates an HTML tree structure based on JSON data provided, by
+   * recursively building a list of child nodes and their parent.
+   * 
+   * @param { object } data - tree structure that will be converted into an unordered
+   * list.
+   * 
+   * @param { string } relPath - current directory path relative to the root of the web
+   * application, and it is used to construct the full URLs for the children nodes in
+   * the tree.
+   * 
+   * @returns { string } a hierarchical HTML list of nodes and their subtree.
+   */
   function makeTree(data,relPath) {
     let result='';
     if ('children' in data) {

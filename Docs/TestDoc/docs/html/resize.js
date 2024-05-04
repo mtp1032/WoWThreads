@@ -23,10 +23,20 @@
  @licend  The above is the entire license notice for the JavaScript code in this file
  */
 
+/**
+ * @description Sets up a resizable side nav and content area, and handles cookie-based
+ * width restoration, window resize events, drag and drop behaviors, and click events
+ * on the split bar and handle for collapsing the side nav.
+ */
 function initResizable() {
   let sidenav,navtree,content,header,footer,barWidth=6;
   const RESIZE_COOKIE_NAME = ''+'width';
 
+  /**
+   * @description Updates the margins of content and footer elements based on the width
+   * of a sidenav element, stores the difference between the sidenav width and the bar
+   * width in a cookie for future use.
+   */
   function resizeWidth() {
     const sidenavWidth = $(sidenav).outerWidth();
     content.css({marginLeft:parseInt(sidenavWidth)+"px"});
@@ -36,6 +46,14 @@ function initResizable() {
     Cookie.writeSetting(RESIZE_COOKIE_NAME,sidenavWidth-barWidth);
   }
 
+  /**
+   * @description Adjusts the CSS margins and width of content, footer, and side nav
+   * based on the value of `navWidth`.
+   * 
+   * @param { integer } navWidth - width of the side navigation element and is used to
+   * set the margins of the content, footer, and side navigation element in the CSS
+   * style properties applied by the function.
+   */
   function restoreWidth(navWidth) {
     content.css({marginLeft:parseInt(navWidth)+barWidth+"px"});
     if (typeof page_layout!=='undefined' && page_layout==1) {
@@ -44,6 +62,10 @@ function initResizable() {
     sidenav.css({width:navWidth + "px"});
   }
 
+  /**
+   * @description Adjusts the heights of various elements on a web page based on the
+   * window height and layout configuration.
+   */
   function resizeHeight() {
     const headerHeight = header.outerHeight();
     const footerHeight = footer.outerHeight();
@@ -66,6 +88,10 @@ function initResizable() {
     }
   }
 
+  /**
+   * @description Adjusts the width of a side nav based on the window width and stores
+   * the new width as a cookie for future reference.
+   */
   function collapseExpand() {
     let newWidth;
     if (sidenav.width()>0) {
