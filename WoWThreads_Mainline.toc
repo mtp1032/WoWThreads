@@ -28,7 +28,7 @@ Libs\ACE\AceDB-3.0\AceDB-3.0.xml
 ## WoW Thread Library Code
 ##---------------------------------------------
 Libs\UtilsLib.lua
-ProtoTyping\XpCallProto.lua
+##ProtoTyping\XpCallProto.lua
 ##Libs\FifoQueue.lua
 ##Locales\EnUS_WoWThreads.lua
 ##WoWThreads.lua

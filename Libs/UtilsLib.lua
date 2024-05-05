@@ -366,8 +366,47 @@ if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
 
+--[[ 
+    Pseudocode for simplifying stack traces:
+function simplifyStackTrace(stackTrace):
+    1. Find the substring starting from "@Interface/AddOns/" to the next occurrence of ":".
+    2. Remove "@Interface/AddOns/" from the start of the substring to normalize the path.
+    3. Extract the Addon name which is the first segment of the path up to the first "/".
+    4. Extract the remaining path and line number up to the last ":".
+    5. Concatenate the extracted Addon name, path, and line number.
+    6. Return the formatted string.
+
+    [string "@Interface/AddOns/WoWThreads/Libs/UtilsLib.lua"]:378: in function <Interface/AddOns/WoWThreads/Libs/UtilsLib.lua:377>
+ ]]
+
+ 
+-- Example usage:
+
+function utils:simplifyStackTrace(stackTrace)
+    -- Adjusted pattern to exclude the quote by adjusting capture groups
+    local pattern = '"@Interface/AddOns/(.-):(%d+):'
+    local path, lineNumber = string.match(stackTrace, pattern)
+
+    -- Remove the quote at the end of the path if it exists, directly within the pattern match
+    if path and lineNumber then
+        -- Directly remove any trailing quote before the colon that might be captured
+        path = path:gsub('%"]$', '')
+        -- Concatenate path with line number for the final output
+        return path .. ':' .. lineNumber
+    else
+        return nil  -- Return nil if the pattern did not match correctly
+    end
+end
+
 --================================================
 --                  TESTS
 -- =================================================
-
+-- Example usage
+-- local exampleStackTrace = '[string "@Interface/AddOns/WoWThreads/Libs/UtilsLib.lua"]:378: in function <Interface/AddOns/WoWThreads/Libs/UtilsLib.lua:377>'
+--     local simplified = simplifyStackTrace(exampleStackTrace)
+--     if simplified then
+--         print("Simplified Stack Trace:", simplified)
+--     else
+--         print("Failed to simplify stack trace.")
+--     end
 

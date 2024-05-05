@@ -285,12 +285,12 @@ function thread:create( yieldTicks, threadFunction, ... )
 
     if utils:debuggingIsEnabled() then
         if type(yieldTicks) ~= "number" then
-            local stack = debugstack(2)
+            local stack = utils:simplifyStacktrace( debugstack(2))
             errorMsg = sprintf("%s %s expected number in %s, got %s"), utils:dbgPrefix(), L["INVALID_TYPE"], func, tostring(type(ticks))
             error( errorMsg)
         end
         if type(threadFunction) ~= "function" then
-            local stack = debugstack(2)
+            local stack = utils:simplifyStacktrace( debugstack(2))
             errorMsg = sprintf("%s %s expected function in %s, got %s", utils:dbgPrefix(), L["INVALID_TYPE"], func, tostring( type(threadFunction )))
                 error( errorMsg)
             end
