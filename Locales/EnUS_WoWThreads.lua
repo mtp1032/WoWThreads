@@ -42,7 +42,7 @@ if LOCALE == "enUS" then
 	L["ADDON_MESSAGE"]		= sprintf("%s (%s) loaded. ",  "WoWThreads-1.0", expansionName )
     L["ERROR_MSG_FRAME_TITLE"] = "Error Messages - WoWThreads-1.0"
  	-- Generic Error MessageS
-	L["INPUT_PARM_NIL"]		= "%s ERROR: Input parameter nil. "
+	L["INPUT_PARM_NIL"]		= "%s ERROR: Input parameter nil . "
 	L["INVALID_TYPE"]		= "%s ERROR: Input datatype invalid, %s. Expected %s."
 
 	-- Thread specific messages
@@ -53,7 +53,7 @@ if LOCALE == "enUS" then
 
 	L["INVALID_EXE_CONTEXT"] = "%s ERROR: Operation requires thread context. "
 	L["HANDLE_INVALID"]		= "%s ERROR: Invalid handle. Handle is likely 'dead.' "
-    L["RESUME_FAILED"]      = "%s ERROR: Failed to resume thread[%d]: "
+    L["RESUME_FAILED"]      = "%s ERROR: Failed to resume thread[%d]. "
 	
 	L["SIGNAL_QUEUE_INVALID"]	= "%s ERROR: Thread[%d] Invalid signal queue. "
 	L["SIGNAL_OUT_OF_RANGE"]	= "%s ERROR: Signal is out of range. "
