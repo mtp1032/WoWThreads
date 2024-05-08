@@ -16,6 +16,8 @@ local UtilsLib = LibStub("UtilsLib")
 local utils = UtilsLib
 
 local FifoQueue = LibStub("FifoQueue")
+if not FifoQueue then return end
+
 local EnUSlib = LibStub("EnUSlib")
 
 local EnUSlib = LibStub("EnUSlib")
@@ -123,17 +125,17 @@ local function createHandle(ticks, threadFunction )
     local H = {}    -- create an empty handle table, H
 
     H[TH_COROUTINE] = coroutine.create(threadFunction)
-    H[TH_STATUS] = coroutine.status(H[TH_COROUTINE])
-    H[TH_UNIQUE_ID] = THREAD_SEQUENCE_ID
-    H[TH_SIGNAL_QUEUE] =FifoQueue.new()
-    H[TH_DURATION_TICKS] = ticks
-    H[TH_REMAINING_TICKS] = ticks
+    H[TH_STATUS]    = coroutine.status(H[TH_COROUTINE])
+    H[TH_UNIQUE_ID]         = THREAD_SEQUENCE_ID
+    H[TH_SIGNAL_QUEUE]      = FifoQueue.new()
+    H[TH_DURATION_TICKS]    = ticks
+    H[TH_REMAINING_TICKS]   = ticks
     H[TH_ACCUM_YIELD_TICKS] = 0
-    H[TH_LIFETIME_TICKS] = 0
-    H[TH_YIELD_COUNT] = 0
+    H[TH_LIFETIME_TICKS]    = 0
+    H[TH_YIELD_COUNT]       = 0
 
-    H[TH_CHILDREN] = {}
-    H[TH_PARENT] = nil
+    H[TH_CHILDREN]  = {}
+    H[TH_PARENT]    = nil
 
     -- Metrics
 
@@ -487,7 +489,7 @@ function thread:sendSignal( target_h, signal, ...)
     local entry = {signal, sender_h, args }
     
     -- inserts the entry at the head of the queue.
-    target_h[TH_SIGNAL_QUEUE]:enqueue(entry)
+    target_h[TH_SIGNAL_QUEUE]:push(entry)
 end
 --- @brief gets the first signal in the calling thread's signal queue. Thread context required.
 -- @param None
@@ -498,7 +500,7 @@ function thread:getSignal()
 
     -- Check if there is an entry in the signalQueue.
     if H[TH_SIGNAL_QUEUE]:isEmpty() == false then
-        entry = H[TH_SIGNAL_QUEUE]:dequeue()  -- Assuming dequeue operation
+        entry = H[TH_SIGNAL_QUEUE]:pop()  -- Assuming pop operation
         local signal, sender_h, args = entry.signal, entry.sender, entry.args
         return entry[1], entry[2], entry[3]
     end

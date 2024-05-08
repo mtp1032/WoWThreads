@@ -1,4 +1,3 @@
--- Filename: UtilsLib.lua
 local ADDON_NAME, _ = ...
 
 -- Make sure the LibStub is available

@@ -5,6 +5,9 @@ local sprintf = _G.string.format
 
 -- get the uitls library
 local UtilsLib = LibStub("UtilsLib")
+if not UtilsLib then 
+    return 
+end
 local utils = UtilsLib
 
 -- Create a new library instance, or get the existing one
@@ -12,13 +15,13 @@ local LibStub = LibStub
 local LIBSTUB_MAJOR, LIBSTUB_MINOR = "EnUSlib", 1
 local LibStub = LibStub -- If LibStub is not global, adjust accordingly
 local EnUSlib, oldVersion = LibStub:NewLibrary(LIBSTUB_MAJOR, LIBSTUB_MINOR)
-if not EnUSlib then return end
-local enUs = EnUSlib
+if not EnUSlib then 
+    return 
+end
 
 local expansionName = utils:getExpansionName()
 local version = utils:getVersion()
 
-local version = utils:getVersion()
 local clockInterval = 1 / GetFramerate() * 1000
 -- =====================================================================
 --                      LOCALIZATION

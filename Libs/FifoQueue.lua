@@ -1,4 +1,6 @@
  -- FifoQueue.lua
+ local ADDON_NAME, _ = ...
+
 local fileName = "FifoQueue.lua"
 local sprintf = _G.string.format
 
@@ -11,11 +13,17 @@ local LIBSTUB_MAJOR, LIBSTUB_MINOR = "FifoQueue", 1
 local LibStub = LibStub -- If LibStub is not global, adjust accordingly
 local FifoQueue, oldVersion = LibStub:NewLibrary(LIBSTUB_MAJOR, LIBSTUB_MINOR)
 if not FifoQueue then return end -- No need to update if the version loaded is newer
-local fifo = FifoQueue
 
 -- Define the FifoQueue type with its methods
+-- function FifoQueue.new()
+--     local self = setmetatable({}, FifoQueue)
+--     self.front = 1
+--     self.rear = 0
+--     self.items = {}
+--     return self
+-- end
 function FifoQueue.new()
-    local self = setmetatable({}, FifoQueue)
+    local self = setmetatable({}, {__index = FifoQueue})
     self.front = 1
     self.rear = 0
     self.items = {}
@@ -24,14 +32,14 @@ end
 -- @brief: Adds an item to the rear of the queue
 -- @param: value
 -- @returns: None
-function FifoQueue:enqueue(value)
+function FifoQueue:push(value)
     self.rear = self.rear + 1
     self.items[self.rear] = value
 end
 -- @bried: removes an item from the front of the queue
 -- @param: None
 -- @returns: see above
-function FifoQueue:dequeue()
+function FifoQueue:pop()
     if self:isEmpty() then
         return true
     else
@@ -62,17 +70,18 @@ function FifoQueue:size()
     return self.rear - self.front + 1
 end
 
---[[ 
-    EXAMPLE USAGE
-local myFifoQueue = FifoQueue.new()
-myFifoQueue:enqueue(10)
-myFifoQueue:enqueue(20)
-print("Peek: ", myFifoQueue:peek())  -- Should output 10 without removing it
-print("Dequeued: ", myFifoQueue:dequeue())
-print("Peek: ", myFifoQueue:peek())  -- Should now output 20
-print("Is empty: ", myFifoQueue:isEmpty())
-print("FifoQueue size: ", myFifoQueue:size())
- ]]
+-- EXAMPLE USAGE
+-- local stack = FifoQueue.new()
+-- stack:push(10)
+-- utils:dbgPrint( stack:peek())
+-- stack:push(20)
+-- utils:dbgPrint( stack:pop() )
+-- utils:dbgPrint( stack:pop() )
+
+-- utils:dbgPrint("stack is Empty?", stack:isEmpty() )
+
+
+
 
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage(fileName, 0.0, 1.0, 1.0)

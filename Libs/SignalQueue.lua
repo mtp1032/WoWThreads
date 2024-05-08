@@ -41,8 +41,8 @@ function send(signal, recipientThread, ...)
     -- Initialize and insert an entry into the recipient thread's signalTable
     local entry = {signal = signal, sender = sendingThread, args = {...}}
     
-    -- enqueue() inserts the entry at the head of the queue.
-    recipientThread[SIGNAL_QUEUE]:enqueue(entry)
+    -- push() inserts the entry at the head of the queue.
+    recipientThread[SIGNAL_QUEUE]:push(entry)
  end
  
  function receive()
@@ -50,7 +50,7 @@ function send(signal, recipientThread, ...)
  
     -- Check if there is an entry in the signalQueue.
     if not self[SIGNAL_QUEUE]:isEmpty() then
-       entry = self[SIGNAL_QUEUE]:dequeue()  -- Assuming dequeue operation
+       entry = self[SIGNAL_QUEUE]:pop()  -- Assuming pop operation
        local signal, sender, args = entry.signal, entry.sender, entry.args
        return signal, sender, table.unpack(args)
     end

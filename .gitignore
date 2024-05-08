@@ -1,4 +1,7 @@
-./Libs/ACE/*
-.Protyping/*
-./Docs/*
-./vscode
+Docs/*
+Docs/TestDoc/*
+Libs/ACE/*
+Libs/LibStub.lua
+Libs/SignalQueue.lua
+Protyping/*
+WoWThreads_*.toc
