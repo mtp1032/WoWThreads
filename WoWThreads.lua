@@ -19,8 +19,8 @@ local FifoQueue = LibStub("FifoQueue")
 if not FifoQueue then return end
 
 local EnUSlib = LibStub("EnUSlib")
+if not EnUSlib then return end
 
-local EnUSlib = LibStub("EnUSlib")
 L = EnUSlib.L
 
 local expansionName = utils:getExpansionName()
@@ -154,13 +154,12 @@ end
 local function handleIsValid(H)
     local isValid = true
     local errorMsg = nil
-
     if type(H) ~= "table" then
         errorMsg = sprintf(L["INVALID_TYPE"], utils:dbgPrefix(), "table", type(H))
         isValid = false
     end
     if type(H[TH_SIGNAL_QUEUE]) ~= "table" then
-        errorMsg = sprintf("%s", L["HANDLE_ILL_FORMED"], utils:dbgPrefix())
+        errorMsg = sprintf("%s %s, Expected 'table', got %s\n", L["HANDLE_ILL_FORMED"], utils:dbgPrefix(), type[H[TH_SIGNAL_QUEUE]])
         isValid = false
     end
     if type(H[TH_COROUTINE]) ~= "thread" then
@@ -209,6 +208,7 @@ local function signalIsValid(signal)
     return isValid, errorMsg
 end
 -- RETURNS void
+--[[ 
 local function scheduleThreads()
     ACCUMULATED_TICKS = ACCUMULATED_TICKS + 1
 
@@ -224,6 +224,7 @@ local function scheduleThreads()
             H[TH_LIFETIME_TICKS] = ACCUMULATED_TICKS - H[TH_LIFETIME_TICKS]
             table.remove(threadControlBlock, i)
             table.insert(morgue, H)
+            utils:dbgPrint( sprintf("Thread[%s] exited normally.", H[TH_UNIQUE_ID]) )
         end
 
         if H[TH_STATUS] == "suspended" then
@@ -241,14 +242,45 @@ local function scheduleThreads()
             if not status then
                 table.insert( morgue, H )
                 local str = sprintf(L["RESUME_FAILED"], utils:dbgPrefix(), H[TH_UNIQUE_ID])
-                errorMsg = sprintf("%s: %s\n", str, errorMsg)
+                errorMsg = sprintf("%s\n%s\n\n", str, errorMsg)
                 utils:postMsg( errorMsg )
             end
         end
     end
 end
--- @returns void
-local function startTimer(CLOCK_INTERVAL)
+ ]]
+ local function scheduleThreads()
+    ACCUMULATED_TICKS = ACCUMULATED_TICKS + 1
+
+    local i = 1
+    while i <= #threadControlBlock do
+        local H = threadControlBlock[i]
+        local status = coroutine.status(H[TH_COROUTINE])
+
+        if status == "dead" then
+            H[TH_LIFETIME_TICKS] = ACCUMULATED_TICKS - H[TH_LIFETIME_TICKS]
+            table.remove(threadControlBlock, i)
+            table.insert(morgue, H)
+            utils:dbgPrint(sprintf("Thread[%s] exited normally.", H[TH_UNIQUE_ID]))
+        else
+            if status == "suspended" then
+                H[TH_REMAINING_TICKS] = H[TH_REMAINING_TICKS] - 1
+                if H[TH_REMAINING_TICKS] == 0 then
+                    H[TH_REMAINING_TICKS] = H[TH_DURATION_TICKS]
+                    local success, errorMsg = coroutine.resume(H[TH_COROUTINE])
+                    if not success then
+                        table.insert(morgue, H)
+                        utils:postMsg(sprintf("Resume failed: %s - %s", H[TH_UNIQUE_ID], errorMsg))
+                    end
+                end
+            end
+            i = i + 1
+        end
+    end
+end
+
+ -- @returns void
+ local function startTimer(CLOCK_INTERVAL)
     scheduleThreads()
 
     C_Timer.After(
@@ -328,7 +360,7 @@ end
 function thread:delay(delayTicks)
     local H = getCallerHandle()
     H[TH_REMAINING_TICKS] = delayTicks + H[TH_REMAINING_TICKS]
-    coroutine.suspend(H[TH_COROUTINE])
+    coroutine.yield()
 end
 --- @brief returns the callingthread's handle. Thread context required
 -- @param None
@@ -347,8 +379,8 @@ function thread:getId(thread_h)
     if thread_h ~= nil then
         isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
-            local func = "thread:getId( thread_h)"
-            errorMsg = sprintf("%s %s in %s.", utils:dbgPrefix(), errorMsg, func )
+            local func = "thread:getId()"
+            errorMsg = sprintf("%s in thread:getId().", errorMsg )
             error( errorMsg )
         end
     else
@@ -464,11 +496,11 @@ function thread:sendSignal( target_h, signal, ...)
     local args = {...}
 
     if target_h == nil then
-        local func = "thread:sendSignals( thread_h, signal, ...)"
-        errorMsg = sprintf("%s %s in %s.", utils:dbgPrefix(), L["HANDLE_NIL"], func )
-        utils:postMsg( errorMsg )
+        errorMsg = sprintf("%s %s in thread:sendSignal().\n", utils:dbgPrefix(), L["HANDLE_NIL"] )
+        -- utils:postMsg( errorMsg )
         error( errorMsg )
     end
+
     isValid, errorMsg = handleIsValid( target_h )
     if not isValid then
         local func = "thread:sendSignal( target_h, signal, ...)"
