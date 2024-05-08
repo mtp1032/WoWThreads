@@ -144,7 +144,7 @@ end
 --                          POST MESSAGE METHODS
 -- =====================================================================
 local DEFAULT_FRAME_WIDTH = 1000
-local DEFAULT_FRAME_HEIGHT = 400
+local DEFAULT_FRAME_HEIGHT = 200
 
 local function createResizeButton( f )
 	f:SetResizable( true )
@@ -258,7 +258,7 @@ local function createTextDisplay(f)
     f.SF:SetScrollChild(f.Text)
 end
 local function createMsgFrame(title)
-    local f = createTopFrame( "ErrorMsgFrame",600, 200, 0, 0 )
+    local f = createTopFrame( "ErrorMsgFrame",DEFAULT_FRAME_WIDTH, DEFAULT_FRAME_HEIGHT, 0, 0 )
     f:SetPoint("CENTER", 0, 200)
     f:SetFrameStrata("BACKGROUND")
     f:EnableMouse(true)
