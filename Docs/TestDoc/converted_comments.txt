@@ -1,7 +1,0 @@
-
-/**
- * \return None
- */
-function sayHello(name)
-    print("Hello, " .. name)
-end
