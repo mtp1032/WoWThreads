@@ -402,10 +402,6 @@ end
 -- =================================================
 -- Example usage
 -- local exampleStackTrace = '[string "@Interface/AddOns/WoWThreads/Libs/UtilsLib.lua"]:378: in function <Interface/AddOns/WoWThreads/Libs/UtilsLib.lua:377>'
---     local simplified = simplifyStackTrace(exampleStackTrace)
---     if simplified then
---         print("Simplified Stack Trace:", simplified)
---     else
---         print("Failed to simplify stack trace.")
---     end
+-- local simplified = utils:simplifyStackTrace(exampleStackTrace)
+-- print("Simplified Stack Trace:", simplified)
 
