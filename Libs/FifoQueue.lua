@@ -32,14 +32,14 @@ end
 -- @brief: Adds an item to the rear of the queue
 -- @param: value
 -- @returns: None
-function FifoQueue:push(value)
+function FifoQueue:enqueue(value)
     self.rear = self.rear + 1
     self.items[self.rear] = value
 end
 -- @bried: removes an item from the front of the queue
 -- @param: None
 -- @returns: see above
-function FifoQueue:pop()
+function FifoQueue:dequeue()
     if self:isEmpty() then
         return true
     else
