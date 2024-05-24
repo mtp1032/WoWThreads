@@ -3,6 +3,12 @@
 -- ORIGINAL DATE:   14 March, 2023
 ----------------------------------------------------------------------------------------
 local ADDON_NAME, WoWThreads = ...
+-- Example: varargs processing!
+-- local args = {}
+-- local numArgs = select("#", ...) -- varargs processing
+-- for i = 1, numArgs do 
+--     args[i] = select(i, ...)
+-- end
 
 -- =====================================================================
 --                      ADMIN, HOUSEKEEPING STUFF
@@ -21,7 +27,7 @@ if not FifoQueue then return end
 local EnUSlib = LibStub("EnUSlib")
 if not EnUSlib then return end
 
-L = EnUSlib.L
+local L = EnUSlib.L
 
 local expansionName = utils:getExpansionName()
 local version = utils:getVersion()
@@ -41,13 +47,13 @@ end -- No need to update if the loaded version is newer or the same
 
 local DEFAULT_YIELD_TICKS = 5
 
-local THREAD_SEQUENCE_ID = 4
-local ACCUMULATED_TICKS = 0
-local threadControlBlock = {}
-local morgue = {}
-local CLOCK_INTERVAL = 1/GetFramerate()
-local WoWThreadsStarted = false
-
+local THREAD_SEQUENCE_ID    = 4
+local ACCUMULATED_TICKS     = 0
+local threadControlBlock    = {}
+local threadSleepQueue      = {}
+local morgue                = {}
+local CLOCK_INTERVAL        = 1/GetFramerate()
+local WoWThreadsStarted     = false
 -- =====================================================================
 --                      CONSTANTS
 -- =====================================================================
@@ -62,33 +68,48 @@ local TH_YIELD_COUNT        = 8 -- the number of times a thread yields
 local TH_CHILDREN           = 9
 local TH_PARENT             = 10
 local TH_ADDON_NAME         = 11
+local TH_COROUTINE_ARGS     = 12
 
 -- Each thread has a signal queue. Each element in the signal queue
 -- consists of 3 elements: the signal, the sending thread, and data.
 -- the data element, for the moment is unused.
-thread.SIG_ALERT            = 1
-thread.SIG_JOIN_DATA_READY  = 2
-thread.SIG_HIBERNATE        = 3
-thread.SIG_TERMINATE        = 4
-thread.SIG_METRICS          = 5
-thread.SIG_STOP             = 6
-thread.SIG_NONE_PENDING     = 7
+-- 
+-- sigEntry = {signalValue, sender_h, ... }
+thread.SIG_ALERT        = 1 -- schedule for immediate execution
+thread.SIG_GET_DATA     = 2 -- no semantics. Used to execute an immediate normal return.
+thread.SIG_RETURN_DATA  = 3 -- no semantics. Used to execute an immediate normal return.
+thread.SIG_BEGIN        = 4 -- no semantics.
+thread.SIG_HALT         = 5 -- no semantics.
+thread.SIG_TERMINATE    = 6 -- deletes the thread. Does not return from yield.
+thread.SIG_IS_COMPLETE  = 7 -- info: thread is complete
+thread.SIG_SUCCESS      = 8 -- info: thread completed successfully
+thread.SIG_FAILURE      = 9 -- info: thread completed with failure
+thread.SIG_READY        = 10
+thread.SIG_NONE_PENDING = 11 -- signal queue is empty.
 
-local SIG_ALERT             = thread.SIG_ALERT
-local SIG_JOIN_DATA_READY   = thread.SIG_JOIN_DATA_READY
-local SIG_HIBERNATE         = thread.SIG_HIBERNATE
-local SIG_TERMINATE         = thread.SIG_TERMINATE
-local SIG_METRICS           = thread.SIG_METRICS
-local SIG_STOP              = thread.SIG_STOP
-local SIG_NONE_PENDING      = thread.SIG_NONE_PENDING
+local SIG_ALERT         = thread.SIG_ALERT
+local SIG_GET_DATA      = thread.SIG_GET_DATA
+local SIG_RETURN_DATA   = thread.SIG_RETURN_DATA
+local SIG_BEGIN         = thread.SIG_BEGIN
+local SIG_HALT          = thread.SIG_HALT
+local SIG_TERMINATE     = thread.SIG_TERMINATE
+local SIG_IS_COMPLETE   = thread.SIG_IS_COMPLETE
+local SIG_SUCCESS       = thread.SIG_SUCCESS
+local SIG_FAILURE       = thread.SIG_FAILURE  
+local SIG_READY         = thread.SIG_READY  
+local SIG_NONE_PENDING  = thread.SIG_NONE_PENDING
 
 local signalNameTable = {
     "SIG_ALERT",
-    "SIG_JOIN_DATA_READY",
-    "SIG_HIBERNATE",
+    "SIG_GET_DATA",
+    "SIG_RETURN_DATA",
+    "SIG_BEGIN",
+    "SIG_HALT",
     "SIG_TERMINATE",
-    "SIG_METRICS",
-    "SIG_STOP",
+    "SIG_IS_COMPLETE",
+    "SIG_SUCCESS",
+    "SIG_FAILURE",
+    "SIG_READY",
     "SIG_NONE_PENDING"
 }
 
@@ -96,41 +117,49 @@ local signalNameTable = {
 -- *                    LOCAL FUNCTIONS                                  =
 -- =======================================================================
 
--- Table to hold registered callback functions.
+-- Table to hold registered callbackFunc functions.
 local errorCallbackTable = {}
+local function libErrorHandler( errorMessage )
+    local errorMsg = sprintf("[CB] %s\n", errorMessage )
+    utils:postMsg( errorMsg )
+end
+function  thread:reportError( addonName, errorMsg )
+    local func = errorCallbackTable[addonName]
 
--- Function to invoke callbacks on error
-local function reportErrorToClient(addonName, errorMessage)
-    local H = getCallerHandle()
-    if H ~= nil then
-        local prefix = sprintf("Thread[%d]", H[TH_UNIQUE_ID] )
-        local str1 = sprintf("%s - %s\n", prefix, errorMessage )
-        errorMessage = str1
-    end
-
-    if errorCallbackTable[addonName] and 
-    type(errorCallbackTable[addonName]) == "function" then
-        errorCallbackTable[addonName](errorMessage)
+    if func then
+        local str = ">> " .. errorMsg
+        func( str )
     else
-        print("Error: No valid error callback registered for addon: " .. addonName)
     end
 end
+function thread:registerCallback( addonName, callbackFunc )
+
+    if type(addonName) ~= "string" then
+        error("Invalid addon name")
+    end
+    if type(callbackFunc) ~= "function" then
+        error("Invalid callback function")
+    end   
+    errorCallbackTable[addonName] = callbackFunc
+end
+thread:registerCallback( ADDON_NAME, libErrorHandler)
 
 local function getCallerHandle()
-    -- only one thread can be "running"
-    for _, H in ipairs(threadControlBlock) do
-        local state = coroutine.status(H[TH_COROUTINE])
-        if state == "running" then
-            return H, H[TH_UNIQUE_ID]
+    local running_h = nil
+
+    for i = 1, #threadControlBlock do
+        local running_h = threadControlBlock[i]
+        local co = running_h[TH_COROUTINE]
+        local status = coroutine.status( co )
+        if status == "running" then
+            return running_h
         end
     end
-    -- if we're here, it's because the WoW Client has issued
-    -- this call. That's why there is not A "running" thread
-    -- in the TCB.
-    return nil, L["NO_THREAD_CONTEXT"]
 
+    return nil
 end
-local function createHandle(durationTicks, threadFunction )
+
+local function createHandle(durationTicks, threadFunction, ... )
 
     if durationTicks  < DEFAULT_YIELD_TICKS then
         durationTicks = DEFAULT_YIELD_TICKS
@@ -152,8 +181,9 @@ local function createHandle(durationTicks, threadFunction )
     H[TH_PARENT]    = nil
 
     H[TH_ADDON_NAME] = ADDON_NAME
+    H[TH_COROUTINE_ARGS] = {...}
 
-    local parent_h, parentId = getCallerHandle()
+    local parent_h = getCallerHandle()
     if parent_h ~= nil then
         -- this call is being executed by a WoW Thread. Therefore,
         -- the running thread is the parent and this handle will be
@@ -164,10 +194,33 @@ local function createHandle(durationTicks, threadFunction )
     return H
 end
 --------------- BEGIN VALIDATE FUNCTIONS -------------------
--- Throws an error if the checks fail
+local function moveToMorgue( H )
+    H[TH_LIFETIME_TICKS] = ACCUMULATED_TICKS - H[TH_LIFETIME_TICKS]
+
+    for i = 1, #morgue do
+        if H[TH_UNIQUE_ID] == morgue[i][TH_UNIQUE_ID] then
+            return
+        end
+    end
+
+    table.remove(threadControlBlock, i)
+    table.insert(morgue, H)
+    utils:dbgPrint( sprintf("thread[%d] moved to morgue", H[TH_UNIQUE_ID]) )
+end
+local function putToSleep( H )
+    for i = 1, #threadControlBlock do
+        if H[TH_UNIQUE_ID] == threadControlBlock[i][TH_UNIQUE_ID] then 
+            table.remove(threadControlBlock, i)
+            break
+        end
+    end
+    table.insert(threadSleepQueue, H)
+end
+-- Raises an error if the checks fail
 local function handleIsValid(H)
     local isValid = true
     local errorMsg = nil
+
     if type(H) ~= "table" then
         errorMsg = L["INVALID_TYPE"]
         isValid = false
@@ -183,17 +236,20 @@ local function handleIsValid(H)
 
     local state = coroutine.status(H[TH_COROUTINE])
     if state == "dead" then
-        local threadId = H[TH_UNIQUE_ID]
-        local s = sprintf("%s", L["INVALID_EXE_STATE"], threadId, state )
-        errorMsg = sprintf("%s %s in %s ", utils:dbgPrefix(), s , fname )
+        errorMsg = L["THREAD_STATE_DEAD"]
         isValid = false
     end
     return isValid, errorMsg
 end
+
+local SIG_NONE_PENDING  = thread.SIG_NONE_PENDING
+
 local function signalInRange(signal)
     local isValid = true
+    local errorMsg = nil
 
     if signal < SIG_ALERT then
+        isValid = false
         isValid = false
         errorMsg = L["SIGNAL_OUT_OF_RANGE"]
     end
@@ -208,6 +264,12 @@ local function signalIsValid(signal)
     local isValid = true
     local errorMsg = nil
 
+    if signal == nil or signal == "" then
+        isValid = false
+        errorMsg = L["SIGNAL_INVALID"]
+        return isValid, errorMsg
+    end
+
     if type(signal) ~= "number" then 
         isValid = false
         errorMsg = L["INVALID_TYPE"]
@@ -215,51 +277,70 @@ local function signalIsValid(signal)
     end  
 
     isValid, errorMsg = signalInRange( signal )
+    if not isValid then
+        return isValid, errorMsg
+    end
     return isValid, errorMsg
 end
-local function moveToMorgue( H )
-    local i = 1
-    while i <= #threadControlBlock do
-        local H = threadControlBlock[i]
-        if status == "dead" then
-            H[TH_LIFETIME_TICKS] = ACCUMULATED_TICKS - H[TH_LIFETIME_TICKS]
-            table.remove(threadControlBlock, i)
-            table.insert(morgue, H)
+local function wakeup(H)
+    local isValid = false
+
+    if #threadSleepQueue == 0 then
+        return isValid, L["THREAD_NOT_FOUND"] 
+    end
+    
+    for i = 1, #threadSleepQueue do
+        local H = threadSleepQueue[i]
+        if H[TH_UNIQUE_ID] == target_h[TH_UNIQUE_ID] then
+            H[TH_REMAINING_TICKS] = 1
+            table.remove( threadSleepQueue, i )
+            table.insert( threadControlBlock, H )
+            isValid = true
+            break
         end
     end
+    if not isValid then 
+        thread:reportError( ADDON_NAME, L["THREAD_NOT_FOUND"] ) 
+        return nil, L["THREAD_NOT_FOUND"] 
+    end
+    return isValid, nil
 end
 local function scheduleThreads()
     ACCUMULATED_TICKS = ACCUMULATED_TICKS + 1
 
-    local i = 1
-    while i <= #threadControlBlock do
-        local H = threadControlBlock[i]
-        local status = coroutine.status(H[TH_COROUTINE])
-        if status == "dead" then
-            H[TH_LIFETIME_TICKS] = ACCUMULATED_TICKS - H[TH_LIFETIME_TICKS]
-            table.remove(threadControlBlock, i)
-            table.insert(morgue, H)
+    for i, H in ipairs(threadControlBlock) do
+        H[TH_LIFETIME_TICKS] = H[TH_LIFETIME_TICKS] + 1
+        local status = coroutine.status( H[TH_COROUTINE] )
+        if status == "dead" then -- move to the morgue
+            moveToMorgue(H)
+        end
         
-        elseif status == "suspended" then
-            H[TH_REMAINING_TICKS] = H[TH_REMAINING_TICKS] - 1
+        if status == "suspended" then
+            local args = H[TH_COROUTINE_ARGS]
+            local errorMsg = nil
+            local coroutineResumed = false
+            local pcallSucceeded = false
 
-            if H[TH_REMAINING_TICKS] == 0 then
-                H[TH_REMAINING_TICKS] = H[TH_DURATION_TICKS]
-                status, result = coroutine.resume( H[TH_COROUTINE])
-                if not status then
-                    H[TH_LIFETIME_TICKS] = ACCUMULATED_TICKS - H[TH_LIFETIME_TICKS]
-                    table.remove(threadControlBlock, i)
-                    table.insert(morgue, H)        
-                    reportErrorToClient( H[TH_ADDON_NAME], result )
+            H[TH_REMAINING_TICKS] = H[TH_REMAINING_TICKS] - 1
+            if H[TH_REMAINING_TICKS] == 0 then -- switch to next coroutine
+                H[TH_REMAINING_TICKS] = H[TH_DURATION_TICKS] -- replenish the remaining ticks
+                local co = H[TH_COROUTINE]
+                local errorStr = nil
+                pcallSucceeded, coroutineResumed, errorStr = pcall(coroutine.resume, co, unpack(args) )
+                if not pcallSucceeded then
+                    thread:reportError(ADDON_NAME, errorStr )
+                    error( "stopped - pcall() failed" )
+                end
+                if not coroutineResumed then
+                    thread:reportError(ADDON_NAME, errorStr )
+                    error( "stopped - " .. errorStr )
                 end
             end
         end
-        i = i + 1
     end
 end
-
  local function startTimer(CLOCK_INTERVAL)
-    scheduleThreads()
+        scheduleThreads()
 
     C_Timer.After(
         CLOCK_INTERVAL,
@@ -269,10 +350,6 @@ end
     )
 end
 -- Returns TCB thread count.
-local function insertHandleIntoTCB(H)
-    table.insert(threadControlBlock, H)
-    return #threadControlBlock
-end
 -- Returns Handle's coroutine
 local function getCoroutine(H)
     return H[TH_COROUTINE]
@@ -304,42 +381,29 @@ POSIX and other thread environments, the thread function is often
 called the action routine.
 - ... (varargs), Additional arguments to be passed to the thread function.
 Returns:
-- If successful, Returns a thread handle.
-- If failure, Returns nil and an error message
+- If successful, Returns a thread handle and the thread's Id.
+- If failure, Returns nil anG651
+d an error message
 Usage:
-    local thread_h, result = thread:create( 60, helloWorld, "Hello World" )
+    local thread_h, threadId, result = thread:create( 60, helloWorld, "Hello World" )
     if thread_h ~= nil then print( result) return end
 @End]]
 function thread:create( yieldTicks, threadFunction, ... )
-    local errorMsg = nil
     local fname = "thread:create()"
+    local isValid = true
+    local errorMsg = nil
 
-    if utils:debuggingIsEnabled() then
-        if type(yieldTicks) ~= "number" then
-            local stack = debugstack(2)
-            local simpleStack = utils:simplifyStacktrace( stack )
-            errorMsg = sprintf("%s %s expected number in %s, got %s", utils:dbgPrefix(), L["INVALID_TYPE"], fname, type(ticks))
-            return nil, errorMsg
-        end
-        if threadFunction == nil then
-            return nil, L["INPUT_PARM_NIL"]
-        end
-        if type(threadFunction) ~= "function" then
-            local stack = utils:simplifyStacktrace( debugstack(2))
-            errorMsg = sprintf("%s %s expected function in %s, got %s", utils:dbgPrefix(), L["INVALID_TYPE"], func, tostring( type(threadFunction )))
-            return nil, L["INVALID_TYPE"]
-        end
-    end
-    -- Create a handle with a suspended coroutine
-    local H = createHandle(yieldTicks, threadFunction)
+    local H = createHandle( yieldTicks, threadFunction, ... )
 
-    insertHandleIntoTCB(H)
-    local status, result = coroutine.resume(H[TH_COROUTINE], ...)
-    if not status then
-        reportErrorToClient( ADDON_NAME, result )
-        return nil, result
+    isValid, errorMsg = handleIsValid(H)
+    if not isValid then
+        errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )         
+        thread:reportError( ADDON_NAME, errorMsg )
+        return nil, nil, errorMsg
     end
-    return H, nil
+
+    table.insert( threadControlBlock, H )
+    return H, H[TH_UNIQUE_ID], nil
 end
 
 --[[@Begin
@@ -373,12 +437,20 @@ Usage:
     if thread_h == nil then print( result) return end
 @End]]
 function thread:yield()
+    local fname = "thread:yield()"
+    local errorMsg = nil
+
     local beforeYieldTicks = ACCUMULATED_TICKS
 
-
     coroutine.yield()
-
     local H = getCallerHandle()
+    if H == nil then 
+        errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname)
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        error( errorMsg )
+        return nil, errorMsg 
+    end
+
     H[TH_YIELD_COUNT] = H[TH_YIELD_COUNT] + 1
     local numYieldTicks = ACCUMULATED_TICKS - beforeYieldTicks
     H[TH_ACCUM_YIELD_TICKS] = H[TH_ACCUM_YIELD_TICKS] + numYieldTicks
@@ -397,9 +469,44 @@ Returns:
 Usage:
 @End]]
 function thread:delay(delayTicks)
+    local fname = "thread:delay()"
     local H = getCallerHandle()
+    if H == nil then -- we're the WoW client.
+        errorMsg = sprintf("%s - %s in %s.\n", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        error( errorMsg )
+        return nil, errorMsg
+    end
+
     H[TH_REMAINING_TICKS] = delayTicks + H[TH_REMAINING_TICKS]
     coroutine.yield()
+end
+
+--[[@Begin
+Title: Suspends the calling thread indefinitely.
+Signature: thread:sleep()
+Description: Suspends a thread for an indeterminate time.
+Note, like thread:yield() or thread:delay(), this call doesn't 
+return until awakened by receipt of a SIG_WAKEUP signal.
+Thread context is required.
+Parameters:
+- None
+Returns:
+- None
+Usage:
+@End]]
+function thread:sleep()
+    local fname = "thread:sleep()"
+    local errorMsg = nil
+
+    local H, errorMsg = getCallerHandle()
+    if H == nil then -- we're the WoW client.
+        errorMsg = sprintf("%s - %s in %s.\n", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        error( errorMsg )
+        return nil, errorMsg
+    end
+    putToSleep(H)
 end
 
 --[[@Begin
@@ -415,9 +522,17 @@ Usage:
 @End]]
 
 function thread:getSelf()
-    local errorMessage = L["NO_THREAD_CONTEXT"]
-    local H =getCallerHandle()
-    if H == nil then return nil, errorMessage end
+    local fname = "thread:getSelf()"
+    local isValid = true
+    local errorMsg = nil
+    
+    local H = getCallerHandle()
+    if H == nil then 
+        errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), errorMsg, fname)
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        error( errorMsg )
+        return nil, errorMsg 
+    end
     return H, nil
 end
 
@@ -436,21 +551,24 @@ Usage:
     if threadId == nil then print( result) return end
 @End]]
 function thread:getId(thread_h)
-    local threadId = nil
+    local fname = "thread:getId()"
     local isValid = true
     local errorMsg = nil
-    local fname = "thread:getId()"
 
     if thread_h ~= nil then
         isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
-            errorMsg = sprintf("%s %s in %s.",utils:dbgPrefix(), errorMsg, fname)
+            errorMsg = sprintf("%s - %s in %s.",utils:dbgPrefix(), errorMsg, fname)
+            thread:reportError( ADDON_NAME,  errorMsg ) 
+            -- error( errorMsg )
             return nil, errorMsg
         end
     else -- input handle (thread_h) was nil.
         thread_h = getCallerHandle()
         if thread_h == nil then 
-            errorMessage = sprintf("%s %s in %s.", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
+            errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
+            thread:reportError( ADDON_NAME,  errorMsg ) 
+            error( errorMsg )
             return nil, errorMsg
         end
     end
@@ -473,24 +591,31 @@ Usage:
     if equal == nil then print( result) return end
 @End]]
 function thread:areEqual(H1, H2)
-    local errorMsg = nil
     local fname = "thread:areEqual()"
-
+    local isValid = true
+    local errorMsg = nil
+    
     -- check that neither handle is nil
     if H1 == nil or H2 == nil then
-        errorMsg = sprintf("%s %s in %s.", utils:dbgPrefix(), L["HANDLE_NIL"], fname )
+        errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), L["HANDLE_NIL"], fname )
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- error( errorMsg )
         return nil, errorMsg
     end
 
     -- check that neither handle is invalid
     isValid, errorMsg = handleIsValid(H1)
     if not isValid then
-        errorMsg = sprintf("%s %s in %s.", utils:dbgPrefix(), errorMsg, fname )
+        errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- error( errorMsg )
         return nil, errorMsg
     end
     isValid, errorMsg = handleIsValid(H2)
     if not isValid then
-        errorMsg = sprintf("%s %s in %s.", utils:dbgPrefix(), errorMsg, fname )
+        errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- error( errorMsg )
         return nil, errorMsg
     end
 
@@ -512,16 +637,28 @@ Usage:
     if parent_h == 'nil' then print( result) return end
 @End]]
 function thread:getParent(thread_h)
+    local fname = "thread:getParent()"
+    local isValid = true
+    local errorMsg = nil
+
     -- if thread_h is nil then this is equivalent to "getMyParent"
     if thread_h ~= nil then
         isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
-            local func = "getParentThread( thread_h)"
-            errorMsg = sprintf("%s %s in %s.", utils:dbgPrefix(), errorMsg, func )
-            error( errorMsg )
+            errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )
+            thread:reportError( ADDON_NAME,  errorMsg ) 
+            -- error( errorMsg )
+            return nil, errorMsg
         end
     else
         thread_h = getCallerHandle()
+        if thread_h == nil then -- we're the WoW client.
+            errorMsg = sprintf("%s - %s in %s.\n", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
+            thread:reportError( ADDON_NAME,  errorMsg ) 
+            error( errorMsg )
+            return nil, errorMsg
+        end
+    
     end
     return thread_h[TH_PARENT]
 end
@@ -549,13 +686,18 @@ function thread:getChildThreads(thread_h)
     if thread_h ~= nil then
         isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
-            errorMsg = sprintf("%s %s in %s.", utils:dbgPrefix(), errorMsg, fname )
-            error( errorMsg )
+            errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )
+            thread:reportError( ADDON_NAME,  errorMsg ) 
+            return nil, errorMsg
         end
-    else
-        thread_h, errorMsg = getCallerHandle()
-        errorMsg = sprintf("%s %s in %s.", utils:dbgPrefix(), errorMsg, fname )
-    end
+    else -- thread_h is nil in which case raises a NO_CONTEXT error.
+        local H = getCallerHandle()
+        if H == nil then 
+            errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), errorMsg, fname)
+            thread:reportError( ADDON_NAME,  errorMsg ) 
+            error( errorMsg )
+            return nil, errorMsg 
+        end
     return thread_h[TH_CHILDREN]
 end
 
@@ -577,29 +719,39 @@ Usage:
     if state == 'nil' then print( result ) return end
 @End]]
 function thread:getState(thread_h)
+    local fname = "thread:getState()"
+    local wasSent = true
+    local errorMsg = nil
+
     if thread_h ~= nil then
-        isValid, errorMsg = handleIsValid(thread_h)
-        if not isValid then
+        local wasSent, errorMsg = handleIsValid(thread_h)
+        if not wasSent then
             local func = "getState( thread_h)"
-            errorMsg = sprintf("%s %s in %s.", utils:dbgPrefix(), errorMsg, func )
-            error( errorMsg )
+            errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, func )
+            thread:reportError( ADDON_NAME,  errorMsg )
+            -- error( errorMsg )
+            return nil, errorMsg
         end
-    else
-        thread_h = getCallerHandle()
+        elseif thread_h == nil then 
+            errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), errorMsg, fname)
+            thread:reportError( ADDON_NAME,  errorMsg ) 
+            error( errorMsg )
+            return nil, errorMsg 
+        end
     end
 
     local status = coroutine.status(H[TH_COROUTINE])
-    return status
+    return status, nil
 end
 
 --[[@Begin
 Title: Signal another thread.
-Signature: status, result = thread:sendSignal( target_h, signaValue, ... )
+Signature: status, result = thread:sendSignal( target_h, signaValue,[,data] )
 Description: Sends a signal to the specified thread. Thread context NOT required.
 Parameters: 
 - thread_h (handle): The thread to which the signal is to be sent. 
 - signalValue (number): signal to be sent.
-- ... (varargs): Data to be passed to the receiving thread
+- data (any)Data to be passed to the receiving thread
 Returns:
 - If successful, Returns true
 - If failure, 'nil' is returned and an error message as a string
@@ -607,32 +759,88 @@ Usage:
     local status, result = thread:sendSignal( thread_h, SIG_ALERT )
     if not status then print( result ) return end
 @End]]
-function thread:sendSignal( target_h, signal, ...)
-    local isValid = true
-    local errorMsg = nil
+function thread:sendSignal( target_h, signal, data )
     local fname = "thread:sendSignal()"
-    local args = {...}
+    local wasSent = true
+    local errorMsg = nil
+    local sigName = nil
+
+    
+    -- DEBUG
+    local sigName = signalNameTable[signal]
+    if sigName == nil then sigName = "nil" end
+    if data == nil then data = "nil" end
+    local H = getCallerHandle()
+    local st = utils:parseStackTrace( debugstack(2))
+    -- local msg = sprintf("%s Thread[%d] entered %s to send %s to thread[%d]\n %s\n", 
+    --         utils:dbgPrefix(),
+    --         H[TH_UNIQUE_ID],
+    --         fname,
+    --         data, 
+    --         target_h[TH_UNIQUE_ID], 
+    --         st )
+    -- utils:postMsg( msg )
+    -- END DEBUG
 
     if target_h == nil then
-        errorMsg = sprintf("%s %s in %s.\n", utils:dbgPrefix(), L["HANDLE_NOT_SPECIFIED"], fname )
-        return false, errorMsg
+        local sigName, errorMsg = signalNameTable[signal]
+        errorMsg = sprintf("%s - %s in %s. Attempt to send %s\n", utils:dbgPrefix(), L["HANDLE_NIL"], fname, sigName )
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        return nil, errorMsg
     end
 
-    if coroutine.status( target_h[TH_COROUTINE]) == "dead" then
-        isValid = false
-        errorMsg = sprintf("%s %s in %s.\n", utils:dbgPrefix(), L["SIGNAL_NOT_DELIVERED"], fname )
+    if signal == SIG_NONE_PENDING then
+        errorMsg = sprintf("%s - %s in %s.\n", utils:dbgPrefix(), L["SIGNAL_INVALID_OPERATION"], fname )
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- error( errorMsg )
+        return nil, errorMsg
     end
+
+    local isValid, errorMsg = signalIsValid( signal )
+    if not isValid then 
+        errorMsg = sprintf("%s - %s in %s\n", utils:dbgPrefix(), errorMsg, fname )
+        thread:reportError( ADDON_NAME, errorMsg ) 
+        -- error( errorMsg )
+        return nil, errorMsg
+    end
+
+    local state = coroutine.status( target_h[TH_COROUTINE])
+    if state == "dead" then
+        local st = utils:parseStackTrace( debugstack(2))
+        local threadId = sprintf("Thread[%d]", target_h[TH_UNIQUE_ID])
+        errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), L["THREAD_STATE_DEAD"], fname )
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        moveToMorgue( target_h )
+        return nil, errorMsg
+    end
+
 
     -- get the identity of the calling thread. This will be nil
     -- if the calling thread is the WoW Client.
     local sender_h = getCallerHandle()
- 
+
     -- Initialize and insert an entry into the recipient thread's signalTable
-    local signalEntry = {signal, sender_h, ... }
-    
+    local sigEntry = {signal, sender_h, data }
+
     -- inserts the entry at the head of the queue.
-    target_h[TH_SIGNAL_QUEUE]:enqueue(signalEntry)
-    return isValid, errorMsg
+    target_h[TH_SIGNAL_QUEUE]:enqueue(sigEntry)
+
+    -- DEBUG
+    -- local st = utils:parseStackTrace( debugstack(2))
+    -- local s = sprintf("Called from %s.\n    Thread[%d] Enqueued %s.\n    Total Signals in queue - %d.\n",
+    -- st,
+    -- target_h[TH_UNIQUE_ID], 
+    -- signalNameTable[sigEntry[1]],
+    -- target_h[TH_SIGNAL_QUEUE]:size()) 
+    -- utils:postMsg( s )
+    -- END DEBUG
+
+    if signal == SIG_ALERT then
+        target_h[TH_REMAINING_TICKS] = 1
+    end
+    sprintf("In %s, returned isValid = %s.", fname, tostring( isValid))
+
+    return wasSent, nil
 end
 
 --[[@Begin
@@ -655,23 +863,28 @@ Usage:
     if signal == nil then print( result ) return end
     signalValue, sender_h, data = signal[1], signal[2], signal[3]
 @End]]
+
 function thread:getSignal()
     local fname = "thread:getSignal()"
-    local isValid = true
     local errorMsg = nil
 
     local H = getCallerHandle()
-    if H == nil then -- we're the WoW client.
-        errorMsg = sprintf("%s %s in %s.\n", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
-        return nil, errorMsg
+    if H == nil then 
+        errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), L["THREAD_CONTEXT_REQUIRED"], fname)
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        error( errorMsg )
+        return nil, errorMsg 
     end
 
     -- Check if there is an entry in the caller's signalQueue.
-    if not H[TH_SIGNAL_QUEUE]:isEmpty() then
-        local entry = H[TH_SIGNAL_QUEUE]:dequeue() -- Get the first signal entry in the signal queue
-        return entry
+    if H[TH_SIGNAL_QUEUE]:isEmpty() then
+        return {SIG_NONE_PENDING, nil, nil }
     end
-    return {SIG_NONE_PENDING, nil, nil }
+
+
+    local entry = H[TH_SIGNAL_QUEUE]:dequeue()
+    local signalName = signalNameTable[entry[1]]
+    return entry, nil
 end
 
 --[[@Begin
@@ -693,38 +906,52 @@ function thread:getSignalName(signal)
     local errorMsg = nil
     local isValid = true
 
-    if signal == nil then
-        isValid = false
-        errorMsg = L["INPUT_SIGNAL_NIL"]
-        return isValid, errorMsg
-    end
-
-    local isValid, errorMsg = signalIsValid( signal )
+    isValid, errorMsg = signalIsValid( signal )
     if not isValid then
-        errorMsg = sprintf("%s %s in %s", utils:dbgPrefix(), errorMsg, fname )
+        errorMsg = sprintf("%s - %s in %s\n", utils:dbgPrefix(), errorMsg, fname )
+        thread:reportError( ADDON_NAME, errorMsg )
+        -- error( errorMsg )
         return nil, errorMsg
     end
-    return signalNameTable[signal], nil
+
+    return signalNameTable[signal]
 end
 --[[@Begin
-Title: Register a callback function with the WoWThreads Library.
-Signature: thread:registerCallback( addonName, callbackFunc )
-Description: Allows an addon client to register a callback function to be
+Title: Register a callbackFunc function with the WoWThreads Library.
+Signature: thread:registerCallback( addonName, callbackFuncFunc )
+Description: Allows an addon client to register a callbackFunc function to be
 invoked when an error occurs in WoWThreads. WoWThreads will then pass the 
-error message back to then addon through the callback function.
+error message back to then addon through the callbackFunc function.
 Parameters:
-- addonName (string): The name of the addon that is registering the callback.
-- callbackFunc (function): The function that sends the error message back tonumber
-the addon. 
+- addonName (string): the name of the addon
+- callbackFunc (function): the callbackFunc function
 Returns:
-- If successful: returns true
+- None
 Usage:
 @End]]
-function thread:registerCallback( addonName, callback )
-    errorCallbackTable[addonName] = callback
+function thread:getSigCount()
+    local errorMsg = nil
+    local fname = "thread:getSigCount()"
+
+    local H = getCallerHandle()
+    if H == nil then 
+        errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), errorMsg, fname)
+        thread:reportError( ADDON_NAME,  errorMsg ) 
+        error( errorMsg )
+        return nil, errorMsg 
+    end
+    return H[TH_SIGNAL_QUEUE]:getCount()
 end
-
-
+function thread:isValid(H)
+    local isValid = false
+    if H == nil then
+        H, errorMsg = getCallerHandle()
+        isValid = true
+    elseif handleIsValid( H ) then
+        isValid = true
+    end
+    return isValid
+end
 -- ------------------------- MANAGEMENT INTERFACE --------------------
 -- local function thread:getCongestion(thread_h)
 --     local threadId          = thread_h[TH_UNIQUE_ID]
@@ -747,7 +974,9 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 
 local function OnEvent(self, event, ...)
-    local addonName = ...
+    local numArgs = select("#", ...)    -- unused
+    local addonName = select(1, ...)
+
 
     if event == "ADDON_LOADED" and ADDON_NAME == addonName then
 
@@ -760,8 +989,3 @@ local function OnEvent(self, event, ...)
     return
 end
 eventFrame:SetScript("OnEvent", OnEvent)
-
-
-if utils:debuggingIsEnabled() then
-    DEFAULT_CHAT_FRAME:AddMessage(fileName, 0.0, 1.0, 1.0)
-end
