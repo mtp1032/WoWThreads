@@ -144,7 +144,7 @@ end
 --                          POST MESSAGE METHODS
 -- =====================================================================
 local DEFAULT_FRAME_WIDTH = 1000
-local DEFAULT_FRAME_HEIGHT = 200
+local DEFAULT_FRAME_HEIGHT = 400
 
 local function createResizeButton( f )
 	f:SetResizable( true )
@@ -277,12 +277,21 @@ local function createMsgFrame(title)
     createTextDisplay(f)
     createResizeButton(f)
     createSelectButton(f, "BOTTOMRIGHT",f, 5, 5)
-    createReloadButton(f,"BOTTOMLEFT",f, 5, 5)
+    createReloadButton(f, "BOTTOMLEFT", f, 5, 5)
     return f
 end
 function utils:postMsg( msg )
     if userMsgFrame == nil then
-        userMsgFrame = createMsgFrame( "Error Message (WoWThreads-1.0)" )
+        userMsgFrame = createMsgFrame( "Error Messages (WoWThreads-1.0)" )
+    end
+
+    if msg == nil then
+        utils:dbgPrint("msg is nil" )
+        local stackTrace = debugstack(2)
+        stackTrace = utils:parseStackTrace( stackTrace )
+        msg = sprintf("Invalid: 'msg' Was nil\nStack Trace:\n%s", stackTrace )
+        utils:postMsg( msg )
+        error( "Error: Program Stopped")
     end
 	userMsgFrame.Text:Insert( msg )
 	userMsgFrame:Show()
@@ -341,26 +350,29 @@ function calculateStats(values)
 
     return mean, variance, stdDev
 end
-local function parseErrorMsg( inputString )
-    if inputString == nil then
-        return "No Error String Provided"
-    end
-    -- Lua script to find the position of the last colon in a string
-    local inputString = "your:string:with:colons" -- Example string
-    local pos = 0  -- Start search position
-    local lastColon = -1  -- Default position if no colons are found
+-- local function parseErrorMsg( inputString )
+--     if inputString == nil then
+--         return "No Error String Provided"
+--     end
+--     -- Lua script to find the position of the last colon in a string
+--     local inputString = "your:string:with:colons" -- Example string
+--     local pos = 0  -- Start search position
+--     local lastColon = -1  -- Default position if no colons are found
 
-    -- Loop to find the last colon
-    while true do
-        local start, ends = string.find(inputString, ":", pos + 1) -- Find ':' starting from pos+1
-        if not start then 
-            break -- If no more colons, exit the loop
-        end  
-        lastColon = start  -- Update lastColon with the new found position
-        pos = start        -- Update pos to move the search start point forward
-    end
-end
+--     -- Loop to find the last colon
+--     while true do
+--         local start, ends = string.find(inputString, ":", pos + 1) -- Find ':' starting from pos+1
+--         if not start then 
+--             break -- If no more colons, exit the loop
+--         end  
+--         lastColon = start  -- Update lastColon with the new found position
+--         pos = start        -- Update pos to move the search start point forward
+--     end
+-- end
 
+--[[ 
+[string "@Interface/AddOns/WoWThreadTests/SignalSendReceiveTests.lua"]:101: in function <...ace/AddOns/WoWThreadTests/SignalSendReceiveTests.lua:88>
+ ]]
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
@@ -404,4 +416,25 @@ end
 -- local exampleStackTrace = '[string "@Interface/AddOns/WoWThreads/Libs/UtilsLib.lua"]:378: in function <Interface/AddOns/WoWThreads/Libs/UtilsLib.lua:377>'
 -- local simplified = utils:simplifyStackTrace(exampleStackTrace)
 -- print("Simplified Stack Trace:", simplified)
+
+
+function utils:parseStackTrace(debug_string) -- clean_debugstack_string(debug_string)
+    -- Step 1: Remove the first 28 characters
+    local step1 = string.sub(debug_string, 28)
+
+    -- Step 2: Remove the quote (") and right bracket (])
+    local step2 = step1:gsub('[%"]', ''):gsub('%]', '')
+
+    -- Step 3: Remove all characters from and including the 2nd colon (:) to the end
+    local first_colon = string.find(step2, ":")
+    local second_colon = string.find(step2, ":", first_colon + 1)
+    local result = string.sub(step2, 1, second_colon - 1)
+
+    return result
+end
+
+-- Example usage
+-- local debug_string = '[string "@Interface/AddOns/WoWThreadTests/SimpleSendReceive.lua"]:110: in function <...nterface/AddOns/WoWThreadTests/SimpleSendReceive.lua:99>'
+-- local str = utils:parseStackTrace(debug_string)
+-- utils:postMsg(str)  -- Output: WoWThreadTests/SimpleSendReceive.lua:110
 
