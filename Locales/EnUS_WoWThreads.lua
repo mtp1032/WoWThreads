@@ -43,8 +43,7 @@ if LOCALE == "enUS" then
     L["ERROR_MSG_FRAME_TITLE"] = "Error Messages - WoWThreads-1.0"
  	-- Generic Error MessageS
 	L["INPUT_PARM_NIL"]		= "ERROR: Input parameter nil  "
-    L["INPUT_SIGNAL_NIL"]   = "ERROR: Input signal was nil."
-	L["INVALID_TYPE"]		= "ERROR: Input datatype invalid, %s. Expected %s "
+	L["INVALID_TYPE"]		= "ERROR: Input datatype invalid "
 
 	-- Thread specific messages
 	L["HANDLE_NIL"] 		    = "ERROR: Thread handle nil "
@@ -56,14 +55,18 @@ if LOCALE == "enUS" then
     L["HANDLE_NOT_SPECIFIED"]   = "ERROR: Handle not specified "
 
 	L["INVALID_EXE_CONTEXT"]    = "ERROR: Operation requires thread context "
-	L["REFERENCED_THREAD_DEAD"]	= "ERROR: Invalid handle. Handle is likely 'dead.' "
+	L["THREAD_STATE_DEAD"]	    = "ERROR: Invalid handle. Handle is likely 'dead' "
     L["RESUME_FAILED"]          = "ERROR: Failed to resume thread[%d] "
+    L["THREAD_NOT_FOUND"]       = "ERROR: Thread not found in sleep queue "
 	
 	L["SIGNAL_QUEUE_INVALID"]	= "ERROR: Thread[%d] Invalid signal queue "
     L["SIGNAL_QUEUE_EMPTY"]     = "ERROR: Signal queue is empty "
 	L["SIGNAL_OUT_OF_RANGE"]	= "ERROR: Signal is out of range "
-    L["SIGNAL_INVALID"]			= "ERROR: Signal is unknown "
-    L["SIGNAL_NOT_DELIVERED"]   = "ERROR: Signal could not be delivered. "
+    L["SIGNAL_INVALID"]			= "ERROR: Signal is unknown or nil "
+    L["SIGNAL_INVALID_OPERATION"] = "ERROR: SIG_NONE_PENDING can not be sent "
+    L["SIGNAL_NOT_DELIVERED"]   = "ERROR: Signal not delivered "
+    L["SIGNAL_PARAMETER"]       = "ERROR: Too many signal parameters "
+    L["SIGNAL_INVALID_NAME"]    = "ERROR: Invalid signal name, %s "
 end
 if LOCALE == "frFR" then
 	-- WoWThreads Localizations
@@ -81,7 +84,7 @@ if LOCALE == "frFR" then
 	L["HANDLE_NOT_A_THREAD"] = "[ERREUR] Le descripteur spécifié ne référence pas une coroutine "
 
 	L["INVALID_EXE_CONTEXT"] = "[ERREUR] Opération nécessite un contexte de thread "
-	L["REFERENCED_THREAD_DEAD"]      = "[ERREUR] Descripteur invalide. Le descripteur est probablement 'mort.' "
+	L["THREAD_STATE_DEAD"]      = "[ERREUR] Descripteur invalide. Le descripteur est probablement 'mort.' "
 	L["RESUME_FAILED"]       = "[ERREUR] Échec de la reprise du thread[%d]: "
 
 	L["SIGNAL_QUEUE_INVALID"] = "[ERREUR] Thread[%d] File d'attente de signaux invalide "
@@ -105,7 +108,7 @@ if LOCALE == "deDE" then
     L["HANDLE_NOT_A_THREAD"]  = "[FEHLER] Angegebenes Thread-Handle ist keine Coroutine "
 
     L["INVALID_EXE_CONTEXT"]  = "[FEHLER] Operation erfordert Thread-Kontext "
-    L["REFERENCED_THREAD_DEAD"]       = "[FEHLER] Ungültiges Handle. Handle ist wahrscheinlich 'tot' "
+    L["THREAD_STATE_DEAD"]       = "[FEHLER] Ungültiges Handle. Handle ist wahrscheinlich 'tot' "
     L["RESUME_FAILED"]        = "[FEHLER] Fortsetzung von Thread[%d] fehlgeschlagen: "
     
     L["SIGNAL_QUEUE_INVALID"] = "[FEHLER] Thread[%d] Ungültige Signalwarteschlange "
@@ -129,7 +132,7 @@ if LOCALE == "frFR" then
     L["HANDLE_NOT_A_THREAD"]  = "[ERREUR] Le descripteur de thread spécifié ne référence pas une coroutine "
 
     L["INVALID_EXE_CONTEXT"]  = "[ERREUR] L'opération nécessite un contexte de thread "
-    L["REFERENCED_THREAD_DEAD"]       = "[ERREUR] Descripteur invalide. Le descripteur est probablement 'mort' "
+    L["THREAD_STATE_DEAD"]       = "[ERREUR] Descripteur invalide. Le descripteur est probablement 'mort' "
     L["RESUME_FAILED"]        = "[ERREUR] Échec de la reprise du thread[%d] : "
     
     L["SIGNAL_QUEUE_INVALID"] = "[ERREUR] Thread[%d] Queue de signal invalide "
@@ -153,7 +156,7 @@ if LOCALE == "zhCN" then
     L["HANDLE_NOT_A_THREAD"]  = "[错误] 指定的线程句柄不引用协程。"
 
     L["INVALID_EXE_CONTEXT"]  = "[错误] 操作需要线程上下文。"
-    L["REFERENCED_THREAD_DEAD"]       = "[错误] 句柄无效。句柄可能已经‘死亡’。"
+    L["THREAD_STATE_DEAD"]       = "[错误] 句柄无效。句柄可能已经‘死亡’。"
     L["RESUME_FAILED"]        = "[错误] 无法恢复线程[%d]："
     
     L["SIGNAL_QUEUE_INVALID"] = "[错误] 线程[%d]信号队列无效。"
@@ -177,7 +180,7 @@ if LOCALE == "koKR" then
     L["HANDLE_NOT_A_THREAD"]  = "[오류] 지정된 스레드 핸들이 코루틴을 참조하지 않습니다 "
 
     L["INVALID_EXE_CONTEXT"]  = "[오류] 작업에 스레드 컨텍스트가 필요합니다 "
-    L["REFERENCED_THREAD_DEAD"]       = "[오류] 핸들이 유효하지 않습니다. 핸들은 '죽었을' 가능성이 높습니다 "
+    L["THREAD_STATE_DEAD"]       = "[오류] 핸들이 유효하지 않습니다. 핸들은 '죽었을' 가능성이 높습니다 "
     L["RESUME_FAILED"]        = "[오류] 스레드[%d] 재개 실패: "
     
     L["SIGNAL_QUEUE_INVALID"] = "[오류] 스레드[%d] 신호 큐가 유효하지 않습니다 "
@@ -201,7 +204,7 @@ if LOCALE == "svSE" then
     L["HANDLE_NOT_A_THREAD"]  = "[FEL] Angivet trådhandtag refererar inte till en korutin "
 
     L["INVALID_EXE_CONTEXT"]  = "[FEL] Operation kräver trådkontext "
-    L["REFERENCED_THREAD_DEAD"]       = "[FEL] Ogiltigt handtag. Handtaget är troligen 'dött.' "
+    L["THREAD_STATE_DEAD"]       = "[FEL] Ogiltigt handtag. Handtaget är troligen 'dött.' "
     L["RESUME_FAILED"]        = "[FEL] Misslyckades med att återuppta tråd[%d]: "
     
     L["SIGNAL_QUEUE_INVALID"] = "[FEL] Tråd[%d] Ogiltig signal kö "
@@ -225,7 +228,7 @@ if LOCALE == "heIL" then
     L["HANDLE_NOT_A_THREAD"]  = "[שגיאה] ידית התהליכון המצוינת אינה מתייחסת לשגרת הרצה "
 
     L["INVALID_EXE_CONTEXT"]  = "[שגיאה] הפעולה דורשת הקשר של תהליכון "
-    L["REFERENCED_THREAD_DEAD"]       = "[שגיאה] ידית לא תקינה. יש סבירות שהידית 'מתה.' "
+    L["THREAD_STATE_DEAD"]       = "[שגיאה] ידית לא תקינה. יש סבירות שהידית 'מתה.' "
     L["RESUME_FAILED"]        = "[שגיאה] נכשל בחידוש התהליכון[%d]: "
     
     L["SIGNAL_QUEUE_INVALID"] = "[שגיאה] תהליכון[%d] תור אותות לא תקין "
@@ -248,7 +251,7 @@ if LOCALE == "esES" then
     L["HANDLE_NOT_A_THREAD"]  = "ERROR: El identificador de hilo especificado no hace referencia a una coroutina "
 
     L["INVALID_EXE_CONTEXT"]  = "ERROR: La operación requiere contexto de hilo "
-    L["REFERENCED_THREAD_DEAD"]       = "ERROR: Identificador inválido. El identificador probablemente esté 'muerto' "
+    L["THREAD_STATE_DEAD"]       = "ERROR: Identificador inválido. El identificador probablemente esté 'muerto' "
     L["RESUME_FAILED"]        = "ERROR: Fallo al reanudar el hilo[%d]: "
     
     L["SIGNAL_QUEUE_INVALID"] = "ERROR: Hilo[%d] Cola de señales inválida "
