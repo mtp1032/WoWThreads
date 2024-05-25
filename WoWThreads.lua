@@ -332,8 +332,9 @@ local function scheduleThreads()
                     error( "stopped - pcall() failed" )
                 end
                 if not coroutineResumed then
-                    thread:reportError(ADDON_NAME, errorStr )
-                    error( "stopped - " .. errorStr )
+                    local st = utils:parseStackTrace( debugstack(2))
+                    thread:reportError(ADDON_NAME, errorStr)
+                    error( "stopped: " .. errorStr )
                 end
             end
         end
@@ -929,18 +930,21 @@ Returns:
 - None
 Usage:
 @End]]
-function thread:getSigCount()
+function thread:getSigCount( thread_h )
     local errorMsg = nil
     local fname = "thread:getSigCount()"
+    local H = nil
 
-    local H = getCallerHandle()
-    if H == nil then 
-        errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), errorMsg, fname)
-        thread:reportError( ADDON_NAME,  errorMsg ) 
-        error( errorMsg )
-        return nil, errorMsg 
+    if thread_h == nil then
+        thread_h = getCallerHandle()
+        if thread_h == nil then 
+            errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname)
+            thread:reportError( ADDON_NAME,  errorMsg ) 
+            error( errorMsg )
+            return nil, errorMsg
+        end
     end
-    return H[TH_SIGNAL_QUEUE]:getCount()
+    return thread_h[TH_SIGNAL_QUEUE]:size(), nil
 end
 function thread:isValid(H)
     local isValid = false
