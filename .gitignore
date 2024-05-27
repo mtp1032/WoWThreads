@@ -1,7 +1,9 @@
 Docs/*
 Docs/TestDoc/*
 Libs/ACE/*
-Libs/LibStub.lua
+Libs/LibStub.lua 
 Libs/SignalQueue.lua
+Libs/FifoQueue-new.lua
 Protyping/*
+test.md
 WoWThreads_*.toc
