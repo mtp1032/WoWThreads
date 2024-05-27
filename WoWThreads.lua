@@ -300,7 +300,7 @@ local function wakeup(H)
         end
     end
     if not isValid then 
-        thread:reportError( ADDON_NAME, L["THREAD_NOT_FOUND"] ) 
+        -- thread:reportError( ADDON_NAME, L["THREAD_NOT_FOUND"] ) 
         return nil, L["THREAD_NOT_FOUND"] 
     end
     return isValid, nil
@@ -322,19 +322,27 @@ local function scheduleThreads()
             local pcallSucceeded = false
 
             H[TH_REMAINING_TICKS] = H[TH_REMAINING_TICKS] - 1
+            
             if H[TH_REMAINING_TICKS] == 0 then -- switch to next coroutine
                 H[TH_REMAINING_TICKS] = H[TH_DURATION_TICKS] -- replenish the remaining ticks
                 local co = H[TH_COROUTINE]
                 local errorStr = nil
                 pcallSucceeded, coroutineResumed, errorStr = pcall(coroutine.resume, co, unpack(args) )
                 if not pcallSucceeded then
+                    local st = utils:parseStackTrace( debugstack(2))
+                    moveToMorgue(H)
+                    -- utils:dbgPrint( "PCALL failed. Thread[%d] moved to morgue", H[TH_UNIQUE_ID])
+                    errorStr = sprintf("\nStack Trace:\n%s\n%s\n", st, errorStr)
                     thread:reportError(ADDON_NAME, errorStr )
-                    error( "stopped - pcall() failed" )
+                    -- error( "stopped - pcall() failed" )
                 end
                 if not coroutineResumed then
                     local st = utils:parseStackTrace( debugstack(2))
+                    -- utils:dbgPrint( "Thread[%d] failed to resume - moved to morgue", H[TH_UNIQUE_ID])
+                    moveToMorgue(H)
+                    errorStr = sprintf("Stack Trace:\n%s\n%s\n", st, errorStr)
                     thread:reportError(ADDON_NAME, errorStr)
-                    error( "stopped: " .. errorStr )
+                    -- error( "stopped: " .. errorStr )
                 end
             end
         end
@@ -399,7 +407,7 @@ function thread:create( yieldTicks, threadFunction, ... )
     isValid, errorMsg = handleIsValid(H)
     if not isValid then
         errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )         
-        thread:reportError( ADDON_NAME, errorMsg )
+        -- thread:reportError( ADDON_NAME, errorMsg )
         return nil, nil, errorMsg
     end
 
@@ -447,8 +455,8 @@ function thread:yield()
     local H = getCallerHandle()
     if H == nil then 
         errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname)
-        thread:reportError( ADDON_NAME,  errorMsg ) 
-        error( errorMsg )
+        -- thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- error( errorMsg )
         return nil, errorMsg 
     end
 
@@ -474,8 +482,8 @@ function thread:delay(delayTicks)
     local H = getCallerHandle()
     if H == nil then -- we're the WoW client.
         errorMsg = sprintf("%s - %s in %s.\n", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
-        thread:reportError( ADDON_NAME,  errorMsg ) 
-        error( errorMsg )
+        -- thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- error( errorMsg )
         return nil, errorMsg
     end
 
@@ -503,8 +511,8 @@ function thread:sleep()
     local H, errorMsg = getCallerHandle()
     if H == nil then -- we're the WoW client.
         errorMsg = sprintf("%s - %s in %s.\n", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
-        thread:reportError( ADDON_NAME,  errorMsg ) 
-        error( errorMsg )
+        -- thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- error( errorMsg )
         return nil, errorMsg
     end
     putToSleep(H)
@@ -530,8 +538,8 @@ function thread:getSelf()
     local H = getCallerHandle()
     if H == nil then 
         errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), errorMsg, fname)
-        thread:reportError( ADDON_NAME,  errorMsg ) 
-        error( errorMsg )
+        -- thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- error( errorMsg )
         return nil, errorMsg 
     end
     return H, nil
@@ -560,7 +568,7 @@ function thread:getId(thread_h)
         isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
             errorMsg = sprintf("%s - %s in %s.",utils:dbgPrefix(), errorMsg, fname)
-            thread:reportError( ADDON_NAME,  errorMsg ) 
+            -- thread:reportError( ADDON_NAME,  errorMsg ) 
             -- error( errorMsg )
             return nil, errorMsg
         end
@@ -568,8 +576,8 @@ function thread:getId(thread_h)
         thread_h = getCallerHandle()
         if thread_h == nil then 
             errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
-            thread:reportError( ADDON_NAME,  errorMsg ) 
-            error( errorMsg )
+            -- thread:reportError( ADDON_NAME,  errorMsg ) 
+            -- error( errorMsg )
             return nil, errorMsg
         end
     end
@@ -599,7 +607,7 @@ function thread:areEqual(H1, H2)
     -- check that neither handle is nil
     if H1 == nil or H2 == nil then
         errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), L["HANDLE_NIL"], fname )
-        thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- thread:reportError( ADDON_NAME,  errorMsg ) 
         -- error( errorMsg )
         return nil, errorMsg
     end
@@ -608,14 +616,14 @@ function thread:areEqual(H1, H2)
     isValid, errorMsg = handleIsValid(H1)
     if not isValid then
         errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )
-        thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- thread:reportError( ADDON_NAME,  errorMsg ) 
         -- error( errorMsg )
         return nil, errorMsg
     end
     isValid, errorMsg = handleIsValid(H2)
     if not isValid then
         errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )
-        thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- thread:reportError( ADDON_NAME,  errorMsg ) 
         -- error( errorMsg )
         return nil, errorMsg
     end
@@ -647,7 +655,7 @@ function thread:getParent(thread_h)
         isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
             errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )
-            thread:reportError( ADDON_NAME,  errorMsg ) 
+            -- thread:reportError( ADDON_NAME,  errorMsg ) 
             -- error( errorMsg )
             return nil, errorMsg
         end
@@ -655,8 +663,8 @@ function thread:getParent(thread_h)
         thread_h = getCallerHandle()
         if thread_h == nil then -- we're the WoW client.
             errorMsg = sprintf("%s - %s in %s.\n", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
-            thread:reportError( ADDON_NAME,  errorMsg ) 
-            error( errorMsg )
+            -- thread:reportError( ADDON_NAME,  errorMsg ) 
+            -- error( errorMsg )
             return nil, errorMsg
         end
     
@@ -688,15 +696,15 @@ function thread:getChildThreads(thread_h)
         isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
             errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )
-            thread:reportError( ADDON_NAME,  errorMsg ) 
+            -- thread:reportError( ADDON_NAME,  errorMsg ) 
             return nil, errorMsg
         end
     else -- thread_h is nil in which case raises a NO_CONTEXT error.
         local H = getCallerHandle()
         if H == nil then 
             errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), errorMsg, fname)
-            thread:reportError( ADDON_NAME,  errorMsg ) 
-            error( errorMsg )
+            -- thread:reportError( ADDON_NAME,  errorMsg ) 
+            -- error( errorMsg )
             return nil, errorMsg 
         end
     return thread_h[TH_CHILDREN]
@@ -729,14 +737,14 @@ function thread:getState(thread_h)
         if not wasSent then
             local func = "getState( thread_h)"
             errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, func )
-            thread:reportError( ADDON_NAME,  errorMsg )
+            -- thread:reportError( ADDON_NAME,  errorMsg )
             -- error( errorMsg )
             return nil, errorMsg
         end
         elseif thread_h == nil then 
             errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), errorMsg, fname)
-            thread:reportError( ADDON_NAME,  errorMsg ) 
-            error( errorMsg )
+            -- thread:reportError( ADDON_NAME,  errorMsg ) 
+            -- error( errorMsg )
             return nil, errorMsg 
         end
     end
@@ -766,7 +774,6 @@ function thread:sendSignal( target_h, signal, data )
     local errorMsg = nil
     local sigName = nil
 
-    
     -- DEBUG
     local sigName = signalNameTable[signal]
     if sigName == nil then sigName = "nil" end
@@ -786,13 +793,13 @@ function thread:sendSignal( target_h, signal, data )
     if target_h == nil then
         local sigName, errorMsg = signalNameTable[signal]
         errorMsg = sprintf("%s - %s in %s. Attempt to send %s\n", utils:dbgPrefix(), L["HANDLE_NIL"], fname, sigName )
-        thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- thread:reportError( ADDON_NAME,  errorMsg ) 
         return nil, errorMsg
     end
 
     if signal == SIG_NONE_PENDING then
         errorMsg = sprintf("%s - %s in %s.\n", utils:dbgPrefix(), L["SIGNAL_INVALID_OPERATION"], fname )
-        thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- thread:reportError( ADDON_NAME,  errorMsg ) 
         -- error( errorMsg )
         return nil, errorMsg
     end
@@ -800,7 +807,7 @@ function thread:sendSignal( target_h, signal, data )
     local isValid, errorMsg = signalIsValid( signal )
     if not isValid then 
         errorMsg = sprintf("%s - %s in %s\n", utils:dbgPrefix(), errorMsg, fname )
-        thread:reportError( ADDON_NAME, errorMsg ) 
+        -- thread:reportError( ADDON_NAME, errorMsg ) 
         -- error( errorMsg )
         return nil, errorMsg
     end
@@ -810,7 +817,7 @@ function thread:sendSignal( target_h, signal, data )
         local st = utils:parseStackTrace( debugstack(2))
         local threadId = sprintf("Thread[%d]", target_h[TH_UNIQUE_ID])
         errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), L["THREAD_STATE_DEAD"], fname )
-        thread:reportError( ADDON_NAME,  errorMsg ) 
+        -- thread:reportError( ADDON_NAME,  errorMsg ) 
         moveToMorgue( target_h )
         return nil, errorMsg
     end
@@ -825,6 +832,8 @@ function thread:sendSignal( target_h, signal, data )
 
     -- inserts the entry at the head of the queue.
     target_h[TH_SIGNAL_QUEUE]:enqueue(sigEntry)
+    local numSigs = target_h[TH_SIGNAL_QUEUE]:size()
+    -- utils:dbgPrint("Signal enqueued. Total signals in queue - ", numSigs)
 
     -- DEBUG
     -- local st = utils:parseStackTrace( debugstack(2))
@@ -839,8 +848,6 @@ function thread:sendSignal( target_h, signal, data )
     if signal == SIG_ALERT then
         target_h[TH_REMAINING_TICKS] = 1
     end
-    sprintf("In %s, returned isValid = %s.", fname, tostring( isValid))
-
     return wasSent, nil
 end
 
@@ -869,22 +876,29 @@ function thread:getSignal()
     local fname = "thread:getSignal()"
     local errorMsg = nil
 
+    -- utils:dbgPrint()
     local H = getCallerHandle()
     if H == nil then 
         errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), L["THREAD_CONTEXT_REQUIRED"], fname)
         thread:reportError( ADDON_NAME,  errorMsg ) 
-        error( errorMsg )
+        -- error( errorMsg )
+        -- utils:dbgPrint()
         return nil, errorMsg 
     end
+    -- utils:dbgPrint( H[TH_UNIQUE_ID])
 
     -- Check if there is an entry in the caller's signalQueue.
-    if H[TH_SIGNAL_QUEUE]:isEmpty() then
+    if H[TH_SIGNAL_QUEUE]:size() == 0 then
+        -- utils:dbgPrint("No signals in queue.")
         return {SIG_NONE_PENDING, nil, nil }
     end
 
-
+    -- utils:dbgPrint(H[TH_SIGNAL_QUEUE]:size(), " signals in queue.")
     local entry = H[TH_SIGNAL_QUEUE]:dequeue()
+    -- utils:dbgPrint(H[TH_SIGNAL_QUEUE]:size(), " signals in queue.")
     local signalName = signalNameTable[entry[1]]
+
+    -- utils:dbgPrint( entry[3])
     return entry, nil
 end
 
@@ -910,7 +924,7 @@ function thread:getSignalName(signal)
     isValid, errorMsg = signalIsValid( signal )
     if not isValid then
         errorMsg = sprintf("%s - %s in %s\n", utils:dbgPrefix(), errorMsg, fname )
-        thread:reportError( ADDON_NAME, errorMsg )
+        -- thread:reportError( ADDON_NAME, errorMsg )
         -- error( errorMsg )
         return nil, errorMsg
     end
@@ -939,7 +953,7 @@ function thread:getSigCount( thread_h )
         thread_h = getCallerHandle()
         if thread_h == nil then 
             errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname)
-            thread:reportError( ADDON_NAME,  errorMsg ) 
+            -- thread:reportError( ADDON_NAME,  errorMsg ) 
             error( errorMsg )
             return nil, errorMsg
         end
