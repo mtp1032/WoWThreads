@@ -1,5 +1,6 @@
 Docs/*
 Docs/TestDoc/*
+Docs/DevNotes/*
 Libs/ACE/*
 Libs/LibStub.lua 
 Libs/SignalQueue.lua
