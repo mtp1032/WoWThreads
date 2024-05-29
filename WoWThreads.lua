@@ -85,7 +85,10 @@ thread.SIG_IS_COMPLETE  = 7 -- info: thread is complete
 thread.SIG_SUCCESS      = 8 -- info: thread completed successfully
 thread.SIG_FAILURE      = 9 -- info: thread completed with failure
 thread.SIG_READY        = 10
-thread.SIG_NONE_PENDING = 11 -- signal queue is empty.
+thread.SIG_WAKEUP       = 11 -- unused. Intended for thread pools.
+thread.SIG_CALLBACK     = 12
+thread.SIG_THREAD_DEAD  = 13
+thread.SIG_NONE_PENDING = 14 -- signal queue is empty.
 
 local SIG_ALERT         = thread.SIG_ALERT
 local SIG_GET_DATA      = thread.SIG_GET_DATA
@@ -96,7 +99,10 @@ local SIG_TERMINATE     = thread.SIG_TERMINATE
 local SIG_IS_COMPLETE   = thread.SIG_IS_COMPLETE
 local SIG_SUCCESS       = thread.SIG_SUCCESS
 local SIG_FAILURE       = thread.SIG_FAILURE  
-local SIG_READY         = thread.SIG_READY  
+local SIG_READY         = thread.SIG_READY 
+local SIG_WAKEUP        = thread.SIG_WAKEUP 
+local SIG_CALLBACK      = thread.SIG_CALLBACK
+local SIG_THREAD_DEAD   = thread.SIG_THREAD_DEAD
 local SIG_NONE_PENDING  = thread.SIG_NONE_PENDING
 
 local signalNameTable = {
@@ -110,6 +116,9 @@ local signalNameTable = {
     "SIG_SUCCESS",
     "SIG_FAILURE",
     "SIG_READY",
+    "SIG_WAKEUP",
+    "SIG_CALLBACK",
+    "SIG_THREAD_DEAD",
     "SIG_NONE_PENDING"
 }
 
@@ -132,18 +141,6 @@ function  thread:reportError( addonName, errorMsg )
     else
     end
 end
-function thread:registerCallback( addonName, callbackFunc )
-
-    if type(addonName) ~= "string" then
-        error("Invalid addon name")
-    end
-    if type(callbackFunc) ~= "function" then
-        error("Invalid callback function")
-    end   
-    errorCallbackTable[addonName] = callbackFunc
-end
-thread:registerCallback( ADDON_NAME, libErrorHandler)
-
 local function getCallerHandle()
     local running_h = nil
 
@@ -197,15 +194,14 @@ end
 local function moveToMorgue( H )
     H[TH_LIFETIME_TICKS] = ACCUMULATED_TICKS - H[TH_LIFETIME_TICKS]
 
-    for i = 1, #morgue do
-        if H[TH_UNIQUE_ID] == morgue[i][TH_UNIQUE_ID] then
-            return
+    for i, entry in ipairs( threadControlBlock ) do
+        if H[TH_UNIQUE_ID] == entry[TH_UNIQUE_ID] then
+            table.remove(threadControlBlock, i)
+            table.insert( morgue, H)
+            break
         end
     end
-
-    table.remove(threadControlBlock, i)
-    table.insert(morgue, H)
-    utils:dbgPrint( sprintf("thread[%d] moved to morgue", H[TH_UNIQUE_ID]) )
+    utils:dbgPrint( sprintf("thread[%d] moved into morgue", H[TH_UNIQUE_ID]) )
 end
 local function putToSleep( H )
     for i = 1, #threadControlBlock do
@@ -307,12 +303,16 @@ local function wakeup(H)
 end
 local function scheduleThreads()
     ACCUMULATED_TICKS = ACCUMULATED_TICKS + 1
+    if #threadControlBlock == 0 then
+        return
+    end
 
     for i, H in ipairs(threadControlBlock) do
         H[TH_LIFETIME_TICKS] = H[TH_LIFETIME_TICKS] + 1
         local status = coroutine.status( H[TH_COROUTINE] )
-        if status == "dead" then -- move to the morgue
+        if status == "dead" then -- move it into the morgue
             moveToMorgue(H)
+            return
         end
         
         if status == "suspended" then
@@ -331,7 +331,7 @@ local function scheduleThreads()
                 if not pcallSucceeded then
                     local st = utils:parseStackTrace( debugstack(2))
                     moveToMorgue(H)
-                    -- utils:dbgPrint( "PCALL failed. Thread[%d] moved to morgue", H[TH_UNIQUE_ID])
+                            -- utils:dbgPrint( "PCALL failed. Thread[%d] moved to morgue", H[TH_UNIQUE_ID])
                     errorStr = sprintf("\nStack Trace:\n%s\n%s\n", st, errorStr)
                     thread:reportError(ADDON_NAME, errorStr )
                     -- error( "stopped - pcall() failed" )
@@ -340,7 +340,7 @@ local function scheduleThreads()
                     local st = utils:parseStackTrace( debugstack(2))
                     -- utils:dbgPrint( "Thread[%d] failed to resume - moved to morgue", H[TH_UNIQUE_ID])
                     moveToMorgue(H)
-                    errorStr = sprintf("Stack Trace:\n%s\n%s\n", st, errorStr)
+                            errorStr = sprintf("Stack Trace:\n%s\n%s\n", st, errorStr)
                     thread:reportError(ADDON_NAME, errorStr)
                     -- error( "stopped: " .. errorStr )
                 end
@@ -374,27 +374,27 @@ end
 -- ============================================================================
 --[[@Begin 
 Title: Create a Thread
-Signature: status, errorMsg = thread:create( yieldTicks, threadFun,... )
+Signature: thread_h, threadId, errorMsg = thread:create( yieldTicks, func,... )
 Description: Creates a reference to an executable thread called a 
-thread handle. The thread handle is implemented as a table of thread 
-attributes, including the reference to the actual executable thread 
-(coroutine).
+thread handle. The thread handle is an opaque reference to the 
+thread's coroutine. The thread handle is used by the library's 
+internals to manage and schedule the thread.
 Parameters:
 - yieldTicks (number). The time, in clock ticks, the thread is to 
 suspend itself when it calls thread:yield(). A clock tick is the 
 reciprocal of your computer's framerate multiplied by 1000. On my 
 system a clock tick is about 16.7 milliseconds where 60 ticks is 
 about 1 second.
-- threadFunc (function). The function the thread is to execute. In 
+- func (function). The function the thread is to execute. In 
 POSIX and other thread environments, the thread function is often 
 called the action routine.
 - ... (varargs), Additional arguments to be passed to the thread function.
 Returns:
 - If successful, Returns a thread handle and the thread's Id.
-- If failure, Returns nil anG651
-d an error message
+- If failure, Returns nil. The error message describes the error
+and its location.
 Usage:
-    local thread_h, threadId, result = thread:create( 60, helloWorld, "Hello World" )
+    local thread_h, threadId, errorMsg = thread:create( 60, helloWorld, "Hello World" )
     if thread_h ~= nil then print( result) return end
 @End]]
 function thread:create( yieldTicks, threadFunction, ... )
@@ -417,14 +417,16 @@ end
 
 --[[@Begin
 Title: Suspend a Thread's Execution
-Signature: thread:yield()
+Signature: success, errorMsg = thread:yield()
 Description: Suspends the calling thread for the number of ticks specified in the
 yieldTicks parameter of the thread's create function used to create the thread. 
 Thread context required, 
 Parameters:
-- None
+- None.
 Returns:
-- None
+- Success (boolean): True if the thread was successfully suspended, 
+false otherwise.
+- Error message (string): The error message if the thread could not be suspended.
 Usage:
     -- This is the function executed by the thread created below and prints the
     -- the greeting 3 times.
@@ -433,7 +435,7 @@ Usage:
         local count = 1
         while not DONE do
             thread:yield()
-            print( greeting )
+            count = count + 1
             if count == 3 then
                 DONE = false
             else
@@ -442,7 +444,7 @@ Usage:
         end
     end
     -- Create a thread to execute the helloWorld action routine.
-    local thread_h, result = thread:create( 60, helloWorld, "Hello World!" )
+    local thread_h, errorMsg = thread:create( 60, helloWorld, "Hello World!" )
     if thread_h == nil then print( result) return end
 @End]]
 function thread:yield()
@@ -467,32 +469,8 @@ function thread:yield()
 end
 
 --[[@Begin
-Title: Suspend a thread's execution for a specified number of ticks
-Signature: thread:delay( delayTicks )
-Description: Delays a thread by the specified number of ticks. Thread 
-context required.
-Parameters:
-- delayTicks (number): the number of ticks to delay before continuing
-Returns:
-- None
-Usage:
-@End]]
-function thread:delay(delayTicks)
-    local fname = "thread:delay()"
-    local H = getCallerHandle()
-    if H == nil then -- we're the WoW client.
-        errorMsg = sprintf("%s - %s in %s.\n", utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
-        -- thread:reportError( ADDON_NAME,  errorMsg ) 
-        -- error( errorMsg )
-        return nil, errorMsg
-    end
-
-    H[TH_REMAINING_TICKS] = delayTicks + H[TH_REMAINING_TICKS]
-    coroutine.yield()
-end
-
---[[@Begin
-Title: Suspends the calling thread indefinitely.
+Title: Suspends the calling thread until it receives a SIG_WAKEUP
+signal.
 Signature: thread:sleep()
 Description: Suspends a thread for an indeterminate time.
 Note, like thread:yield() or thread:delay(), this call doesn't 
@@ -520,7 +498,7 @@ end
 
 --[[@Begin
 Title: Get the handle of the calling thread
-Signature: thread_h, result = thread:getSelf()
+Signature: thread_h, errorMsg = thread:getSelf()
 Description: Gets the handle of the calling thread.
 Parameters:
 - None
@@ -529,7 +507,6 @@ Returns:
 - If failure: 'nil' is returned along with an error message (string)
 Usage:
 @End]]
-
 function thread:getSelf()
     local fname = "thread:getSelf()"
     local isValid = true
@@ -547,7 +524,7 @@ end
 
 --[[@Begin
 Title: Obtain the numerical Id of the specified thread
-Signature: threadId, result = thread:getId( thread_h )
+Signature: threadId, errorMsg = thread:getId( thread_h )
 Description: Obtains the numerical Id of the calling thread. Thread context
 required.
 Parameters:
@@ -556,7 +533,7 @@ Returns:
 - If successful: returns the numerical Id of the thread.
 - If failure: 'nil' is returned along with an error message (string)
 Usage:
-    local threadId, result = thread:getId()
+    local threadId, errorMsg = thread:getId()
     if threadId == nil then print( result) return end
 @End]]
 function thread:getId(thread_h)
@@ -586,7 +563,7 @@ end
 
 --[[@Begin
 Title: Check if two threads are equal
-Signature: local equal, result = thread:areEqual( H1, H2 )
+Signature: local equal, errorMsg = thread:areEqual( H1, H2 )
 Description: Determines whether two thread handles are identical. Thread context
 required.
 Parameters: 
@@ -596,7 +573,7 @@ Returns:
 - If successful: returns 'true'
 - If failure: returns 'false' and an error message (string)
 Usage:
-    local equal, result = thread:areEqual( H1, H2 )
+    local equal, errorMsg = thread:areEqual( H1, H2 )
     if equal == nil then print( result) return end
 @End]]
 function thread:areEqual(H1, H2)
@@ -642,7 +619,7 @@ Returns
 - If successful: returns the handle of the parent thread
 - If failure: 'nil' is returned and an error message (string)
 Usage:
-    local parent_h, result = thread:getParent( thread_h )
+    local parent_h, errorMsg = thread:getParent( thread_h )
     if parent_h == 'nil' then print( result) return end
 @End]]
 function thread:getParent(thread_h)
@@ -674,46 +651,48 @@ end
 
 --[[@Begin
 Title: Obtain a table of handles of the specified thread's children.
-Signature: children, result thread:getChildThreads( thread_h )
+Signature: children, errorMsg thread:getChildThreads( thread_h )
 Description: Obtains a table of the handles of the specified thread's children.
 Parameters
 - thread_h (handle). If nil, then a table of the child threads of the calling 
 thread is returned.
 Returns
-- If successful: returns a table of thread handles.
-- If failure: 'nil' is returned and an error message (string)
+- If successful: returns a table of thread handles and a count of the number of children
+- If failure: 'nil' and 'nil' are returned and an error message (string) i.e.,
+- Error returns: nil, nil, errorMsg.
 Usage:
-    local threadTable, result = thread:getChildThreads( thread_h )
-    if threadTable == 'nil' then print( result ) return end
+    local threadTable, childCounterrorMsg = thread:getChildThreads( thread_h )
+    if threadTable == 'nil' then print( errorMsg ) return end
 @End]]
 function thread:getChildThreads(thread_h)
     local fname = "thread:getChildThreads()"
     local errorMsg = nil
-    local isValid = false
 
     -- if thread_h is nil then this is equivalent to "getMyParent"
     if thread_h ~= nil then
-        isValid, errorMsg = handleIsValid(thread_h)
+        local isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
             errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), errorMsg, fname )
             -- thread:reportError( ADDON_NAME,  errorMsg ) 
-            return nil, errorMsg
+            return nil, nil, errorMsg
         end
-    else -- thread_h is nil in which case raises a NO_CONTEXT error.
+    else -- the argument is non-nil
         local H = getCallerHandle()
         if H == nil then 
             errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), errorMsg, fname)
             -- thread:reportError( ADDON_NAME,  errorMsg ) 
             -- error( errorMsg )
-            return nil, errorMsg 
+            return nil, nil, errorMsg 
         end
-    return thread_h[TH_CHILDREN]
+    end
+
+    return thread_h[TH_CHILDREN], #thread_h[TH_CHILDREN], errorMsg
 end
 
 --[[@Begin
 Title: Get a Thread's State
 Descripture: Obtain the specified thread's execution state.
-Signature: state, result = thread:getState( thread_h )
+Signature: state, errorMsg = thread:getState( thread_h )
 Description: Gets the state of the specified thread. A thread may be in one of 
 three execution states: "suspended," "running," or "dead." Thread context required.
 Parameters:
@@ -724,8 +703,8 @@ Returns:
 specified thread.
 - If failure: returns 'false' and an error message (string)
 Usage:
-    local state, result = thread:getState( thread_h )
-    if state == 'nil' then print( result ) return end
+    local state, errorMsg = thread:getState( thread_h )
+    if state == 'nil' then print( errorMsg ) return end
 @End]]
 function thread:getState(thread_h)
     local fname = "thread:getState()"
@@ -741,7 +720,7 @@ function thread:getState(thread_h)
             -- error( errorMsg )
             return nil, errorMsg
         end
-        elseif thread_h == nil then 
+        if thread_h == nil then 
             errorMsg = sprintf("%s - %s in %s", utils:dbgPrefix(), errorMsg, fname)
             -- thread:reportError( ADDON_NAME,  errorMsg ) 
             -- error( errorMsg )
@@ -755,73 +734,66 @@ end
 
 --[[@Begin
 Title: Signal another thread.
-Signature: status, result = thread:sendSignal( target_h, signaValue,[,data] )
+Signature: status, errorMsg = thread:sendSignal( target_h, signaValue,[,data] )
 Description: Sends a signal to the specified thread. Thread context NOT required.
 Parameters: 
 - thread_h (handle): The thread to which the signal is to be sent. 
 - signalValue (number): signal to be sent.
-- data (any)Data to be passed to the receiving thread
+- data (any) Data (including functions) to be passed to the receiving thread
 Returns:
-- If successful, Returns true
-- If failure, 'nil' is returned and an error message as a string
+    If successful, SIG_SUCCESS, nil is returned.
+    If not successful, SIG_FAILURE, error message is returned. If 
+    the call failed because the target thread is dead, then SIG_THREAD_DEAD, nil
+    is returned. In other words, signaling a dead thread is not fatal. What happens
+    when a dead thread is signaled is up to the developer.
 Usage:
-    local status, result = thread:sendSignal( thread_h, SIG_ALERT )
-    if not status then print( result ) return end
+    -- Sending a signal to a dead thread is not fatal.
+    local status, errorMsg = thread:sendSignal( target_h, signalValue, data )
+    if status == SIG_FAILURE then 
+        error( errorMsg )
+        return 
+    end
+    if status == SIG_THREAD_DEAD then
+        print( "thread was dead" )
+    end
+
+
 @End]]
 function thread:sendSignal( target_h, signal, data )
     local fname = "thread:sendSignal()"
     local wasSent = true
     local errorMsg = nil
     local sigName = nil
-
-    -- DEBUG
-    local sigName = signalNameTable[signal]
-    if sigName == nil then sigName = "nil" end
-    if data == nil then data = "nil" end
-    local H = getCallerHandle()
-    local st = utils:parseStackTrace( debugstack(2))
-    -- local msg = sprintf("%s Thread[%d] entered %s to send %s to thread[%d]\n %s\n", 
-    --         utils:dbgPrefix(),
-    --         H[TH_UNIQUE_ID],
-    --         fname,
-    --         data, 
-    --         target_h[TH_UNIQUE_ID], 
-    --         st )
-    -- utils:postMsg( msg )
-    -- END DEBUG
+    local isDead = false
 
     if target_h == nil then
         local sigName, errorMsg = signalNameTable[signal]
         errorMsg = sprintf("%s - %s in %s. Attempt to send %s\n", utils:dbgPrefix(), L["HANDLE_NIL"], fname, sigName )
         -- thread:reportError( ADDON_NAME,  errorMsg ) 
-        return nil, errorMsg
+        return SIG_FAILURE, errorMsg
     end
 
     if signal == SIG_NONE_PENDING then
         errorMsg = sprintf("%s - %s in %s.\n", utils:dbgPrefix(), L["SIGNAL_INVALID_OPERATION"], fname )
         -- thread:reportError( ADDON_NAME,  errorMsg ) 
         -- error( errorMsg )
-        return nil, errorMsg
+        return SIG_FAILURE, errorMsg
     end
-
     local isValid, errorMsg = signalIsValid( signal )
     if not isValid then 
         errorMsg = sprintf("%s - %s in %s\n", utils:dbgPrefix(), errorMsg, fname )
         -- thread:reportError( ADDON_NAME, errorMsg ) 
         -- error( errorMsg )
-        return nil, errorMsg
+        return SIG_FAILURE, errorMsg
     end
-
     local state = coroutine.status( target_h[TH_COROUTINE])
     if state == "dead" then
         local st = utils:parseStackTrace( debugstack(2))
         local threadId = sprintf("Thread[%d]", target_h[TH_UNIQUE_ID])
         errorMsg = sprintf("%s - %s in %s.", utils:dbgPrefix(), L["THREAD_STATE_DEAD"], fname )
         -- thread:reportError( ADDON_NAME,  errorMsg ) 
-        moveToMorgue( target_h )
-        return nil, errorMsg
+        return SIG_THREAD_DEAD, errorMsg
     end
-
 
     -- get the identity of the calling thread. This will be nil
     -- if the calling thread is the WoW Client.
@@ -833,22 +805,11 @@ function thread:sendSignal( target_h, signal, data )
     -- inserts the entry at the head of the queue.
     target_h[TH_SIGNAL_QUEUE]:enqueue(sigEntry)
     local numSigs = target_h[TH_SIGNAL_QUEUE]:size()
-    -- utils:dbgPrint("Signal enqueued. Total signals in queue - ", numSigs)
-
-    -- DEBUG
-    -- local st = utils:parseStackTrace( debugstack(2))
-    -- local s = sprintf("Called from %s.\n    Thread[%d] Enqueued %s.\n    Total Signals in queue - %d.\n",
-    -- st,
-    -- target_h[TH_UNIQUE_ID], 
-    -- signalNameTable[sigEntry[1]],
-    -- target_h[TH_SIGNAL_QUEUE]:size()) 
-    -- utils:postMsg( s )
-    -- END DEBUG
 
     if signal == SIG_ALERT then
         target_h[TH_REMAINING_TICKS] = 1
     end
-    return wasSent, nil
+    return SIG_SUCCESS, nil
 end
 
 --[[@Begin
@@ -856,7 +817,7 @@ Title: Get a signal, if present.
 Description: The queue of a thread's signals is FIFO. So, getting a signal means 
 gets the first signal in the calling thread's signal queue. In other words, then
 signal that has been in the queue the longest. Thread context is required.
-Signature: status, result = thread:getSignal()
+Signature: status, errorMsg = thread:getSignal()
 Description: Sends a signal to the specified thread.
 Parameters:
 - target_h (handle): the thread to which the signal is to be sent.
@@ -867,8 +828,8 @@ In other words, a table entry. The entry consists of a signal value, the handle 
 data. The sending thread's handle will be nil if sent from the WoW client.
 - If failure: 'nil' is returned along with an error message (string)
 Usage:
-    local signal, result = thread:getSignal()
-    if signal == nil then print( result ) return end
+    local signal, errorMsg = thread:getSignal()
+    if signal == nil then print( errorMsg ) return end
     signalValue, sender_h, data = signal[1], signal[2], signal[3]
 @End]]
 
@@ -904,7 +865,7 @@ end
 
 --[[@Begin
 Title: Get the name of a signal
-Signature: signalName, result = thread:getSignalName( signal )
+Signature: signalName, errorMsg = thread:getSignalName( signal )
 Description: Gets the string name of the specified signal value. Thread context
 not required.
 Parameters:
@@ -913,8 +874,8 @@ Returns:
 - If successful: returns the name of the signal value
 - If failure: returns 'nil' and an error message(string)
 Usage:
-    local signalName, result = thread:getSignalName( signal )
-    if signalName == nil then print( result ) return end
+    local signalName, errorMsg = thread:getSignalName( signal )
+    if signalName == nil then print( errorMsg ) return end
 @End ]]
 function thread:getSignalName(signal)
     local fname = "thread:getSignalName()"
@@ -931,19 +892,22 @@ function thread:getSignalName(signal)
 
     return signalNameTable[signal]
 end
+
 --[[@Begin
-Title: Register a callbackFunc function with the WoWThreads Library.
-Signature: thread:registerCallback( addonName, callbackFuncFunc )
-Description: Allows an addon client to register a callbackFunc function to be
-invoked when an error occurs in WoWThreads. WoWThreads will then pass the 
-error message back to then addon through the callbackFunc function.
+Title: Get a count of the number of signals pending in a thread's 
+signal queue.
+Signature: signalCount, errorMsg = thread:getSigCount( thread_h )
+Description: Gets the number of signals in the calling thread's signal queue.
 Parameters:
-- addonName (string): the name of the addon
-- callbackFunc (function): the callbackFunc function
+- thread_h (number): The number of pending signals in the specified
+thread's signal queue
 Returns:
-- None
+- If successful: returns the number of pending signals
+- If failure: returns 'nil' and an error message(string)
 Usage:
-@End]]
+    local sigCount, errorMsg = thread:getSigCount( thread_h )
+    if signalCount == nil then print( errorMsg ) return end
+@End ]]
 function thread:getSigCount( thread_h )
     local errorMsg = nil
     local fname = "thread:getSigCount()"
@@ -960,15 +924,28 @@ function thread:getSigCount( thread_h )
     end
     return thread_h[TH_SIGNAL_QUEUE]:size(), nil
 end
-function thread:isValid(H)
-    local isValid = false
-    if H == nil then
-        H, errorMsg = getCallerHandle()
-        isValid = true
-    elseif handleIsValid( H ) then
-        isValid = true
+--[[@Begin
+Title: Register a callbackFunc function with the WoWThreads Library.
+Signature: thread:registerCallback( addonName, callbackFuncFunc )
+Description: Allows an addon client to register a callbackFunc function to be
+invoked when an error occurs in WoWThreads. WoWThreads will then pass the 
+error message back to then addon through the callbackFunc function.
+Parameters:
+- addonName (string): the name of the addon
+- callbackFunc (function): the callbackFunc function
+Returns:
+- None
+Usage:
+@End]]
+function thread:registerCallback( addonName, callbackFunc )
+
+    if type(addonName) ~= "string" then
+        error("Invalid addon name")
     end
-    return isValid
+    if type(callbackFunc) ~= "function" then
+        error("Invalid callback function")
+    end   
+    errorCallbackTable[addonName] = callbackFunc
 end
 -- ------------------------- MANAGEMENT INTERFACE --------------------
 -- local function thread:getCongestion(thread_h)
