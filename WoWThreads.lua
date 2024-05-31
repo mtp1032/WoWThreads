@@ -651,18 +651,17 @@ end
 
 --[[@Begin
 Title: Obtain a table of handles of the specified thread's children.
-Signature: children, errorMsg thread:getChildThreads( thread_h )
+Signature: childTable, errorMsg thread:getChildThreads( thread_h )
 Description: Obtains a table of the handles of the specified thread's children.
 Parameters
 - thread_h (handle). If nil, then a table of the child threads of the calling 
 thread is returned.
 Returns
-- If successful: returns a table of thread handles and a count of the number of children
-- If failure: 'nil' and 'nil' are returned and an error message (string) i.e.,
-- Error returns: nil, nil, errorMsg.
+- If successful: returns a table of thread handles.
+- If failure: 'nil' is returned along with an error message (string) i.e.,
 Usage:
-    local threadTable, childCounterrorMsg = thread:getChildThreads( thread_h )
-    if threadTable == 'nil' then print( errorMsg ) return end
+    local childTable, errorMsg = thread:getChildThreads( thread_h )
+    if childTable == 'nil' then print( errorMsg ) return end
 @End]]
 function thread:getChildThreads(thread_h)
     local fname = "thread:getChildThreads()"
@@ -686,7 +685,7 @@ function thread:getChildThreads(thread_h)
         end
     end
 
-    return thread_h[TH_CHILDREN], #thread_h[TH_CHILDREN], errorMsg
+    return thread_h[TH_CHILDREN], errorMsg
 end
 
 --[[@Begin
