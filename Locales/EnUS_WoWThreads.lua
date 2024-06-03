@@ -46,7 +46,7 @@ if LOCALE == "enUS" then
 	L["INVALID_TYPE"]		= "ERROR: Input datatype invalid "
 
 	-- Thread specific messages
-	L["HANDLE_NIL"] 		    = "ERROR: Thread handle nil "
+	L["THREAD_HANDLE_NIL"] 		= "ERROR: Thread handle nil "
     L["INVALID_HANDLE"]         = "ERROR: Invalid handle "
 	L["INVALID_EXE_STATE"]	    = "ERROR: Thread[%d] is %s "
 	L["HANDLE_ILL_FORMED"]	    = "ERROR: Thread handle ill-formed "
@@ -56,8 +56,8 @@ if LOCALE == "enUS" then
 
 	L["INVALID_EXE_CONTEXT"]    = "ERROR: Operation requires thread context "
 	L["THREAD_STATE_DEAD"]	    = "ERROR: Invalid handle. Handle is likely 'dead' "
-    L["RESUME_FAILED"]          = "ERROR: Failed to resume thread[%d] "
-    L["THREAD_NOT_FOUND"]       = "ERROR: Thread not found in sleep queue "
+    L["RESUME_FAILED"]          = "ERROR: Failed to resume thread "
+    L["THREAD_NOT_FOUND"]       = "ERROR: Thread not found. "
 	
 	L["SIGNAL_QUEUE_INVALID"]	= "ERROR: Thread[%d] Invalid signal queue "
     L["SIGNAL_QUEUE_EMPTY"]     = "ERROR: Signal queue is empty "
@@ -78,7 +78,7 @@ if LOCALE == "frFR" then
 	L["INVALID_TYPE"]        = "[ERREUR] Type de données d'entrée invalide. Attendu %s "
 
 	-- Thread specific messages
-	L["HANDLE_NIL"]          = "[ERREUR] Descripteur de thread nil "
+	L["THREAD_HANDLE_NIL"]     = "[ERREUR] Descripteur de thread nil "
 	L["INVALID_EXE_STATE"]   = "[ERREUR] Thread[%d] est %s "
 	L["HANDLE_ILL_FORMED"]   = "[ERREUR] Descripteur de thread mal formé "
 	L["HANDLE_NOT_A_THREAD"] = "[ERREUR] Le descripteur spécifié ne référence pas une coroutine "
@@ -102,7 +102,7 @@ if LOCALE == "deDE" then
     L["INVALID_TYPE"]         = "[FEHLER] Eingabedatentyp ungültig. Erwartet wurde %s "
 
     -- Thread-spezifische Nachrichten
-    L["HANDLE_NIL"]           = "[FEHLER] Thread-Handle nil "
+    L["THREAD_HANDLE_NIL"]           = "[FEHLER] Thread-Handle nil "
     L["INVALID_EXE_STATE"]    = "[FEHLER] Thread[%d] ist %s "
     L["HANDLE_ILL_FORMED"]    = "[FEHLER] Thread-Handle fehlerhaft "
     L["HANDLE_NOT_A_THREAD"]  = "[FEHLER] Angegebenes Thread-Handle ist keine Coroutine "
@@ -126,7 +126,7 @@ if LOCALE == "frFR" then
     L["INVALID_TYPE"]         = "[ERREUR] Type de données d'entrée invalide. Attendu %s "
 
     -- Messages spécifiques aux threads
-    L["HANDLE_NIL"]           = "[ERREUR] Descripteur de thread nul "
+    L["THREAD_HANDLE_NIL"]           = "[ERREUR] Descripteur de thread nul "
     L["INVALID_EXE_STATE"]    = "[ERREUR] Thread[%d] est %s "
     L["HANDLE_ILL_FORMED"]    = "[ERREUR] Descripteur de thread mal formé "
     L["HANDLE_NOT_A_THREAD"]  = "[ERREUR] Le descripteur de thread spécifié ne référence pas une coroutine "
@@ -150,7 +150,7 @@ if LOCALE == "zhCN" then
     L["INVALID_TYPE"]         = "[错误] 输入数据类型无效。期望 %s "
 
     -- 线程特定消息
-    L["HANDLE_NIL"]           = "[错误] 线程句柄为空。"
+    L["THREAD_HANDLE_NIL"]           = "[错误] 线程句柄为空。"
     L["INVALID_EXE_STATE"]    = "[错误] 线程[%d]为%s。"
     L["HANDLE_ILL_FORMED"]    = "[错误] 线程句柄格式错误。"
     L["HANDLE_NOT_A_THREAD"]  = "[错误] 指定的线程句柄不引用协程。"
@@ -174,7 +174,7 @@ if LOCALE == "koKR" then
     L["INVALID_TYPE"]         = "[오류] 입력 데이터 유형이 잘못되었습니다. %s 이(가) 필요합니다 "
 
     -- 스레드 특정 메시지
-    L["HANDLE_NIL"]           = "[오류] 스레드 핸들이 nil입니다 "
+    L["THREAD_HANDLE_NIL"]           = "[오류] 스레드 핸들이 nil입니다 "
     L["INVALID_EXE_STATE"]    = "[오류] 스레드[%d] 상태가 %s입니다 "
     L["HANDLE_ILL_FORMED"]    = "[오류] 스레드 핸들 형식이 잘못되었습니다 "
     L["HANDLE_NOT_A_THREAD"]  = "[오류] 지정된 스레드 핸들이 코루틴을 참조하지 않습니다 "
@@ -198,7 +198,7 @@ if LOCALE == "svSE" then
     L["INVALID_TYPE"]         = "[FEL] Ogiltig datatyp för inmatning. Förväntad %s "
 
     -- Trådspecifika meddelanden
-    L["HANDLE_NIL"]           = "[FEL] Trådhandtag är null "
+    L["THREAD_HANDLE_NIL"]           = "[FEL] Trådhandtag är null "
     L["INVALID_EXE_STATE"]    = "[FEL] Tråd[%d] är %s "
     L["HANDLE_ILL_FORMED"]    = "[FEL] Trådhandtaget är felaktigt formaterat "
     L["HANDLE_NOT_A_THREAD"]  = "[FEL] Angivet trådhandtag refererar inte till en korutin "
@@ -222,7 +222,7 @@ if LOCALE == "heIL" then
     L["INVALID_TYPE"]         = "[שגיאה] סוג נתוני קלט לא תקין. צפוי %s "
 
     -- הודעות ספציפיות לתהליכון
-    L["HANDLE_NIL"]           = "[שגיאה] ידית התהליכון ריקה "
+    L["THREAD_HANDLE_NIL"]           = "[שגיאה] ידית התהליכון ריקה "
     L["INVALID_EXE_STATE"]    = "[שגיאה] תהליכון[%d] הוא %s "
     L["HANDLE_ILL_FORMED"]    = "[שגיאה] ידית תהליכון בעייתית "
     L["HANDLE_NOT_A_THREAD"]  = "[שגיאה] ידית התהליכון המצוינת אינה מתייחסת לשגרת הרצה "
@@ -245,7 +245,7 @@ if LOCALE == "esES" then
     L["INVALID_TYPE"]         = "ERROR: Tipo de dato de entrada inválido. Se esperaba %s "
 
     -- Mensajes específicos de hilos
-    L["HANDLE_NIL"]           = "ERROR: Identificador del hilo nulo "
+    L["THREAD_HANDLE_NIL"]           = "ERROR: Identificador del hilo nulo "
     L["INVALID_EXE_STATE"]    = "ERROR: Hilo[%d] está %s "
     L["HANDLE_ILL_FORMED"]    = "ERROR: Identificador del hilo mal formado "
     L["HANDLE_NOT_A_THREAD"]  = "ERROR: El identificador de hilo especificado no hace referencia a una coroutina "
