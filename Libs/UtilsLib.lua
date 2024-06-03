@@ -48,7 +48,7 @@ local userMsgFrame = nil
 -- =================================================
 --                  DEBUGGING UTILITIES
 -- =================================================
-local debuggingEnabled = true
+utils.strict = false
 
 function utils:enableDebugging()
     debuggingEnabled = true
@@ -138,7 +138,6 @@ function utils:findCharPosition(str, n, char)
     end
     return nil -- Return nil if the character is not found
 end
-
 
 --======================================================================
 --                          POST MESSAGE METHODS
@@ -288,7 +287,7 @@ function utils:postMsg( msg )
     if msg == nil then
         utils:dbgPrint("msg is nil" )
         local stackTrace = debugstack(2)
-        stackTrace = utils:parseStackTrace( stackTrace )
+        stackTrace = utils:simplifyStackTrace( stackTrace )
         msg = sprintf("Invalid: 'msg' Was nil\nStack Trace:\n%s", stackTrace )
         utils:postMsg( msg )
         error( "Error: Program Stopped")
@@ -296,6 +295,9 @@ function utils:postMsg( msg )
 	userMsgFrame.Text:Insert( msg )
 	userMsgFrame:Show()
 end
+--======================================================================
+--                 DEBUG AND ERROR HANDLING METHODS
+-- =====================================================================
 function utils:dbgPrefix( stackTrace )
 	if stackTrace == nil then stackTrace = debugstack(2) end
 	
@@ -328,113 +330,24 @@ function utils:dbgPrint(...)
     -- numArgs = #output
     _G.print(unpack(output))
 end
-function calculateStats(values)
-    local n = #values
-    local sum = 0
-    local sumSq = 0
-
-    -- Calculate the sum of values and the sum of squared values
-    for i = 1, n do
-        sum = sum + values[i]
-        sumSq = sumSq + values[i]^2
-    end
-
-    -- Calculate the mean
-    local mean = sum / n
-
-    -- Calculate the variance
-    local variance = (sumSq - sum^2 / n) / n
-
-    -- Calculate the standard deviation
-    local stdDev = math.sqrt(variance)
-
-    return mean, variance, stdDev
-end
--- local function parseErrorMsg( inputString )
---     if inputString == nil then
---         return "No Error String Provided"
---     end
---     -- Lua script to find the position of the last colon in a string
---     local inputString = "your:string:with:colons" -- Example string
---     local pos = 0  -- Start search position
---     local lastColon = -1  -- Default position if no colons are found
-
---     -- Loop to find the last colon
---     while true do
---         local start, ends = string.find(inputString, ":", pos + 1) -- Find ':' starting from pos+1
---         if not start then 
---             break -- If no more colons, exit the loop
---         end  
---         lastColon = start  -- Update lastColon with the new found position
---         pos = start        -- Update pos to move the search start point forward
---     end
--- end
-
---[[ 
-[string "@Interface/AddOns/WoWThreadTests/SignalSendReceiveTests.lua"]:101: in function <...ace/AddOns/WoWThreadTests/SignalSendReceiveTests.lua:88>
- ]]
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
 
---[[ 
-    Pseudocode for simplifying stack traces:
-function simplifyStackTrace(stackTrace):
-    1. Find the substring starting from "@Interface/AddOns/" to the next occurrence of ":".
-    2. Remove "@Interface/AddOns/" from the start of the substring to normalize the path.
-    3. Extract the Addon name which is the first segment of the path up to the first "/".
-    4. Extract the remaining path and line number up to the last ":".
-    5. Concatenate the extracted Addon name, path, and line number.
-    6. Return the formatted string.
-
-    [string "@Interface/AddOns/WoWThreads/Libs/UtilsLib.lua"]:378: in function <Interface/AddOns/WoWThreads/Libs/UtilsLib.lua:377>
- ]]
-
- 
--- Example usage:
-
 function utils:simplifyStackTrace(stackTrace)
-    -- Adjusted pattern to exclude the quote by adjusting capture groups
-    local pattern = '"@Interface/AddOns/(.-):(%d+):'
-    local path, lineNumber = string.match(stackTrace, pattern)
+    local addonName = string.match(stackTrace, "@Interface/AddOns/(%w+)")
+    local subDirs = string.match(stackTrace, "/(%w+)/(%w+)")
+    local fileName = string.match(stackTrace, "/(%w+%.lua)")
+    local lineNumber = string.match(stackTrace, "(%d+):")
 
-    -- Remove the quote at the end of the path if it exists, directly within the pattern match
-    if path and lineNumber then
-        -- Directly remove any trailing quote before the colon that might be captured
-        path = path:gsub('%"]$', '')
-        -- Concatenate path with line number for the final output
-        return path .. ':' .. lineNumber
+    if subDirs then
+        subDirs = string.gsub(subDirs, "/", "/")
+        return addonName .. "/" .. subDirs .. "/" .. fileName .. ":" .. lineNumber
     else
-        return nil  -- Return nil if the pattern did not match correctly
+        return addonName .. "/" .. fileName .. ":" .. lineNumber
     end
 end
 
---================================================
---                  TESTS
--- =================================================
--- Example usage
--- local exampleStackTrace = '[string "@Interface/AddOns/WoWThreads/Libs/UtilsLib.lua"]:378: in function <Interface/AddOns/WoWThreads/Libs/UtilsLib.lua:377>'
--- local simplified = utils:simplifyStackTrace(exampleStackTrace)
--- print("Simplified Stack Trace:", simplified)
-
-
-function utils:parseStackTrace(debug_string) -- clean_debugstack_string(debug_string)
-    -- Step 1: Remove the first 28 characters
-    local step1 = string.sub(debug_string, 28)
-
-    -- Step 2: Remove the quote (") and right bracket (])
-    local step2 = step1:gsub('[%"]', ''):gsub('%]', '')
-
-    -- Step 3: Remove all characters from and including the 2nd colon (:) to the end
-    local first_colon = string.find(step2, ":")
-    local second_colon = string.find(step2, ":", first_colon + 1)
-    local result = string.sub(step2, 1, second_colon - 1)
-
-    return result
+if utils:debuggingIsEnabled() then
+    DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
-
--- Example usage
--- local debug_string = '[string "@Interface/AddOns/WoWThreadTests/SimpleSendReceive.lua"]:110: in function <...nterface/AddOns/WoWThreadTests/SimpleSendReceive.lua:99>'
--- local str = utils:parseStackTrace(debug_string)
--- utils:postMsg(str)  -- Output: WoWThreadTests/SimpleSendReceive.lua:110
-
