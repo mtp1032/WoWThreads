@@ -4,7 +4,7 @@ Docs/DevNotes/*
 Libs/ACE/*
 Libs/LibStub.lua 
 Libs/SignalQueue.lua
-Libs/FifoQueue-new.lua
+Libs/SignalQueue-new.lua
 Libs/Stack.lua
 Protyping/*
 test.md
