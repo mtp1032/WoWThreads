@@ -1,6 +1,5 @@
 -- Filename: EnUs_WoWThreads.lua
 local ADDON_NAME, _ = ...
-local fileName = "EnUS_WoWThreads.lua"
 local sprintf = _G.string.format
 
 -- get the uitls library
@@ -53,11 +52,14 @@ if LOCALE == "enUS" then
 	L["HANDLE_NOT_A_THREAD"]    = "ERROR: Specified Thread handle does not reference a coroutine "
     L["NO_THREAD_CONTEXT"]      = "ERROR: Operation requires thread context "
     L["HANDLE_NOT_SPECIFIED"]   = "ERROR: Handle not specified "
+    L["THREAD_CREATE_FAILED"]   = "Failed to create thread "
 
 	L["INVALID_EXE_CONTEXT"]    = "ERROR: Operation requires thread context "
 	L["THREAD_STATE_DEAD"]	    = "ERROR: Invalid handle. Handle is likely 'dead' "
-    L["RESUME_FAILED"]          = "ERROR: Failed to resume thread "
-    L["THREAD_NOT_FOUND"]       = "ERROR: Thread not found. "
+    
+    L["RESUME_FAILED"]          = "Failed to resume thread "
+    L["THREAD_NOT_FOUND"]       = "Thread not found. "
+    L["WRONG_ADDON_NAME"]       = "Wrong Addon Name"
 	
 	L["SIGNAL_QUEUE_INVALID"]	= "ERROR: Thread[%d] Invalid signal queue "
     L["SIGNAL_QUEUE_EMPTY"]     = "ERROR: Signal queue is empty "
@@ -259,6 +261,7 @@ if LOCALE == "esES" then
     L["SIGNAL_INVALID"]       = "ERROR: Señal desconocida "
 end
 
+local fileName = "EnUS_WoWThreads.lua" 
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
