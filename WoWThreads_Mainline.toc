@@ -1,4 +1,4 @@
-## Interface: 100207
+## Interface: 100207 
 ##----------------------------------------------
 ## Title: WoWThreads
 ## Notes: An Asynchronous Multithreading Library for AddOn development.
@@ -28,10 +28,11 @@ Libs\ACE\AceDB-3.0\AceDB-3.0.xml
 ## WoW Thread Library Code
 ##---------------------------------------------
 Libs\UtilsLib.lua
-Libs\FifoQueue.lua
+Libs\SignalQueue.lua
 Locales\EnUS_WoWThreads.lua
+##Prototyping\ErrorTestingFramework.lua
 WoWThreads.lua
-MinimapIcon.lua
+##MinimapIcon.lua
 
 
 
