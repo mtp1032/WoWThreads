@@ -1,4 +1,4 @@
-local ADDON_NAME, _ = ...
+local ADDON_NAME, _ = ... 
 
 local sprintf = _G.string.format
 
@@ -264,3 +264,8 @@ local function OnEvent( self, event, ... )
     return
 end
 eventFrame:SetScript( "OnEvent", OnEvent )
+
+local fileName = "MinimapIcon.lua" 
+if utils:debuggingIsEnabled() then
+    DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
+end
