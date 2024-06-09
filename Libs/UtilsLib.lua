@@ -12,7 +12,6 @@ local utils = UtilsLib
 --              PROLOGUE
 -- =================================================
 local sprintf = _G.string.format
-local fileName = "UtilsLib.lua"
 local function getExpansionName( )
     local expansionLevel = GetExpansionLevel()
     local expansionNames = { -- Use a table to map expansion levels to names
@@ -43,31 +42,39 @@ end
 function utils:getExpansionName()
     return expansionName
 end
+
 local userMsgFrame = nil
 
 -- =================================================
 --                  DEBUGGING UTILITIES
 -- =================================================
-utils.strict = false
+utils.DEBUGGING_ENABLED = true
+local DEBUGGING_ENABLED = utils.DEBUGGING_ENABLED
+
+function utils:dbgAssert( condition, msg )
+    if utils:debuggingIsEnabled() then
+        assert( condition, msg )
+    end
+end
 
 function utils:enableDebugging()
-    debuggingEnabled = true
+    DEBUGGING_ENABLED = true
 end
 function utils:disableDebugging()
-    debuggingEnabled = false
+    DEBUGGING_ENABLED = false
 end
 function utils:debuggingIsEnabled()
-    return debuggingEnabled
+    return DEBUGGING_ENABLED
 end
-function utils:enableDataCollection()
-    DATA_COLLECTION_ENABLED = true
-end
-function utils:disableDataCollection()
-    DATA_COLLECTION_ENABLED = false
-end
-function utils:dataCollectionIsEnabled()
-    return DATA_COLLECTION_ENABLED
-end
+-- function utils:enableDataCollection()
+--     DATA_COLLECTION_ENABLED = true
+-- end
+-- function utils:disableDataCollection()
+--     DATA_COLLECTION_ENABLED = false
+-- end
+-- function utils:dataCollectionIsEnabled()
+--     return DATA_COLLECTION_ENABLED
+-- end
 --======================================================================
 --                          STRING FUNCTIONS
 -- =====================================================================
@@ -330,10 +337,6 @@ function utils:dbgPrint(...)
     -- numArgs = #output
     _G.print(unpack(output))
 end
-if utils:debuggingIsEnabled() then
-    DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
-end
-
 function utils:simplifyStackTrace(stackTrace)
     local addonName = string.match(stackTrace, "@Interface/AddOns/(%w+)")
     local subDirs = string.match(stackTrace, "/(%w+)/(%w+)")
@@ -347,7 +350,11 @@ function utils:simplifyStackTrace(stackTrace)
         return addonName .. "/" .. fileName .. ":" .. lineNumber
     end
 end
+if utils:debuggingIsEnabled() then
+    DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
+end
 
+local fileName = "UtilsLib.lua"
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
