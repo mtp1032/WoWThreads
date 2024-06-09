@@ -2,10 +2,9 @@ Docs/*
 Docs/TestDoc/*
 Docs/DevNotes/*
 Libs/ACE/*
-Libs/LibStub.lua 
 Libs/SignalQueue.lua
 Libs/SignalQueue-new.lua
 Libs/Stack.lua
 Protyping/*
 test.md
-WoWThreads_*.toc
+*.toc
