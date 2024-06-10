@@ -354,6 +354,7 @@ end
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
+
 -- only called when utils:debuggingIsEnabled() is true
 -- Messages are, for the moment, may be non-localized.
 function utils:dbgLog( msg, stackTrace ) -- use debugstack(2)
@@ -363,7 +364,7 @@ function utils:dbgLog( msg, stackTrace ) -- use debugstack(2)
         st = utils:simplifyStackTrace( stackTrace )
     end
     newMsg = string.format("[LOG] %s : %s\n", msg, st )
-    DEFAULT_CHAT_FRAME:AddMessage( msg, 0.0, 1.0, 1.0 )
+    DEFAULT_CHAT_FRAME:AddMessage( newMsg, 0.0, 1.0, 1.0 )
     return newMsg
 end
 
