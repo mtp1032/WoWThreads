@@ -233,7 +233,7 @@ local function putToSleep( H )
         if H[TH_UNIQUE_ID] == entry[TH_UNIQUE_ID] then
             table.remove(threadControlBlock, i)
             if utils:debuggingIsEnabled() then
-                local msg = string.format("thread[%d] moved from TCB to morgue", H[TH_UNIQUE_ID])
+                local msg = string.format("thread[%d] removed from TCB", H[TH_UNIQUE_ID])
                 utils:dbgLog( msg, debugstack(2) )
             end
             inTCB = true
@@ -243,7 +243,7 @@ local function putToSleep( H )
 
     -- if the thread wasn't in the TCB then return nil, errorMsg
     if not inTCB then
-        local errorMsg = string.format("Thread not found in thread control block")
+        local errorMsg = string.format("Thread[%d] not found in thread control block", H[TH_UNIQUE_ID])
         if utils:debuggingIsEnabled() then
             utils:dbgLog( errorMsg, debugstack(2) )
         end
@@ -253,7 +253,7 @@ local function putToSleep( H )
     -- thread is ready to be entered into the thread sleep table.
     table.insert(threadSleepTable, H)
     if utils:debuggingIsEnabled() then
-        local msg = string.format("Thread[%d] entered into sleep queue", H[TH_UNIQUE_ID])
+        local msg = string.format("Thread[%d] entered into the thread sleep table. ", H[TH_UNIQUE_ID])
         utils:dbgLog( msg, debugstack(2) )
     end    
     return H, errorMsg
@@ -265,12 +265,17 @@ local function wakeup(H )
     for i, entry in ipairs(threadSleepTable) do
         if H[TH_UNIQUE_ID] == entry[TH_UNIQUE_ID] then
             table.remove(threadSleepTable, i)
+            if utils:debuggingIsEnabled() then
+                local msg = string.format("Thread[%d] removed from sleep table.\n", H[TH_UNIQUE_ID])
+                utils:dbgLog( msg, debugstack(2) )
+            end
+    
             isSleeping = true
             break
         end
     end
     if not isSleeping then
-        errorMsg = string.format("thread not in thread sleep table.\n")
+        errorMsg = string.format("thread[%d] not in thread sleep table.\n", H[TH_UNIQUE_ID])
         if utils:debuggingIsEnabled() then
             utils:dbgLog( errorMsg, debugstack(2) )
         end
@@ -678,33 +683,38 @@ Usage:
 @End]]
 function thread:areEqual(H1, H2)
     local fname = "thread:areEqual()"
-    local isValid = true
+    local areEqual = false
     local errorMsg = nil
     
     -- check that neither handle is nil
     if H1 == nil then
+        errorMsg = string.format("%s",L["THREAD_HANDLE_NIL"])
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
         return nil, errorMsg
     end
     if H2 == nil then
+        errorMsg = string.format("%s",L["THREAD_HANDLE_NIL"])
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
-        return nil, errorMsg
+        return areEqual, errorMsg
     end
-
-    -- check that neither handle is invalid
     isValid, errorMsg = handleIsValid(H1)
     if not isValid then
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
-        return nil, nil, errorMsg
+        return areEqual, errorMsg
     end
     isValid, errorMsg = handleIsValid(H2)
     if not isValid then
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
-        return nil, nil, errorMsg
+        return areEqual, errorMsg
     end
 
     -- handles are not nil and they are both valid
-    return H1[TH_UNIQUE_ID] == H2[TH_UNIQUE_ID], errorMsg
+    if H1[TH_UNIQUE_ID] ~= H2[TH_UNIQUE_ID] then
+        return areEqual, nil
+    else
+        areEqual = true
+    end
+    return areEqual, nil
 end
 
 --[[@Begin
@@ -811,6 +821,7 @@ function thread:getState(thread_h)
         return "running", nil 
     end
 
+    utils:dbgPrint(thread_h[TH_UNIQUE_ID])
     local status = coroutine.status( thread_h[TH_COROUTINE])
     return status, nil
 end
@@ -872,6 +883,7 @@ function thread:sendSignal( target_h, signal, ... )
 
     local state = coroutine.status( target_h[TH_COROUTINE])
     if state == "dead" then
+        errorMsg = string.format("Signal not sent becauseThread[%d] is dead", target_h[TH_UNIQUE_ID] )
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
         return nil, errorMsg
     end
