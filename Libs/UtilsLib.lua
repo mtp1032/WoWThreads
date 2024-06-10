@@ -305,6 +305,7 @@ end
 --======================================================================
 --                 DEBUG AND ERROR HANDLING METHODS
 -- =====================================================================
+
 function utils:dbgPrefix( stackTrace )
 	if stackTrace == nil then stackTrace = debugstack(2) end
 	
@@ -353,6 +354,20 @@ end
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
+-- only called when utils:debuggingIsEnabled() is true
+-- Messages are, for the moment, may be non-localized.
+function utils:dbgLog( msg, stackTrace ) -- use debugstack(2)
+    local newMsg = nil
+    local st = ""
+    if stackTrace ~= nil then
+        st = utils:simplifyStackTrace( stackTrace )
+    end
+    newMsg = string.format("[LOG] %s : %s\n", msg, st )
+    DEFAULT_CHAT_FRAME:AddMessage( msg, 0.0, 1.0, 1.0 )
+    return newMsg
+end
+
+
 
 local fileName = "UtilsLib.lua"
 if utils:debuggingIsEnabled() then
