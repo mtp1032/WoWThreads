@@ -11,8 +11,6 @@ WoWThreads = WoWThreads or {}
 WoWThreads.WoWThreads = WoWThreads.WoWThreads or {}
 _G.WoWThreads = WoWThreads
 
-local sprintf = _G.string.format
-
 -- Import the utility, signal, and localization libraries.
 local UtilsLib = LibStub("UtilsLib")
 if not UtilsLib then return end
@@ -30,7 +28,7 @@ local L = EnUSlib.L
 -- These two operations ensure that the library name comes from
 -- one source - the addon and version names from .TOC file.
 local version = C_AddOns.GetAddOnMetadata(ADDON_NAME, "Version")
-local libraryName = sprintf("%s-%s", ADDON_NAME, version)
+local libraryName = string.format("%s-%s", ADDON_NAME, version)
 
 -- Export the WoWThreads public services
 local LibStub = LibStub -- Assumes LibStub is globally available
@@ -45,7 +43,7 @@ local THREAD_SEQUENCE_ID    = 4 -- a number representing the order in which the 
 local ACCUMULATED_TICKS     = 0 -- The system-wide, total number of clock ticks
 
 local threadControlBlock    = {} -- Table to hold all active threads
-local threadSleepQueue      = {} -- Table to hold sleeping threads
+local threadSleepTable      = {} -- Table to hold sleeping threads
 local morgue                = {} -- Table to hold the dead threads
 local errorCallbackTable    = {} -- Table to hold the errorHandlers
 
@@ -119,7 +117,7 @@ local signalNameTable = {
     "SIG_NONE_PENDING"
 }
 
---                          LOCAL FUNCTIONS  
+--                          LOCAL FUNCTIONS 
 local function getCallerHandle()
     local running_h = nil
 
@@ -139,18 +137,9 @@ local function getAddonName( thread_h )
     end
     return thread_h[TH_CLIENT_ADDON]
 end
--- local function errorHandler( addonName, errorMsg )
---     if errorCallbackTable[addonName] then
---         local handler = errorCallbackTable[addonName]
---         handler( errorMsg )
---     else
---         DEFAULT_CHAT_FRAME:AddMessage(sprintf("No error handler registered for %s.", addonName), 1.0, 0.0, 0.0)
---     end
-
--- end
 local function formatErrorMsg( errorMsg, functionName, stackTrace )
     local st = utils:simplifyStackTrace( stackTrace )
-    errorMsg = sprintf("%s in %s. %s\n ", errorMsg, functionName, st )
+    errorMsg = string.format("%s in %s. %s\n ", errorMsg, functionName, st )
     return errorMsg
 end
 -- this function is WoWThread's registered callback
@@ -160,16 +149,13 @@ local function WoWThreadsErrorHandler( addonName, errorMsg )
     if errorCallbackTable[addonName] then
         handler = errorCallbackTable[addonName]
         handler( errorMsg )
+    else  
+        local msg = string.format("Error handler not found for thread from %s.", addonName)
+        DEFAULT_CHAT_FRAME:AddMessage(msg, 1.0, 0.0, 0.0)
         if utils:debuggingIsEnabled() then
-            utils:postMsg( errorMsg )
-        else
-            errorMsg = sprintf("FATAL: Addon terminated: %s\n", errorMsg )
-            error( errorMsg )
-        end    
-    else
-        DEFAULT_CHAT_FRAME:AddMessage(sprintf("No error handler registered for %s.", addonName), 1.0, 0.0, 0.0)
+            utils:dbgLog( errorMsg, debugstack(2) )
+        end
     end
-
 end
 local function inMorgue(H)
     for _, entry in ipairs(morgue) do
@@ -223,43 +209,81 @@ local function moveToMorgue( H )
         end
     end
     if utils:debuggingIsEnabled() then
-        local msg = sprintf("thread[%d] moved into morgue", H[TH_UNIQUE_ID])
-        DEFAULT_CHAT_FRAME:AddMessage( msg, H[TH_UNIQUE_ID], 0.0, 1.0, 1.0 )
+        local msg = string.format("thread[%d] moved from TCB to morgue", H[TH_UNIQUE_ID])
+        utils:dbgLog( msg, debugstack(2) )
     end
 end
+-- returns the handle if successful. Otherwise, nil, errorMsg
 local function putToSleep( H )
-    local found = false
+    local inTCB = false
+    local isSleeping = false
+    local errorMsg = nil
+
+    -- if it's already sleeping then return nil, errorMsg
+    for i, entry in ipairs(threadSleepTable) do
+        if H[TH_UNIQUE_ID] == entry[TH_UNIQUE_ID] then
+            table.remove(threadControlBlock, i)
+            isSleeping = true
+            local errorMsg = string.format("Thread is already sleeping" )
+            return nil, errorMsg
+        end
+    end
+    -- if the thread is in the TCB then remove it
     for i, entry in ipairs(threadControlBlock) do
         if H[TH_UNIQUE_ID] == entry[TH_UNIQUE_ID] then
             table.remove(threadControlBlock, i)
-            found = true
+            if utils:debuggingIsEnabled() then
+                local msg = string.format("thread[%d] moved from TCB to morgue", H[TH_UNIQUE_ID])
+                utils:dbgLog( msg, debugstack(2) )
+            end
+            inTCB = true
             break
         end
     end
-    if found then
-        table.insert(threadSleepQueue, H)
+
+    -- if the thread wasn't in the TCB then return nil, errorMsg
+    if not inTCB then
+        local errorMsg = string.format("Thread not found in thread control block")
         if utils:debuggingIsEnabled() then
-            local msg = sprintf("thread[%d] put to sleep", H[TH_UNIQUE_ID])
-            DEFAULT_CHAT_FRAME:AddMessage( msg, H[TH_UNIQUE_ID], 0.0, 1.0, 1.0 )
-        end    
+            utils:dbgLog( errorMsg, debugstack(2) )
+        end
+        return nil, errorMsg
     end
+
+    -- thread is ready to be entered into the thread sleep table.
+    table.insert(threadSleepTable, H)
+    if utils:debuggingIsEnabled() then
+        local msg = string.format("Thread[%d] entered into sleep queue", H[TH_UNIQUE_ID])
+        utils:dbgLog( msg, debugstack(2) )
+    end    
+    return H, errorMsg
 end
 local function wakeup(H )
-    local found = false
-    for i, entry in ipairs(threadSleepQueue) do
+    local isSleeping = false
+    local errorMsg = nil
+
+    for i, entry in ipairs(threadSleepTable) do
         if H[TH_UNIQUE_ID] == entry[TH_UNIQUE_ID] then
-            table.remove(threadSleepQueue, i)
-            found = true
+            table.remove(threadSleepTable, i)
+            isSleeping = true
             break
         end
     end
-    if found then
+    if not isSleeping then
+        errorMsg = string.format("thread not in thread sleep table.\n")
+        if utils:debuggingIsEnabled() then
+            utils:dbgLog( errorMsg, debugstack(2) )
+        end
+        return nil, errorMsg
+    end
+    if isSleeping then
         table.insert(threadControlBlock, H)
         if utils:debuggingIsEnabled() then
-            local msg = sprintf("thread[%d] woken up", H[TH_UNIQUE_ID])
-            DEFAULT_CHAT_FRAME:AddMessage( msg, H[TH_UNIQUE_ID], 0.0, 1.0, 1.0 )
+            local msg = string.format("Thread[%d] moved from sleep table to TCB.\n", H[TH_UNIQUE_ID])
+            utils:dbgLog( msg, debugstack(2) )
         end
     end
+    return H, errorMsg
 end
 local function handleIsValid(H)
     local isValid = true
@@ -344,7 +368,7 @@ local function reformatErrorStr(originalStr)
     local firstString = originalStr:sub(secondColon + 2)
 
     -- Format the new string with the first and second parts swapped and separated by a newline
-    return sprintf("[ERROR] %s\nSee - %s\n", firstString, secondString)
+    return string.format("[ERROR] %s\nSee - %s\n", firstString, secondString)
 end
 local function isInMorgue( H )
     local inMorgue = false
@@ -543,7 +567,7 @@ function thread:yield()
     if H == nil then 
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
         if utils.stack then
-            error(sprintf("FATAL: Addon terminated: %s\n", errorMsg ))
+            error(string.format("FATAL: Addon terminated: %s\n", errorMsg ))
         end
     end
 
@@ -573,11 +597,11 @@ function thread:sleep()
     if H == nil then 
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
         if utils:debuggingIsEnabled() then
-            error( utils:postMsg( errorMsg ))
+            utils:dbgLog( errorMsg, debugstack(2) )
         end
         return nil, errorMsg 
     end
-    putToSleep(H)
+    return putToSleep(H)
 end
 
 --[[@Begin
@@ -797,11 +821,17 @@ Description: Sends a signal to the specified thread. Thread context NOT required
 Parameters: 
 - thread_h (handle): The thread to which the signal is to be sent. 
 - signalValue (number): signal to be sent.
-- data (any) Data (including functions) to be passed to the receiving thread
+- data (any) Data (including functions) to be passed to the receiving thread.areEqual
+- NOTE: WoWThreads assumes that the structure of the ... parameter is known to the
+receiveing thread.
 Returns:
-- If successful, true is returned.
-- If not successful either the target thread was 'dead' or was invalid. in either
-case, nil is returned. The error message describes why the signal was not sent.
+- If successful, true is returned. This only means that the signal was delivered.
+Programmers should make no assumptions about whether the signal was received.
+- If not successful either the target thread was 'dead' or the signal was invalid.
+If the target thread was 'dead', then the false is returned along with an error 
+message to that effectIf the call failed for any other reason 
+(e.g., an invalide signal), the nil is returned along with an appropriate error 
+message.
 Usage:
     -- Sending a signal to a dead thread is not fatal.
     local wasSent, errorMsg = thread:sendSignal( target_h, signalValue, data )
@@ -814,10 +844,21 @@ function thread:sendSignal( target_h, signal, ... )
     local fname = "thread:sendSignal()"
     local wasSent = true
     local errorMsg = nil
-    local sigName = nil
-    local isDead = false
     local isValid = false
 
+    -- check that the signal is valid
+    if signal == SIG_NONE_PENDING then
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        return nil, errorMsg
+    end
+
+    local isValid, errorMsg = signalIsValid( signal )
+    if not isValid then 
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        return nil, errorMsg
+    end
+
+    -- check that the target handle is valid
     if target_h == nil then
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
         return nil, errorMsg
@@ -828,35 +869,28 @@ function thread:sendSignal( target_h, signal, ... )
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
         return nil, errorMsg
     end
-    if signal == SIG_NONE_PENDING then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
-        return nil, errorMsg
-    end
-    local isValid, errorMsg = signalIsValid( signal )
-    if not isValid then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
-        return nil, errorMsg
-    end
+
     local state = coroutine.status( target_h[TH_COROUTINE])
     if state == "dead" then
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
         return nil, errorMsg
     end
 
-    -- get the identity of the calling thread. This will be nil
-    -- if the calling thread is the WoW Client.
-    local sender_h, errorMsg = getCallerHandle()
-    local varargs = {...} -- varargs is now {myData}
-    local sigEntry = {signal, sender_h, varargs[1] }
+    -- Validity checks are complete.
 
     -- Initialize and insert an entry into the recipient thread's signalTable
+    local sender_h, errorMsg = getCallerHandle()
+    local varargs = {...}
+    local sigEntry = {signal, sender_h, varargs[1] }
+
     -- local sigEntry = {signal, sender_h, sigData }
-    -- inserts the entry at the head of the queue.
     target_h[TH_SIGNAL_QUEUE]:enqueue(sigEntry)
-    local numSigs = target_h[TH_SIGNAL_QUEUE]:size()
 
     if signal == SIG_ALERT then
         target_h[TH_REMAINING_TICKS] = 1
+    end
+    if signal == SIG_WAKEUP then
+        wakeup( target_h )
     end
     return wasSent, nil
 end
@@ -892,12 +926,9 @@ function thread:getSignal()
         return {SIG_NONE_PENDING, nil, nil }
     end
 
-    -- utils:dbgPrint( H[TH_SIGNAL_QUEUE]:size() )
-
     local entry = H[TH_SIGNAL_QUEUE]:dequeue()
     local signalName = signalNameTable[entry[1]]
 
-    -- utils:dbgPrint( entry[1], entry[3])
     return entry, nil
 end
 
@@ -995,10 +1026,10 @@ Usage:
 function thread:registerErrorHandler( addonName, callbackHandler )
     if not errorCallbackTable[addonName] then
         errorCallbackTable[addonName] = callbackHandler
-        DEFAULT_CHAT_FRAME:AddMessage( sprintf("%s Error handler registered for %s", utils:dbgPrefix(), addonName), 0.0, 1.0, 1.0)
+        DEFAULT_CHAT_FRAME:AddMessage( string.format("Error handler registered for %s", addonName), 0.0, 1.0, 1.0)
         return
     end
-    DEFAULT_CHAT_FRAME:AddMessage( sprintf("%s Error handler for %s could not be registered.", utils:dbgPrefix(), addonName), 0.0, 1.0, 1.0)
+    DEFAULT_CHAT_FRAME:AddMessage( string.format("Error handler for %s could not be registered.", addonName), 0.0, 1.0, 1.0)
 end
 
 local eventFrame = CreateFrame("Frame")
