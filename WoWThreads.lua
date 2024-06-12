@@ -55,7 +55,7 @@ local WoWThreadsStarted     = false
 local TH_COROUTINE          = 1 -- the coroutine created to execute the thread's function
 local TH_UNIQUE_ID          = 2 -- a number representing the order in which the thread was created
 local TH_SIGNAL_QUEUE       = 3 -- a table of all currently pending signals
-local TH_YIELD_TICKS     = 4 -- the number of clock ticks for which a thread must suspend after a yield.
+local TH_YIELD_TICKS        = 4 -- the number of clock ticks for which a thread must suspend after a yield.
 local TH_REMAINING_TICKS    = 5 -- decremented on every clock tick. When 0 the thread is queued.
 local TH_ACCUM_YIELD_TICKS  = 6 -- The total number of yield ticks the thread is suspended.
 local TH_LIFETIME_TICKS     = 7
@@ -118,6 +118,24 @@ local signalNameTable = {
 }
 
 --                          LOCAL FUNCTIONS 
+local function isCallerClient( H )
+    local isWowClient = false
+    if H[TH_PARENT] == nil then
+        return true
+    end
+    return false
+end
+local function isInMorgue( H )
+    local inMorgue = false
+    for _, entry in ipairs(morgue) do
+        if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
+            inMorgue = true
+            return inMorgue, nil
+        end
+    end
+    return inMorgue, L["THREAD_IS_DEAD"]
+end
+
 local function getCallerHandle()
     local running_h = nil
 
@@ -129,7 +147,7 @@ local function getCallerHandle()
             return running_h, nil
         end
     end
-    return nil, L["THREAD_HANDLE_NIL"]
+    return nil, L["NO_THREAD_CONTEXT"]
 end
 local function getAddonName( thread_h )
     if thread_h == nil then
@@ -143,7 +161,7 @@ local function formatErrorMsg( errorMsg, functionName, stackTrace )
     return errorMsg
 end
 -- this function is WoWThread's registered callback
-local function WoWThreadsErrorHandler( addonName, errorMsg )
+local function threadCallback( addonName, errorMsg )
     local handler = nil
 
     if errorCallbackTable[addonName] then
@@ -156,14 +174,6 @@ local function WoWThreadsErrorHandler( addonName, errorMsg )
             utils:dbgLog( errorMsg, debugstack(2) )
         end
     end
-end
-local function inMorgue(H)
-    for _, entry in ipairs(morgue) do
-        if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
-            return true
-        end
-    end
-    return false
 end
 local function createHandle( addonName, yieldTicks, threadFunction,... )
 
@@ -186,7 +196,6 @@ local function createHandle( addonName, yieldTicks, threadFunction,... )
 
     H[TH_CHILDREN]  = {}
     H[TH_PARENT]    = nil
-
     H[TH_COROUTINE_ARGS] = {...}
 
     local parent_h = getCallerHandle()
@@ -304,14 +313,14 @@ local function handleIsValid(H)
         isValid = false
         return isValid, errorMsg
     end
-    if type(H[TH_COROUTINE]) ~= "thread" then
-        errorMsg = L["HANDLE_NOT_A_THREAD"]
+    local isDead, errorMsg = isInMorgue(H) 
+    if isDead then
+        errorMsg = L["THREAD_IS_DEAD"]
         isValid = false
         return isValid, errorMsg
     end
-    local state = coroutine.status(H[TH_COROUTINE])
-    if state == "dead" then
-        errorMsg = L["THREAD_STATE_DEAD"]
+    if type(H[TH_COROUTINE]) ~= "thread" then
+        errorMsg = L["NOT_A_THREAD"]
         isValid = false
         return isValid, errorMsg
     end
@@ -375,16 +384,6 @@ local function reformatErrorStr(originalStr)
     -- Format the new string with the first and second parts swapped and separated by a newline
     return string.format("[ERROR] %s\nSee - %s\n", firstString, secondString)
 end
-local function isInMorgue( H )
-    local inMorgue = false
-    for _, entry in ipairs(morgue) do
-        if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
-            inMorgue = true
-            return inMorgue
-        end
-    end
-    return inMorgue
-end
 local function scheduleThreads()
     local fname = "scheduleThreads()"
     ACCUMULATED_TICKS = ACCUMULATED_TICKS + 1
@@ -413,12 +412,14 @@ local function scheduleThreads()
                 local co = H[TH_COROUTINE]
                 pcallSucceeded, coroutineResumed, errorMsg = pcall(coroutine.resume, co, unpack(args) )
                 if not pcallSucceeded then
-                    errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+                    errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
+                    utils:dbgPrint( "pcallSucceeded", errorMsg )
                     moveToMorgue(H)
                     -- errorHandler( H[TH_CLIENT_ADDON], errorMsg )
                 end
                 if not coroutineResumed then
-                    errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+                    errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
+                    utils:dbgPrint( "coroutineResumed", errorMsg )
                     moveToMorgue(H)
                     -- errorHandler( H[TH_CLIENT_ADDON], errorStr )
                 end
@@ -496,10 +497,12 @@ function thread:create( yieldTicks, threadFunction,... )
 
     local H = createHandle( addonName, yieldTicks, threadFunction, ... )
 
-    isValid, errorMsg = handleIsValid(H)
-    if not isValid then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
-        return nil, errorMsg
+    if not isCallerClient(H) then
+        isValid, errorMsg = handleIsValid(H)
+        if not isValid then
+            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
+            return nil, errorMsg
+        end
     end
 
     table.insert( threadControlBlock, H )
@@ -565,12 +568,16 @@ Usage:
 function thread:yield()
     local fname = "thread:yield()"
 
+    local H, errorMsg = getCallerHandle()
+    if H == nil then
+        return nil, errorMsg
+    end
     local beforeYieldTicks = ACCUMULATED_TICKS
 
     coroutine.yield()
     local H, errorMsg = getCallerHandle()
     if H == nil then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         if utils.stack then
             error(string.format("FATAL: Addon terminated: %s\n", errorMsg ))
         end
@@ -600,7 +607,7 @@ function thread:sleep()
 
     local H, errorMsg = getCallerHandle()
     if H == nil then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         if utils:debuggingIsEnabled() then
             utils:dbgLog( errorMsg, debugstack(2) )
         end
@@ -626,7 +633,7 @@ function thread:getSelf()
     
     local H, errorMsg = getCallerHandle()
     if H == nil then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return nil, errorMsg 
     end
     return H, nil
@@ -654,13 +661,13 @@ function thread:getId(thread_h)
     if thread_h ~= nil then
         isValid, errorMsg = handleIsValid(H)
         if not isValid then
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
             return nil, nil, errorMsg
         end
     else -- input handle (thread_h) was nil.
         thread_h, errorMsg = getCallerHandle()
         if thread_h == nil then 
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
             return nil, errorMsg 
         end
     end
@@ -689,22 +696,22 @@ function thread:areEqual(H1, H2)
     -- check that neither handle is nil
     if H1 == nil then
         errorMsg = string.format("%s",L["THREAD_HANDLE_NIL"])
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return nil, errorMsg
     end
     if H2 == nil then
         errorMsg = string.format("%s",L["THREAD_HANDLE_NIL"])
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return areEqual, errorMsg
     end
     isValid, errorMsg = handleIsValid(H1)
     if not isValid then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return areEqual, errorMsg
     end
     isValid, errorMsg = handleIsValid(H2)
     if not isValid then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return areEqual, errorMsg
     end
 
@@ -749,7 +756,7 @@ function thread:getParent(thread_h)
     if thread_h ~= nil then
         isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
             return nil, errorMsg
         else
             return nil, nil
@@ -758,7 +765,7 @@ function thread:getParent(thread_h)
     else
         local thread_h, errorMsg = getCallerHandle()
         if thread_h == nil then 
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
             return nil, errorMsg 
         else
             return thread_h[TH_PARENT], errorMsg
@@ -788,12 +795,12 @@ function thread:getChildThreads(thread_h)
     if thread_h ~= nil then
         local isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
             return nil, nil, errorMsg
         else -- the argument is non-nil
             thread_h, errorMsg = getCallerHandle()
             if thread_h == nil then 
-                errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+                errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
                 return nil, errorMsg 
             end
         end
@@ -821,7 +828,6 @@ function thread:getState(thread_h)
         return "running", nil 
     end
 
-    utils:dbgPrint(thread_h[TH_UNIQUE_ID])
     local status = coroutine.status( thread_h[TH_COROUTINE])
     return status, nil
 end
@@ -856,38 +862,37 @@ function thread:sendSignal( target_h, signal, ... )
     local wasSent = true
     local errorMsg = nil
     local isValid = false
+    local isWowClient = true
 
     -- check that the signal is valid
     if signal == SIG_NONE_PENDING then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return nil, errorMsg
     end
 
     local isValid, errorMsg = signalIsValid( signal )
     if not isValid then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return nil, errorMsg
     end
 
     -- check that the target handle is valid
     if target_h == nil then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return nil, errorMsg
     end
 
     isValid, errorMsg = handleIsValid( target_h )
     if not isValid then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return nil, errorMsg
     end
 
-    local state = coroutine.status( target_h[TH_COROUTINE])
-    if state == "dead" then
-        errorMsg = string.format("Signal not sent becauseThread[%d] is dead", target_h[TH_UNIQUE_ID] )
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+    local isDead, errorMsg = isInMorgue( target_h )
+    if isDead then
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return nil, errorMsg
     end
-
     -- Validity checks are complete.
 
     -- Initialize and insert an entry into the recipient thread's signalTable
@@ -931,9 +936,10 @@ function thread:getSignal()
 
     local H, errorMsg = getCallerHandle()
     if H == nil then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return nil, errorMsg 
     end
+    
     if H[TH_SIGNAL_QUEUE]:size() == 0 then
         return {SIG_NONE_PENDING, nil, nil }
     end
@@ -964,7 +970,7 @@ function thread:getSignalName(signal)
 
     isValid, errorMsg = signalIsValid( signal )
     if not isValid then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return nil, errorMsg
     end
 
@@ -992,7 +998,7 @@ function thread:getSigCount( thread_h )
     if thread_h == nil then
         local thread_h, errorMsg = getCallerHandle()
         if thread_h == nil then 
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack())
+            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
             return nil, errorMsg 
         end
     end
@@ -1016,7 +1022,7 @@ Usage:
     end
 @End]]
 function thread:invokeErrorHandler(addonName, errorMsg )
-    WoWThreadsErrorHandler( addonName, errorMsg )
+    threadCallback( addonName, errorMsg )
 end
 
 --[[@Begin
