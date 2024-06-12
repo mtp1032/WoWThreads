@@ -45,6 +45,62 @@ end
 
 local userMsgFrame = nil
 
+-- This is a function that will print all of the visible symbols from an addon's symbol table.
+
+-- Helper function to recursively print the contents of a table
+local function printTable(t, indent)
+    indent = indent or "   "
+    for k, v in pairs(t) do
+        if type(v) == "table" then
+            local str = indent .. k .. ":"
+            utils:postMsg(string.format("%s\n", str ))
+            printTable(v, indent .. "  ")
+        else
+            local str = indent .. k .. ": " .. tostring(v)
+            utils:postMsg( string.format("%s\n", str ))
+        end
+    end
+end
+-- Function to get all global variables for a specified addon
+function utils:printGlobalVars( addonName )SLASH_PRINTGLOBALS1 = "/printglobals"
+    SlashCmdList["PRINTGLOBALS"] = function(msg)
+        local addonName = msg:match("^(%S+)$")
+        if addonName then
+            _G.printGlobalVars(addonName)
+        else
+            print("Usage: /printglobals <AddonName>")
+        end
+    end
+    local globals = {}
+    
+    for k, v in pairs(_G) do
+        -- Check if the variable name starts with the addon name
+        if type(k) == "string" and k:find("^" .. addonName) then
+            globals[k] = v
+        end
+    end
+    
+    printTable( globals )
+end
+
+-- Register the table globally for other addon files to use
+-- Add the printGlobalVars function to the global namespace
+_G.printGlobalVars = function(addonName)
+    utils:printGlobalVars(addonName)
+end 
+    
+-- Example Usage:
+SLASH_PRINTGLOBALS1 = "/printglobals"
+SlashCmdList["PRINTGLOBALS"] = function(msg)
+    local addonName = msg:match("^(%S+)$")
+    if addonName then
+        _G.printGlobalVars(addonName)
+    else
+        print("Usage: /printglobals <AddonName>")
+    end
+end
+
+
 -- =================================================
 --                  DEBUGGING UTILITIES
 -- =================================================
