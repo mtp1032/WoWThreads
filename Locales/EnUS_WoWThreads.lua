@@ -49,13 +49,13 @@ if LOCALE == "enUS" then
     L["INVALID_HANDLE"]         = "ERROR: Invalid handle "
 	L["INVALID_EXE_STATE"]	    = "ERROR: Thread[%d] is %s "
 	L["HANDLE_ILL_FORMED"]	    = "ERROR: Thread handle ill-formed "
-	L["HANDLE_NOT_A_THREAD"]    = "ERROR: Specified Thread handle does not reference a coroutine "
+	L["NOT_A_THREAD"]           = "ERROR: Specified Thread handle does not reference a coroutine "
     L["NO_THREAD_CONTEXT"]      = "ERROR: Operation requires thread context "
     L["HANDLE_NOT_SPECIFIED"]   = "ERROR: Handle not specified "
     L["THREAD_CREATE_FAILED"]   = "Failed to create thread "
 
 	L["INVALID_EXE_CONTEXT"]    = "ERROR: Operation requires thread context "
-	L["THREAD_STATE_DEAD"]	    = "ERROR: Invalid handle. Handle is likely 'dead' "
+	L["THREAD_IS_DEAD"]	        = "ERROR: Invalid handle. Thread has completed or faulted. "
     
     L["RESUME_FAILED"]          = "Failed to resume thread "
     L["THREAD_NOT_FOUND"]       = "Thread not found. "
@@ -83,10 +83,10 @@ if LOCALE == "frFR" then
 	L["THREAD_HANDLE_NIL"]     = "[ERREUR] Descripteur de thread nil "
 	L["INVALID_EXE_STATE"]   = "[ERREUR] Thread[%d] est %s "
 	L["HANDLE_ILL_FORMED"]   = "[ERREUR] Descripteur de thread mal formé "
-	L["HANDLE_NOT_A_THREAD"] = "[ERREUR] Le descripteur spécifié ne référence pas une coroutine "
+	L["NOT_A_THREAD"] = "[ERREUR] Le descripteur spécifié ne référence pas une coroutine "
 
 	L["INVALID_EXE_CONTEXT"] = "[ERREUR] Opération nécessite un contexte de thread "
-	L["THREAD_STATE_DEAD"]      = "[ERREUR] Descripteur invalide. Le descripteur est probablement 'mort.' "
+	L["THREAD_IS_DEAD"]      = "[ERREUR] Descripteur invalide. Le descripteur est probablement 'mort.' "
 	L["RESUME_FAILED"]       = "[ERREUR] Échec de la reprise du thread[%d]: "
 
 	L["SIGNAL_QUEUE_INVALID"] = "[ERREUR] Thread[%d] File d'attente de signaux invalide "
@@ -107,10 +107,10 @@ if LOCALE == "deDE" then
     L["THREAD_HANDLE_NIL"]           = "[FEHLER] Thread-Handle nil "
     L["INVALID_EXE_STATE"]    = "[FEHLER] Thread[%d] ist %s "
     L["HANDLE_ILL_FORMED"]    = "[FEHLER] Thread-Handle fehlerhaft "
-    L["HANDLE_NOT_A_THREAD"]  = "[FEHLER] Angegebenes Thread-Handle ist keine Coroutine "
+    L["NOT_A_THREAD"]  = "[FEHLER] Angegebenes Thread-Handle ist keine Coroutine "
 
     L["INVALID_EXE_CONTEXT"]  = "[FEHLER] Operation erfordert Thread-Kontext "
-    L["THREAD_STATE_DEAD"]       = "[FEHLER] Ungültiges Handle. Handle ist wahrscheinlich 'tot' "
+    L["THREAD_IS_DEAD"]       = "[FEHLER] Ungültiges Handle. Handle ist wahrscheinlich 'tot' "
     L["RESUME_FAILED"]        = "[FEHLER] Fortsetzung von Thread[%d] fehlgeschlagen: "
     
     L["SIGNAL_QUEUE_INVALID"] = "[FEHLER] Thread[%d] Ungültige Signalwarteschlange "
@@ -131,10 +131,10 @@ if LOCALE == "frFR" then
     L["THREAD_HANDLE_NIL"]           = "[ERREUR] Descripteur de thread nul "
     L["INVALID_EXE_STATE"]    = "[ERREUR] Thread[%d] est %s "
     L["HANDLE_ILL_FORMED"]    = "[ERREUR] Descripteur de thread mal formé "
-    L["HANDLE_NOT_A_THREAD"]  = "[ERREUR] Le descripteur de thread spécifié ne référence pas une coroutine "
+    L["NOT_A_THREAD"]  = "[ERREUR] Le descripteur de thread spécifié ne référence pas une coroutine "
 
     L["INVALID_EXE_CONTEXT"]  = "[ERREUR] L'opération nécessite un contexte de thread "
-    L["THREAD_STATE_DEAD"]       = "[ERREUR] Descripteur invalide. Le descripteur est probablement 'mort' "
+    L["THREAD_IS_DEAD"]       = "[ERREUR] Descripteur invalide. Le descripteur est probablement 'mort' "
     L["RESUME_FAILED"]        = "[ERREUR] Échec de la reprise du thread[%d] : "
     
     L["SIGNAL_QUEUE_INVALID"] = "[ERREUR] Thread[%d] Queue de signal invalide "
@@ -155,10 +155,10 @@ if LOCALE == "zhCN" then
     L["THREAD_HANDLE_NIL"]           = "[错误] 线程句柄为空。"
     L["INVALID_EXE_STATE"]    = "[错误] 线程[%d]为%s。"
     L["HANDLE_ILL_FORMED"]    = "[错误] 线程句柄格式错误。"
-    L["HANDLE_NOT_A_THREAD"]  = "[错误] 指定的线程句柄不引用协程。"
+    L["NOT_A_THREAD"]  = "[错误] 指定的线程句柄不引用协程。"
 
     L["INVALID_EXE_CONTEXT"]  = "[错误] 操作需要线程上下文。"
-    L["THREAD_STATE_DEAD"]       = "[错误] 句柄无效。句柄可能已经‘死亡’。"
+    L["THREAD_IS_DEAD"]       = "[错误] 句柄无效。句柄可能已经‘死亡’。"
     L["RESUME_FAILED"]        = "[错误] 无法恢复线程[%d]："
     
     L["SIGNAL_QUEUE_INVALID"] = "[错误] 线程[%d]信号队列无效。"
@@ -179,10 +179,10 @@ if LOCALE == "koKR" then
     L["THREAD_HANDLE_NIL"]           = "[오류] 스레드 핸들이 nil입니다 "
     L["INVALID_EXE_STATE"]    = "[오류] 스레드[%d] 상태가 %s입니다 "
     L["HANDLE_ILL_FORMED"]    = "[오류] 스레드 핸들 형식이 잘못되었습니다 "
-    L["HANDLE_NOT_A_THREAD"]  = "[오류] 지정된 스레드 핸들이 코루틴을 참조하지 않습니다 "
+    L["NOT_A_THREAD"]  = "[오류] 지정된 스레드 핸들이 코루틴을 참조하지 않습니다 "
 
     L["INVALID_EXE_CONTEXT"]  = "[오류] 작업에 스레드 컨텍스트가 필요합니다 "
-    L["THREAD_STATE_DEAD"]       = "[오류] 핸들이 유효하지 않습니다. 핸들은 '죽었을' 가능성이 높습니다 "
+    L["THREAD_IS_DEAD"]       = "[오류] 핸들이 유효하지 않습니다. 핸들은 '죽었을' 가능성이 높습니다 "
     L["RESUME_FAILED"]        = "[오류] 스레드[%d] 재개 실패: "
     
     L["SIGNAL_QUEUE_INVALID"] = "[오류] 스레드[%d] 신호 큐가 유효하지 않습니다 "
@@ -203,10 +203,10 @@ if LOCALE == "svSE" then
     L["THREAD_HANDLE_NIL"]           = "[FEL] Trådhandtag är null "
     L["INVALID_EXE_STATE"]    = "[FEL] Tråd[%d] är %s "
     L["HANDLE_ILL_FORMED"]    = "[FEL] Trådhandtaget är felaktigt formaterat "
-    L["HANDLE_NOT_A_THREAD"]  = "[FEL] Angivet trådhandtag refererar inte till en korutin "
+    L["NOT_A_THREAD"]  = "[FEL] Angivet trådhandtag refererar inte till en korutin "
 
     L["INVALID_EXE_CONTEXT"]  = "[FEL] Operation kräver trådkontext "
-    L["THREAD_STATE_DEAD"]       = "[FEL] Ogiltigt handtag. Handtaget är troligen 'dött.' "
+    L["THREAD_IS_DEAD"]       = "[FEL] Ogiltigt handtag. Handtaget är troligen 'dött.' "
     L["RESUME_FAILED"]        = "[FEL] Misslyckades med att återuppta tråd[%d]: "
     
     L["SIGNAL_QUEUE_INVALID"] = "[FEL] Tråd[%d] Ogiltig signal kö "
@@ -227,10 +227,10 @@ if LOCALE == "heIL" then
     L["THREAD_HANDLE_NIL"]           = "[שגיאה] ידית התהליכון ריקה "
     L["INVALID_EXE_STATE"]    = "[שגיאה] תהליכון[%d] הוא %s "
     L["HANDLE_ILL_FORMED"]    = "[שגיאה] ידית תהליכון בעייתית "
-    L["HANDLE_NOT_A_THREAD"]  = "[שגיאה] ידית התהליכון המצוינת אינה מתייחסת לשגרת הרצה "
+    L["NOT_A_THREAD"]  = "[שגיאה] ידית התהליכון המצוינת אינה מתייחסת לשגרת הרצה "
 
     L["INVALID_EXE_CONTEXT"]  = "[שגיאה] הפעולה דורשת הקשר של תהליכון "
-    L["THREAD_STATE_DEAD"]       = "[שגיאה] ידית לא תקינה. יש סבירות שהידית 'מתה.' "
+    L["THREAD_IS_DEAD"]       = "[שגיאה] ידית לא תקינה. יש סבירות שהידית 'מתה.' "
     L["RESUME_FAILED"]        = "[שגיאה] נכשל בחידוש התהליכון[%d]: "
     
     L["SIGNAL_QUEUE_INVALID"] = "[שגיאה] תהליכון[%d] תור אותות לא תקין "
@@ -250,10 +250,10 @@ if LOCALE == "esES" then
     L["THREAD_HANDLE_NIL"]           = "ERROR: Identificador del hilo nulo "
     L["INVALID_EXE_STATE"]    = "ERROR: Hilo[%d] está %s "
     L["HANDLE_ILL_FORMED"]    = "ERROR: Identificador del hilo mal formado "
-    L["HANDLE_NOT_A_THREAD"]  = "ERROR: El identificador de hilo especificado no hace referencia a una coroutina "
+    L["NOT_A_THREAD"]  = "ERROR: El identificador de hilo especificado no hace referencia a una coroutina "
 
     L["INVALID_EXE_CONTEXT"]  = "ERROR: La operación requiere contexto de hilo "
-    L["THREAD_STATE_DEAD"]       = "ERROR: Identificador inválido. El identificador probablemente esté 'muerto' "
+    L["THREAD_IS_DEAD"]       = "ERROR: Identificador inválido. El identificador probablemente esté 'muerto' "
     L["RESUME_FAILED"]        = "ERROR: Fallo al reanudar el hilo[%d]: "
     
     L["SIGNAL_QUEUE_INVALID"] = "ERROR: Hilo[%d] Cola de señales inválida "
