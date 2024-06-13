@@ -28,6 +28,6 @@ Libs\ACE\AceDB-3.0\AceDB-3.0.xml
 Libs\UtilsLib.lua
 Libs\SignalQueue.lua
 Locales\EnUS_WoWThreads.lua
-WoWThreads.lua
-OptionsPanel.lua
-Icon.lua
+Sources\WoWThreads.lua
+Sources\OptionsPanel.lua
+Sources\Icon.lua
