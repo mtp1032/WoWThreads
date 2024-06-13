@@ -61,7 +61,7 @@ local TH_ACCUM_YIELD_TICKS  = 6 -- The total number of yield ticks the thread is
 local TH_LIFETIME_TICKS     = 7
 local TH_YIELD_COUNT        = 8 -- the number of times a thread yields
 local TH_CHILDREN           = 9
-local TH_PARENT             = 10
+local TH_PARENT_HANDLE      = 10
 local TH_CLIENT_ADDON       = 11
 local TH_COROUTINE_ARGS     = 12
 
@@ -120,7 +120,7 @@ local signalNameTable = {
 --                          LOCAL FUNCTIONS 
 local function isCallerClient( H )
     local isWowClient = false
-    if H[TH_PARENT] == nil then
+    if H[TH_PARENT_HANDLE] == nil then
         return true
     end
     return false
@@ -152,12 +152,13 @@ end
 local function getAddonName( thread_h )
     if thread_h == nil then
         thread_h = getCallerHandle()
+        return nil, L["NOT_A_THREAD"]
     end
-    return thread_h[TH_CLIENT_ADDON]
+    return thread_h[TH_CLIENT_ADDON], nil
 end
 local function formatErrorMsg( errorMsg, functionName, stackTrace )
-    local st = utils:simplifyStackTrace( stackTrace )
-    errorMsg = string.format("%s in %s. %s\n ", errorMsg, functionName, st )
+    -- local st = utils:simplifyStackTrace( stackTrace )
+    -- errorMsg = string.format("%s in %s. %s\n ", errorMsg, functionName, st )
     return errorMsg
 end
 -- this function is WoWThread's registered callback
@@ -195,14 +196,14 @@ local function createHandle( addonName, yieldTicks, threadFunction,... )
     H[TH_CLIENT_ADDON]      = addonName
 
     H[TH_CHILDREN]  = {}
-    H[TH_PARENT]    = nil
+    H[TH_PARENT_HANDLE]    = nil
     H[TH_COROUTINE_ARGS] = {...}
 
     local parent_h = getCallerHandle()
     if parent_h ~= nil then
         -- This handle will be he child of the running thread.
         table.insert(parent_h[TH_CHILDREN], H)
-        H[TH_PARENT] = parent_h
+        H[TH_PARENT_HANDLE] = parent_h
     end
 
     return H
@@ -413,13 +414,13 @@ local function scheduleThreads()
                 pcallSucceeded, coroutineResumed, errorMsg = pcall(coroutine.resume, co, unpack(args) )
                 if not pcallSucceeded then
                     errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-                    utils:dbgPrint( "pcallSucceeded", errorMsg )
+                    -- utils:dbgPrint( "pcallSucceeded", errorMsg )
                     moveToMorgue(H)
                     -- errorHandler( H[TH_CLIENT_ADDON], errorMsg )
                 end
                 if not coroutineResumed then
                     errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-                    utils:dbgPrint( "coroutineResumed", errorMsg )
+                    -- utils:dbgPrint( "coroutineResumed", errorMsg )
                     moveToMorgue(H)
                     -- errorHandler( H[TH_CLIENT_ADDON], errorStr )
                 end
@@ -521,7 +522,7 @@ Returns:
 - If failure, Returns nil. The error message describes the error
 and its location.
 Usage:
-    -- This function is typically used to get the name of the addon for use In
+    -- This function is typically used to get the name of the addon for use when
     -- invoking the error handler.
     local wasSent, errorMsg = thread:sendSignal( target_h, SIG_ALERT )
     if not wasSent then
@@ -530,7 +531,14 @@ Usage:
     end
 @End]]
 function thread:getAddonName( thread_h )
-    return getAddonName( thread_h )
+    local errorMsg = nil
+    if thread_h == nil then
+        thread_h, errorMsg = getCallerHandle()
+        if thread_h == nil then
+            return nil, errorMsg
+        end
+    end
+    return thread_h[TH_CLIENT_ADDON], errorMsg
 end
 
 --[[@Begin
@@ -731,10 +739,9 @@ the thread was created by the WoW client it will not have a parent.
 Parameters
 - thread_h (handle): if nil, then the calling thread's parent is returned.
 Returns
-- If successful: returns the handle of the parent thread. However, if the
-thread has no parent (i.e., was created by the WoW client, the the errorMsg
-will be nil as well (e.g., to return nil, nil means no parent).
-- If failure: 'nil' is returned and an error message (string)
+- If successful: returns the handle of the parent thread.
+- If failure: 'nil' is returned. Either the calling thread is
+the WoW client or the specified thread is invalie.
 Usage:
     local parent_h, errorMsg = thread:getParent( thread_h )
     if parent_h == 'nil' then 
@@ -752,26 +759,23 @@ function thread:getParent(thread_h)
     local isValid = true
     local errorMsg = nil
 
-    -- if thread_h is nil then this is equivalent to "getMyParent"
     if thread_h ~= nil then
         isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
             errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
             return nil, errorMsg
-        else
-            return nil, nil
         end
-        return thread_h[TH_PARENT], errorMsg
-    else
-        local thread_h, errorMsg = getCallerHandle()
-        if thread_h == nil then 
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-            return nil, errorMsg 
-        else
-            return thread_h[TH_PARENT], errorMsg
-        end
+        return thread_h[TH_PARENT_HANDLE]
     end
-    return thread_h[TH_PARENT], errorMsg
+
+    -- if thread_h is nil then this is equivalent to "getMyParent." If the
+    -- the caller is the WoW client, then no parent exists.
+    thread_h, errorMsg = getCallerHandle()
+    if thread_h == nil then -- the caller is the WoW client
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
+        return nil, errorMsg
+    end
+    return thread_h[TH_PARENT_HANDLE]
 end
 
 --[[@Begin
@@ -797,7 +801,7 @@ function thread:getChildThreads(thread_h)
         if not isValid then
             errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
             return nil, nil, errorMsg
-        else -- the argument is non-nil
+        else -- we're looking for the caller's thread Id.
             thread_h, errorMsg = getCallerHandle()
             if thread_h == nil then 
                 errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
@@ -824,7 +828,12 @@ Usage:
     if state == 'nil' then print( errorMsg ) return end
 @End]]
 function thread:getState(thread_h)
+    local errorMsg = nil
     if thread_h == nil then 
+        thread_h, errorMsg = getCallerHandle()
+        if thread_h == nil then
+            return nil, errorMsg
+        end
         return "running", nil 
     end
 
@@ -862,40 +871,49 @@ function thread:sendSignal( target_h, signal, ... )
     local wasSent = true
     local errorMsg = nil
     local isValid = false
-    local isWowClient = true
 
     -- check that the signal is valid
     if signal == SIG_NONE_PENDING then
+        errorMsg = L["SIGNAL_INVALID_OPERATION"]
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
+        -- utils:dbgPrint()
         return nil, errorMsg
     end
 
+    -- utils:dbgPrint()
     local isValid, errorMsg = signalIsValid( signal )
     if not isValid then 
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
+        -- utils:dbgPrint()
         return nil, errorMsg
     end
 
     -- check that the target handle is valid
+    -- utils:dbgPrint()
     if target_h == nil then
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
         return nil, errorMsg
     end
 
+    -- utils:dbgPrint()
     isValid, errorMsg = handleIsValid( target_h )
     if not isValid then
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
+        -- utils:dbgPrint()
         return nil, errorMsg
     end
 
     local isDead, errorMsg = isInMorgue( target_h )
+    -- utils:dbgPrint()
     if isDead then
         errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
+        -- utils:dbgPrint()
         return nil, errorMsg
     end
     -- Validity checks are complete.
 
     -- Initialize and insert an entry into the recipient thread's signalTable
+    -- utils:dbgPrint()
     local sender_h, errorMsg = getCallerHandle()
     local varargs = {...}
     local sigEntry = {signal, sender_h, varargs[1] }
@@ -909,6 +927,7 @@ function thread:sendSignal( target_h, signal, ... )
     if signal == SIG_WAKEUP then
         wakeup( target_h )
     end
+    -- utils:dbgPrint()
     return wasSent, nil
 end
 
