@@ -50,7 +50,7 @@ if LOCALE == "enUS" then
 	L["INVALID_EXE_STATE"]	    = "ERROR: Thread[%d] is %s "
 	L["HANDLE_ILL_FORMED"]	    = "ERROR: Thread handle ill-formed "
 	L["NOT_A_THREAD"]           = "ERROR: Specified Thread handle does not reference a coroutine "
-    L["NO_THREAD_CONTEXT"]      = "ERROR: Operation requires thread context "
+    L["NO_THREAD_CONTEXT"]      = "ERROR: Caller is likely the WoW client (WoW.exe) "
     L["HANDLE_NOT_SPECIFIED"]   = "ERROR: Handle not specified "
     L["THREAD_CREATE_FAILED"]   = "Failed to create thread "
 
