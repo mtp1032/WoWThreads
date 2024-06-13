@@ -1,6 +1,5 @@
 -- Filename: EnUs_WoWThreads.lua
 local ADDON_NAME, _ = ...
-local sprintf = _G.string.format
 
 -- get the uitls library
 local UtilsLib = LibStub("UtilsLib")
@@ -34,11 +33,28 @@ end })
 EnUSlib.L = L
 local LOCALE = GetLocale()
 if LOCALE == "enUS" then
+    -- minimap localizations
+    L["OPTIONS"] = string.format("%s Options", ADDON_NAME )
+    L["OPTIONS_MENUS"]= string.format("%s %s", L["OPTIONS"], "Menu")
+
+    L["LINE1"] = "    WoWThreads is a library of services that enable developers"
+    L["LINE2"] = "to incorporate asynchronous, non-preemptive multithreading into"
+    L["LINE3"] = "their addons. You can read more about thread programming generally"
+    L["LINE4"] = "and WoWThreads specifically in the Docs directory."
+
+    L["ACCEPT_BUTTON_LABEL"]    = "Accept"
+    L["DISMISS_BUTTON_LABEL"]   = "Dismiss"
+
+    L["ENABLE_DATA_COLLECTION"] = "Check to collect thread congestion data."
+    L["TOOTIP_DATA_COLLECTION"] = "If checked, per thread congestion data will be collected."
+
+    L["TOOLTIP_DEBUGGING"]      = "If checked, most errors are not returned to the calling thread. Instead, the thread fails in place and generates an error message and a stack trace."
+
 
 	-- WoWThreads Localizations
-    L["CLOCK_INTERVAL"]     = sprintf("Clock Interval: %0.3f ms", clockInterval )
+    L["CLOCK_INTERVAL"]     = string.format("Clock Interval: %0.3f ms", clockInterval )
 	L["VERSION"] 			= version
-	L["ADDON_MESSAGE"]		= sprintf("%s (%s) loaded ",  "WoWThreads-1.0", expansionName )
+	L["ADDON_MESSAGE"]		= string.format("%s (%s) loaded ",  "WoWThreads-1.0", expansionName )
     L["ERROR_MSG_FRAME_TITLE"] = "Error Messages - WoWThreads-1.0"
  	-- Generic Error MessageS
 	L["INPUT_PARM_NIL"]		= "ERROR: Input parameter nil  "
@@ -73,7 +89,7 @@ end
 if LOCALE == "frFR" then
 	-- WoWThreads Localizations
 	L["VERSION"]             = version
-	L["ADDON_MESSAGE"]       = sprintf("%s (%s) chargé ", libraryName, expansionName)
+	L["ADDON_MESSAGE"]       = string.format("%s (%s) chargé ", libraryName, expansionName)
 
 	-- Generic Error Messages
 	L["INPUT_PARM_NIL"]      = "[ERREUR] Paramètre d'entrée nil "
@@ -97,7 +113,7 @@ if LOCALE == "deDE" then
 
     -- WoWThreads Lokalisierungen
     L["VERSION"]              = version
-    L["ADDON_MESSAGE"]        = sprintf("%s (%s) geladen ", libraryName, expansionName )
+    L["ADDON_MESSAGE"]        = string.format("%s (%s) geladen ", libraryName, expansionName )
 
     -- Allgemeine Fehlermeldungen
     L["INPUT_PARM_NIL"]       = "[FEHLER] Eingabeparameter nil "
@@ -121,7 +137,7 @@ if LOCALE == "frFR" then
 
     -- Localisations pour WoWThreads
     L["VERSION"]              = version
-    L["ADDON_MESSAGE"]        = sprintf("%s (%s) chargé ", libraryName, expansionName )
+    L["ADDON_MESSAGE"]        = string.format("%s (%s) chargé ", libraryName, expansionName )
 
     -- Messages d'erreur génériques
     L["INPUT_PARM_NIL"]       = "[ERREUR] Paramètre d'entrée nul "
@@ -145,7 +161,7 @@ if LOCALE == "zhCN" then
 
     -- WoWThreads 本地化
     L["VERSION"]              = version
-    L["ADDON_MESSAGE"]        = sprintf("%s (%s) 已加载。", libraryName, expansionName )
+    L["ADDON_MESSAGE"]        = string.format("%s (%s) 已加载。", libraryName, expansionName )
 
     -- 通用错误消息
     L["INPUT_PARM_NIL"]       = "[错误] 输入参数为空。"
@@ -169,7 +185,7 @@ if LOCALE == "koKR" then
 
     -- WoWThreads 지역화
     L["VERSION"]              = version
-    L["ADDON_MESSAGE"]        = sprintf("%s (%s) 로드됨 ", libraryName, expansionName )
+    L["ADDON_MESSAGE"]        = string.format("%s (%s) 로드됨 ", libraryName, expansionName )
 
     -- 일반 오류 메시지
     L["INPUT_PARM_NIL"]       = "[오류] 입력 매개변수가 nil입니다 "
@@ -193,7 +209,7 @@ if LOCALE == "svSE" then
 
     -- WoWThreads Lokaliseringar
     L["VERSION"]              = version
-    L["ADDON_MESSAGE"]        = sprintf("%s (%s) laddat ", libraryName, expansionName )
+    L["ADDON_MESSAGE"]        = string.format("%s (%s) laddat ", libraryName, expansionName )
 
     -- Generella felmeddelanden
     L["INPUT_PARM_NIL"]       = "[FEL] Inmatningsparameter är null "
@@ -217,7 +233,7 @@ if LOCALE == "heIL" then
 
     -- תרגומים ל-WoWThreads
     L["VERSION"]              = version
-    L["ADDON_MESSAGE"]        = sprintf("%s (%s) נטען ", libraryName, expansionName )
+    L["ADDON_MESSAGE"]        = string.format("%s (%s) נטען ", libraryName, expansionName )
 
     -- הודעות שגיאה כלליות
     L["INPUT_PARM_NIL"]       = "[שגיאה] פרמטר קלט ריק "
@@ -240,7 +256,7 @@ end
 if LOCALE == "esES" then
     -- Localizaciones de WoWThreads
     L["VERSION"]              = version
-    L["ADDON_MESSAGE"]        = sprintf("%s (%s) cargado ", libraryName, expansionName )
+    L["ADDON_MESSAGE"]        = string.format("%s (%s) cargado ", libraryName, expansionName )
 
     -- Mensajes de Error Genéricos
     L["INPUT_PARM_NIL"]       = "ERROR: Parámetro de entrada nulo "
