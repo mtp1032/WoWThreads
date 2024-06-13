@@ -1068,6 +1068,25 @@ function thread:registerErrorHandler( addonName, callbackHandler )
     end
     DEFAULT_CHAT_FRAME:AddMessage( string.format("Error handler for %s could not be registered.", addonName), 0.0, 1.0, 1.0)
 end
+function thread:debuggingIsEnabled()
+    print( "In  debuggingIsEnabled")
+end
+function thread:enableDebugging()
+    print(  "In enableDebugging()")
+end
+function thread:disableDebugging()
+    print(  "In disableDebugging()")
+end
+function thread:dataCollectionIsEnabled()
+    print( "In dataCollectionIsEnabled()")
+end
+function thread:enableDataCollection()
+    print( "In enableDataCollection()")
+end
+function thread:disableDataCollection()
+    print( "In disableDataCollection()")
+end
+
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
