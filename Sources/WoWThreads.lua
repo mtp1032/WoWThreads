@@ -993,33 +993,30 @@ function thread:getSignalName(signal)
         return nil, errorMsg
     end
 
-    return signalNameTable[signal]
+    return signalNameTable[signal], errorMsg
 end
 
 --[[@Begin
-Signature: signalCount, errorMsg = thread:getSigCount( thread_h )
-Description: Gets the number of signals in the calling thread's signal queue.
+Signature: signalCount, errorMsg = thread:getNumPendingSignals()
+Description: Gets the number of pending signals for the calling thread
 Parameters:
-- thread_h (number): The number of pending signals in the specified
-thread's signal queue
+- None
 Returns:
-- If successful: returns the number of pending signals
+- If successful: returns the number of the thread's pending signals
 - If failure: returns 'nil' and an error message(string)
 Usage:
-    local sigCount, errorMsg = thread:getSigCount( thread_h )
+    local sigCount, errorMsg = thread:getNumPendingSignals( thread_h )
     if signalCount == nil then print( errorMsg ) return end
 @End]]
-function thread:getSigCount( thread_h )
-    local fname = "thread:getSigCount()"
+function thread:getNumPendingSignals()
+    local fname = "thread:getNumPendingSignals()"
     local errorMsg = nil
     local H = nil
 
-    if thread_h == nil then
-        local thread_h, errorMsg = getCallerHandle()
-        if thread_h == nil then 
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-            return nil, errorMsg 
-        end
+    local thread_h, errorMsg = getCallerHandle()
+    if thread_h == nil then 
+        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
+        return nil, errorMsg 
     end
     return thread_h[TH_SIGNAL_QUEUE]:size(), nil
 end
