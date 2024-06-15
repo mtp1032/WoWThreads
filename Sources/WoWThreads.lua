@@ -118,6 +118,12 @@ local signalNameTable = {
 }
 
 --                          LOCAL FUNCTIONS 
+local function setResult( fname, errorMsg, stackTrace )
+    local st = utils:simplifyStackTrace( stackTrace )
+    errorMsg = string.format("%s in %s. ", errorMsg, fname )
+    local result = {errorMsg, st }
+    return result
+end
 local function isCallerClient( H )
     local isWowClient = false
     if H[TH_PARENT_HANDLE] == nil then
@@ -141,8 +147,7 @@ local function getCallerHandle()
 
     for i = 1, #threadControlBlock do
         local running_h = threadControlBlock[i]
-        local co = running_h[TH_COROUTINE]
-        local status = coroutine.status( co )
+        local co = running_h[TH_COROUTINE]        
         if status == "running" then
             return running_h, nil
         end
@@ -152,14 +157,9 @@ end
 local function getAddonName( thread_h )
     if thread_h == nil then
         thread_h = getCallerHandle()
-        return nil, L["NOT_A_THREAD"]
+        return nil, getResult( L["NOT_A_THREAD"], debugstack(2) )
     end
     return thread_h[TH_CLIENT_ADDON], nil
-end
-local function formatErrorMsg( errorMsg, functionName, stackTrace )
-    -- local st = utils:simplifyStackTrace( stackTrace )
-    -- errorMsg = string.format("%s in %s. %s\n ", errorMsg, functionName, st )
-    return errorMsg
 end
 -- this function is WoWThread's registered callback
 local function threadCallback( addonName, errorMsg )
@@ -234,8 +234,7 @@ local function putToSleep( H )
         if H[TH_UNIQUE_ID] == entry[TH_UNIQUE_ID] then
             table.remove(threadControlBlock, i)
             isSleeping = true
-            local errorMsg = string.format("Thread is already sleeping" )
-            return nil, errorMsg
+            return true, nil
         end
     end
     -- if the thread is in the TCB then remove it
@@ -257,7 +256,8 @@ local function putToSleep( H )
         if utils:debuggingIsEnabled() then
             utils:dbgLog( errorMsg, debugstack(2) )
         end
-        return nil, errorMsg
+        local st = utils:simplifyStackTrace( debugstack(2))
+        return nil, getResult( errorMsg, debugstack(2) )
     end
 
     -- thread is ready to be entered into the thread sleep table.
@@ -365,27 +365,9 @@ local function signalIsValid(signal)
     end
     return isValid, errorMsg
 end
-local function reformatErrorStr(originalStr)
-    -- Use pattern matching to find the position of the colon followed by a number
-    local firstColon = originalStr:find(":%d")
-    if not firstColon then
-        return originalStr -- If there is no colon followed by a number, return the original string
-    end
-    
-    -- Find the position of the second colon
-    local secondColon = originalStr:find(": ", firstColon + 1)
-    if not secondColon then
-        return originalStr -- If there is no second colon, return the original string
-    end
-    
-    -- Extract the substrings based on the positions found
-    local secondString = originalStr:sub(1, secondColon - 1)
-    local firstString = originalStr:sub(secondColon + 2)
-
-    -- Format the new string with the first and second parts swapped and separated by a newline
-    return string.format("[ERROR] %s\nSee - %s\n", firstString, secondString)
-end
 local function scheduleThreads()
+    local result = nil
+
     local fname = "scheduleThreads()"
     ACCUMULATED_TICKS = ACCUMULATED_TICKS + 1
     if #threadControlBlock == 0 then
@@ -413,15 +395,15 @@ local function scheduleThreads()
                 local co = H[TH_COROUTINE]
                 pcallSucceeded, coroutineResumed, errorMsg = pcall(coroutine.resume, co, unpack(args) )
                 if not pcallSucceeded then
-                    errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
                     -- utils:dbgPrint( "pcallSucceeded", errorMsg )
                     moveToMorgue(H)
+                    result = setResult( fname, errorMsg, debugstack(2))
                     -- errorHandler( H[TH_CLIENT_ADDON], errorMsg )
                 end
                 if not coroutineResumed then
-                    errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
                     -- utils:dbgPrint( "coroutineResumed", errorMsg )
                     moveToMorgue(H)
+                    result = setResult( fname, errorMsg, debugstack(2))
                     -- errorHandler( H[TH_CLIENT_ADDON], errorStr )
                 end
             end
@@ -452,8 +434,25 @@ local function extractAddonName(stacktrace) -- used in thread:create()
 end
 
 --                      PUBLIC (EXPORTED) SERVICES
+
+--[[@Begin
+:Description: All WoWThread public function (thread:xxxx()) return two parameters the second of which is
+the result parameter. If the first parameter is nil, then the function has failed or otherwise could not
+deliver the first parameter. In this case, the information about the cause of its failure is contained 
+in the second parameter, conventionally called the "result.""
+
+:SignatureThe result return parameter is a two member table:
+```
+    result = 
+        { errorMsg, -- (string) describes the cause of the failure
+          stackTrace -- (string) a stack trace indicating where the error occurred.
+        }
+
+@End]]
+
+
 --[[@Begin 
-Signature: thread_h, errorMsg = thread:create( addonName, yieldTicks, addonName, func,... )
+Signature: thread_h, result = thread:create( addonName, yieldTicks, addonName, func,... )
 Description: Creates a reference to an executable thread called a 
 thread handle. The thread handle is an opaque reference to the 
 thread's coroutine. The thread handle is used by the library's 
@@ -470,15 +469,17 @@ POSIX and other thread environments, the thread function is often
 called the action routine.
 - ... (varargs), Additional arguments to be passed to the thread function.
 Returns:
-- If successful, Returns a thread handle and the thread's Id.
-- If failure, Returns nil. The error message describes the error
-and its location.
+- If successful, a valid thread handle is returned and the result is undefined..
+- If failure: nil is returned and the result parameter is as described previously
 Usage:
     local function greetings( greetingString )
         print( greetingString )
     end
-    local thread_h, errorMsg = thread:create( 60, greetings, "Hello World" )
-    if thread_h ~= nil then print( result) return end
+    local thread_h, result = thread:create( 60, greetings, "Hello World" )
+    if not thread_h then 
+        print( result[1], result[2]) 
+        return 
+    end
 @End]]
 function thread:create( yieldTicks, threadFunction,... )
     local fname = "thread:create()"
@@ -501,8 +502,7 @@ function thread:create( yieldTicks, threadFunction,... )
     if not isCallerClient(H) then
         isValid, errorMsg = handleIsValid(H)
         if not isValid then
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-            return nil, errorMsg
+            return nil, setResult( fname, errorMsg, debugstack(2) )
         end
     end
 
@@ -511,84 +511,82 @@ function thread:create( yieldTicks, threadFunction,... )
 end
 
 --[[@Begin 
-Signature: addonName, errorMsg = thread:getAddonName( thread_h )
+Signature: addonName, result = thread:getAddonName( thread_h )
 Description: Obtains the name of the addon within which the specified
 thread was created.
 Parameters:
 - thread_h (thread handle). A handle to the thread whose addon name is to be 
 obtained. If nil, the addon name of the calling thread is retreived.
 Returns:
-- If successful, Returns the name of the specified thread's addon.
-- If failure, Returns nil. The error message describes the error
-and its location.
+- If successful, Returns the name of the specified thread's addon. The result
+is undefined.
+- If failure, the addonName is nil, and the result table contains an error message (result[1])
+and a stack trace (result[2]).
 Usage:
     -- This function is typically used to get the name of the addon for use when
     -- invoking the error handler.
-    local wasSent, errorMsg = thread:sendSignal( target_h, SIG_ALERT )
+    local wasSent, result = thread:sendSignal( target_h, SIG_ALERT )
     if not wasSent then
-        thread:invokeErrorHandler( thread:getAddonName(), errorMsg )
-        return nil, errorMsg
+        print( result[1], result[2])
     end
 @End]]
 function thread:getAddonName( thread_h )
+    local fname = "thread:getAddonName()"
     local errorMsg = nil
     if thread_h == nil then
         thread_h, errorMsg = getCallerHandle()
         if thread_h == nil then
-            return nil, errorMsg
+            return nil, setResult( fname, L["HANDLE_NON_EXISTANT"], debugstack(2) )
         end
     end
     return thread_h[TH_CLIENT_ADDON], errorMsg
 end
 
 --[[@Begin
-Signature: success, errorMsg = thread:yield()
+Signature: (void) thread:yield()
 Description: Suspends the calling thread for the number of ticks specified in the
 yieldTicks parameter of the thread's create function used to create the thread. 
 Thread context required, 
 Parameters:
 - None.
 Returns:
-- Success (boolean): True if the thread was successfully suspended, 
-false otherwise.
+- None
 - Error message (string): The error message if the thread could not be suspended.
 Usage:
-    -- A simple function that waits for a signal signal.
+    -- A simple function that waits (yields) until a signal arrives.
     local function waitForSignal( signal )
         local DONE = false
         while not DONE do
             thread:yield()
-            local sigEntry, errorMsg = thread:getSignal()
+            local sigEntry, result = thread:getSignal()
             if not sigEntry then
-                thread:invokeErrorHandler( thread:getAddonName(), errorMsg )
-                return nil, errorMsg
+                print( result[1], result[2])
+                return
             end
-            if sigEntry[1] == SIG_ALERT then
-                < do something >
-                DONE = true
-            end 
+            ... do something
         end
     end
     -- Create a thread to execute the waitForSignal function.
-    local thread_h, errorMsg = thread:create( 60, waitForSignal, signal )
-    if thread_h == nil then print( result) return end
+    local thread_h, result = thread:create( 60, waitForSignal, signal )
+    if thread_h == nil then 
+        print( result[1], result[2]) 
+        return 
+    end
 @End]]
 function thread:yield()
     local fname = "thread:yield()"
 
     local H, errorMsg = getCallerHandle()
     if H == nil then
-        return nil, errorMsg
+        return nil, setResult( fname,errorMsg, debugstack(2) )
+
     end
     local beforeYieldTicks = ACCUMULATED_TICKS
 
     coroutine.yield()
     local H, errorMsg = getCallerHandle()
     if H == nil then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        if utils.stack then
-            error(string.format("FATAL: Addon terminated: %s\n", errorMsg ))
-        end
+        return nil, setResult( fname, errorMsg, debugstack(2) )
     end
 
     H[TH_YIELD_COUNT] = H[TH_YIELD_COUNT] + 1
@@ -599,15 +597,15 @@ end
 
 --[[@Begin
 Signature: thread:sleep()
-Description: Suspends a thread for an indeterminate time.
-Note, like thread:yield() or thread:delay(), this call doesn't 
-return until awakened by receipt of a SIG_WAKEUP signal.
-Thread context is required.
+Description: Suspends the calling thread for an indeterminate amount of time.
+Note, unlike thread:yield(), this call doesn't  return until awakened by receipt 
+of a SIG_WAKEUP signal.
 Parameters:
 - None
 Returns:
 - None
 Usage:
+    thread:sleep()
 @End]]
 function thread:sleep()
     local fname = "thread:sleep()"
@@ -615,23 +613,19 @@ function thread:sleep()
 
     local H, errorMsg = getCallerHandle()
     if H == nil then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        if utils:debuggingIsEnabled() then
-            utils:dbgLog( errorMsg, debugstack(2) )
-        end
-        return nil, errorMsg 
+        return nil, setResult( fname, errorMsg, debugstack(2) )
     end
-    return putToSleep(H)
+    return putToSleep(H), nil
 end
 
 --[[@Begin
-Signature: thread_h, errorMsg = thread:getSelf()
+Signature: thread_h, result = thread:getSelf()
 Description: Gets the handle of the calling thread.
 Parameters:
 - None
 Returns:
-- If successful: returns a thread handle
-- If failure: 'nil' is returned along with an error message (string)
+- If successful: returns a thread handle abd a nil result
+- If failure: nil is returned and the result parameter is as described previously
 Usage:
 @End]]
 function thread:getSelf()
@@ -641,24 +635,26 @@ function thread:getSelf()
     
     local H, errorMsg = getCallerHandle()
     if H == nil then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        return nil, errorMsg 
+        return nil, setResult( fname, errorMsg, debugstack(2) )
     end
-    return H, nil
+        return H, nil
 end
 
 --[[@Begin
-Signature: threadId, errorMsg = thread:getId( thread_h )
-Description: Obtains the numerical Id of the calling thread. Thread context
-required.
+Signature: threadId, result = thread:getId( thread_h )
+Description: Obtains the unique, numerical Id of the specified thread.
 Parameters:
 - thread_h (handle):
 Returns:
 - If successful: returns the numerical Id of the thread.
-- If failure: 'nil' is returned along with an error message (string)
+- If failure: 'nil' is returned along with an error message in result[1],
+and a stack trace in result[2]
 Usage:
-    local threadId, errorMsg = thread:getId()
-    if threadId == nil then print( result) return end
+    local threadId, result = thread:getId()
+    if threadId == nil then 
+        print( result[1], result[2]) 
+        return 
+    end
 @End]]
 function thread:getId(thread_h)
     local fname = "thread:getId()"
@@ -669,32 +665,32 @@ function thread:getId(thread_h)
     if thread_h ~= nil then
         isValid, errorMsg = handleIsValid(H)
         if not isValid then
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-            return nil, nil, errorMsg
+            return nil, setResult( fname, errorMsg, debugstack(2) )
         end
     else -- input handle (thread_h) was nil.
         thread_h, errorMsg = getCallerHandle()
         if thread_h == nil then 
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-            return nil, errorMsg 
+            return nil, setResult( fname, errorMsg, debugstack(2) )
         end
     end
     return thread_h[TH_UNIQUE_ID], nil
 end
 
 --[[@Begin
-Signature: local equal, errorMsg = thread:areEqual( H1, H2 )
-Description: Determines whether two thread handles are identical. Thread context
-required.
+Signature: local equal, result = thread:areEqual( h1, h2 )
+Description: Determines whether two thread handles are identical.
 Parameters: 
-- H1 (handle): a thread handle
-- H2 (handle); a thread handle
+- h1 (handle): a thread handle
+- h2 (handle); a thread handle
 Returns: 
-- If successful: returns 'true'
-- If failure: returns 'false' and an error message (string)
+- If successful: returns 'true'. The result is nil
+- If failure: nil is returned and the result parameter is as described previously
 Usage:
-    local equal, errorMsg = thread:areEqual( H1, H2 )
-    if equal == nil then print( result) return end
+    local equal, result = thread:areEqual( H1, H2 )
+    if equal == nil then 
+        print( result) 
+        return 
+    end
 @End]]
 function thread:areEqual(H1, H2)
     local fname = "thread:areEqual()"
@@ -703,24 +699,20 @@ function thread:areEqual(H1, H2)
     
     -- check that neither handle is nil
     if H1 == nil then
-        errorMsg = string.format("%s",L["THREAD_HANDLE_NIL"])
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        return nil, errorMsg
+        return nil, setResult( fname, L["THREAD_HANDLE_NIL"], debugstack(2) )
+
     end
     if H2 == nil then
-        errorMsg = string.format("%s",L["THREAD_HANDLE_NIL"])
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        return areEqual, errorMsg
+        return nil, setResult( fname, L["THREAD_HANDLE_NIL"], debugstack(2) )
+    end
+
+    isValid, errorMsg = handleIsValid(H1)
+    if not isValid then
+        return areEqual, setResult( fname, errorMsg, debugstack(2))
     end
     isValid, errorMsg = handleIsValid(H1)
     if not isValid then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        return areEqual, errorMsg
-    end
-    isValid, errorMsg = handleIsValid(H2)
-    if not isValid then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        return areEqual, errorMsg
+        return areEqual, setResult( fname, errorMsg, debugstack(2))
     end
 
     -- handles are not nil and they are both valid
@@ -733,26 +725,19 @@ function thread:areEqual(H1, H2)
 end
 
 --[[@Begin
-Signature: parent_h, errorMsg = thread:getParent( thread_h )
+Signature: parent_h, result = thread:getParent( thread_h )
 Description: Gets the specified thread's parent. NOTE: if the 
 the thread was created by the WoW client it will not have a parent.
 Parameters
 - thread_h (handle): if nil, then the calling thread's parent is returned.
 Returns
 - If successful: returns the handle of the parent thread.
-- If failure: 'nil' is returned. Either the calling thread is
-the WoW client or the specified thread is invalie.
+- If failure: nil is returned and the result parameter is as described previously
 Usage:
-    local parent_h, errorMsg = thread:getParent( thread_h )
-    if parent_h == 'nil' then 
-        if errorMsg == nil then
-            print( "specfied thread has no parent" ) 
-        else
-            print( errorMsg )
-        end
-        return
+    local parent_h, result = thread:getParent( thread_h )
+    if parent_h == nil then 
+        print( result[1], result[2])
     end
-
 @End]]
 function thread:getParent(thread_h)
     local fname = "thread:getParent()"
@@ -762,34 +747,34 @@ function thread:getParent(thread_h)
     if thread_h ~= nil then
         isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-            return nil, errorMsg
+            return nil, setResult( fname, errorMsg, debugstack(2) )
         end
         return thread_h[TH_PARENT_HANDLE]
     end
 
-    -- if thread_h is nil then this is equivalent to "getMyParent." If the
-    -- the caller is the WoW client, then no parent exists.
-    thread_h, errorMsg = getCallerHandle()
-    if thread_h == nil then -- the caller is the WoW client
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        return nil, errorMsg
+        -- if thread_h is nil then this is equivalent to "getMyParent." If the
+        -- the caller is the WoW client, then no parent exists.
+        thread_h, errorMsg = getCallerHandle()
+        if thread_h == nil then -- the caller is the WoW client
+            return nil, setResult( fname, errorMsg, debugstack(2) )
     end
     return thread_h[TH_PARENT_HANDLE]
 end
 
 --[[@Begin
-Signature: childTable, errorMsg thread:getChildThreads( thread_h )
+Signature: childTable, result = thread:getChildThreads( thread_h )
 Description: Obtains a table of the handles of the specified thread's children.
 Parameters
 - thread_h (handle). If nil, then a table of the child threads of the calling 
 thread is returned.
 Returns
 - If successful: returns a table of thread handles.
-- If failure: 'nil' is returned along with an error message (string) i.e.,
+- If failure: nil is returned and the result parameter is as described previously
 Usage:
-    local childTable, errorMsg = thread:getChildThreads( thread_h )
-    if childTable == 'nil' then print( errorMsg ) return end
+    local childThreads, result = thread:getChildThreads( thread_h )
+    if not childThreads then 
+        print( result[1], result[2] ) 
+    end
 @End]]
 function thread:getChildThreads(thread_h)
     local fname = "thread:getChildThreads()"
@@ -799,13 +784,11 @@ function thread:getChildThreads(thread_h)
     if thread_h ~= nil then
         local isValid, errorMsg = handleIsValid(thread_h)
         if not isValid then
-            errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-            return nil, nil, errorMsg
+            return nil, setResult( fname, errorMsg, debugstack(2) )
         else -- we're looking for the caller's thread Id.
             thread_h, errorMsg = getCallerHandle()
             if thread_h == nil then 
-                errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-                return nil, errorMsg 
+                return nil, setResult( fname, errorMsg, debugstack(2) )
             end
         end
     end
@@ -813,26 +796,29 @@ function thread:getChildThreads(thread_h)
 end
 
 --[[@Begin
-Signature: state, errorMsg = thread:getState( thread_h )
+Signature: state, result = thread:getState( thread_h )
 Description: Gets the state of the specified thread. A thread may be in one of 
 three execution states: "suspended," "running," or "dead." Thread context required.
 Parameters:
 - thread_h (handle): if 'nil', then "running" is returned. NOTE: the calling
 thread is, by definition, alwaysin the "running" state.
 Returns: 
-- If successful: returns the state ("suspended", "running", or "dead") of the 
-specified thread.
-- If failure: returns 'false' and an error message (string)
+- If successful: returns the state of the specified thread ("suspended", "running", or "dead") of the 
+specified thread and the result is undefined.
+- If failure: nil is returned and the result parameter is as described previously
 Usage:
-    local state, errorMsg = thread:getState( thread_h )
-    if state == 'nil' then print( errorMsg ) return end
+    local state, result = thread:getState( thread_h )
+    if not state then
+        print( result[1], result[2] )
+    end
 @End]]
 function thread:getState(thread_h)
+    local fname = "thread:getState()"
     local errorMsg = nil
     if thread_h == nil then 
         thread_h, errorMsg = getCallerHandle()
         if thread_h == nil then
-            return nil, errorMsg
+            return nil, setResult( fname, errorMsg, debugstack(2) )
         end
         return "running", nil 
     end
@@ -842,27 +828,22 @@ function thread:getState(thread_h)
 end
 
 --[[@Begin
-Signature: status, errorMsg = thread:sendSignal( target_h, signaValue,[,data] )
-Description: Sends a signal to the specified thread. Thread context NOT required.
+Signature: value, result = thread:sendSignal( target_h, signaValue,[,data] )
+Description: Sends a signal to the specified thread. Note: a return value of
+true only means the signal was delivered. It does mean the signal has been seen
+by the target thread.
 Parameters: 
 - thread_h (handle): The thread to which the signal is to be sent. 
 - signalValue (number): signal to be sent.
-- data (any) Data (including functions) to be passed to the receiving thread.areEqual
-- NOTE: WoWThreads assumes that the structure of the ... parameter is known to the
-receiveing thread.
+- data (any) Data (including functions) to be passed to the receiving thread.
 Returns:
-- If successful, true is returned. This only means that the signal was delivered.
-Programmers should make no assumptions about whether the signal was received.
-- If not successful either the target thread was 'dead' or the signal was invalid.
-If the target thread was 'dead', then the false is returned along with an error 
-message to that effectIf the call failed for any other reason 
-(e.g., an invalide signal), the nil is returned along with an appropriate error 
-message.
+- If successful, value = true is returned.
+- If failure, value = false is returned and the signal could NOT delivered. Usually
+this means that the target thread was 'dead.'
 Usage:
-    -- Sending a signal to a dead thread is not fatal.
-    local wasSent, errorMsg = thread:sendSignal( target_h, signalValue, data )
+    local wasSent, result = thread:sendSignal( target_h, signalValue, data )
     if not wasSent then 
-        print( errorMsg )
+        print( result[1], result[2] )
         return 
     end
 @End]]
@@ -874,41 +855,31 @@ function thread:sendSignal( target_h, signal, ... )
 
     -- check that the signal is valid
     if signal == SIG_NONE_PENDING then
-        errorMsg = L["SIGNAL_INVALID_OPERATION"]
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        -- utils:dbgPrint()
-        return nil, errorMsg
+        return nil, setResult( fname, L["SIGNAL_INVALID_OPERATION"], debugstack(2) )
     end
 
     -- utils:dbgPrint()
     local isValid, errorMsg = signalIsValid( signal )
     if not isValid then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        -- utils:dbgPrint()
-        return nil, errorMsg
+        return nil, setResult( fname, errorMsg, debugstack(2) )
     end
 
     -- check that the target handle is valid
     -- utils:dbgPrint()
     if target_h == nil then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        return nil, errorMsg
+        return nil, setResult( fname, L["THREAD_HANDLE_NIL"], debugstack(2) )
     end
 
     -- utils:dbgPrint()
     isValid, errorMsg = handleIsValid( target_h )
     if not isValid then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        -- utils:dbgPrint()
-        return nil, errorMsg
+        return nil, setResult( fname, errorMsg, debugstack(2) )
     end
 
     local isDead, errorMsg = isInMorgue( target_h )
     -- utils:dbgPrint()
     if isDead then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        -- utils:dbgPrint()
-        return nil, errorMsg
+        return nil, setResult( fname, errorMsg, debugstack(2) )
     end
     -- Validity checks are complete.
 
@@ -927,27 +898,35 @@ function thread:sendSignal( target_h, signal, ... )
     if signal == SIG_WAKEUP then
         wakeup( target_h )
     end
-    -- utils:dbgPrint()
+    utils:dbgPrint( tostring( wasSent ))
     return wasSent, nil
 end
 
 --[[@Begin
+Signature: local sigEntry, result = thread:getSignal()
 Description: The retrieval semantics of the thread's signal queue is FIFO. So, getting a
 signal means getting the first signal in the calling thread's signal queue.
 In other words, then signal that has been in the queue the longest. Thread
 context is required.
 Parameters:
-- target_h (handle): the thread to which the signal is to be sent.
-- signal (number) signal to be sent.
+- sigEntry (table): sigEntry is a table containing 3 values:
+- sigEntry[1] (number): the numerical signal, e.g., SIG_ALERT, SIG_TERMINATE, etc.
+- sigEntry[2] (handle): the handle of the thread that sent the signal.
+- sigEntry[3] (varargs): data
 Returns:
-- If successful: returns a signal entry, i.e., entry = {signal, sender_h, data}.
-In other words, a table entry. The entry consists of a signal value, the handle of the sending thread, and
-data. The sending thread's handle will be nil if sent from the WoW client.
-- If failure: 'nil' is returned along with an error message (string)
+- If successful: returns a signal entry. The result return value is undefined.
+- If failure: nil is returned and the result parameter is as described previously
 Usage:
-    local signal, errorMsg = thread:getSignal()
-    if signal == nil then print( errorMsg ) return end
-    signalValue, sender_h, data = signal[1], signal[2], signal[3]
+    local sigInt, result = thread:getSignal()
+    if not sigInt then 
+        print( result[1, result[2] )
+    end
+
+    local signal = sigEntry[1]
+    local sender_h = sigEntry[2]
+    local data = signal[3]
+    ... do something
+
 @End]]
 function thread:getSignal()
     local fname = "thread:getSignal()"
@@ -955,8 +934,7 @@ function thread:getSignal()
 
     local H, errorMsg = getCallerHandle()
     if H == nil then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        return nil, errorMsg 
+        return nil, setResult( fname, errorMsg, debugstack(2) )
     end
     
     if H[TH_SIGNAL_QUEUE]:size() == 0 then
@@ -970,16 +948,15 @@ function thread:getSignal()
 end
 
 --[[@Begin
-Signature: signalName, errorMsg = thread:getSignalName( signal )
-Description: Gets the string name of the specified signal value. Thread context
-not required.
+Signature: signalName, result = thread:getSignalName( signal )
+Description: Gets the string name of the specified signal value.
 Parameters:
-- signal (number): the signal
+- signal (number): the numerical signal whose name is to be returned.
 Returns:
-- If successful: returns the name of the signal value
-- If failure: returns 'nil' and an error message(string)
+- If successful: returns the name associated with the signal value
+- If failure: nil is returned and the result parameter is as described previously
 Usage:
-    local signalName, errorMsg = thread:getSignalName( signal )
+    local signalName, result = thread:getSignalName( signal )
     if signalName == nil then print( errorMsg ) return end
 @End]]
 function thread:getSignalName(signal)
@@ -989,24 +966,25 @@ function thread:getSignalName(signal)
 
     isValid, errorMsg = signalIsValid( signal )
     if not isValid then
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        return nil, errorMsg
+        return nil, setResult( fname, errorMsg, debugstack(2) )
     end
 
     return signalNameTable[signal], errorMsg
 end
 
 --[[@Begin
-Signature: signalCount, errorMsg = thread:getNumPendingSignals()
-Description: Gets the number of pending signals for the calling thread
+Signature: signalCount, result = thread:getNumPendingSignals()
+Description: Gets the number of pending signals for the calling thread.
 Parameters:
 - None
 Returns:
-- If successful: returns the number of the thread's pending signals
-- If failure: returns 'nil' and an error message(string)
+- If successful: returns the number of the threads waiting to be retrieved (i.e., in
+the thread's signal queue).
+- If failure: nil is returned and the result parameter is as described previously
 Usage:
-    local sigCount, errorMsg = thread:getNumPendingSignals( thread_h )
-    if signalCount == nil then print( errorMsg ) return end
+    local sigCount, result = thread:getNumPendingSignals( thread_h )
+    if signalCount == nil then 
+        print( result[1], result[2]) return end
 @End]]
 function thread:getNumPendingSignals()
     local fname = "thread:getNumPendingSignals()"
@@ -1015,56 +993,13 @@ function thread:getNumPendingSignals()
 
     local thread_h, errorMsg = getCallerHandle()
     if thread_h == nil then 
-        errorMsg = formatErrorMsg( errorMsg, fname, debugstack(2))
-        return nil, errorMsg 
+        return nil, setResult( fname, errorMsg, debugstack(2) )
     end
     return thread_h[TH_SIGNAL_QUEUE]:size(), nil
 end
 
---[[@Begin
-Signature: thread:invokeErrorHandler( addonName, errorMsg )
-Description: Invokes a previously registered error callback function. This service
-is useful for reporting applicable errors to code executing outside of not under
-a thread context.
-- addonName (string): The name of the addon in which the thread was created.
-- errorMsg (string): An error message describing the error.
-Returns:
-- None
-Usage:
-    local sigEntry, errorMsg = thread:getSignal()
-    if sigEntry == nil then 
-        thread:invokeErrorHandler( addonName, errorMsg )
-        return nil, errorMsg
-    end
-@End]]
-function thread:invokeErrorHandler(addonName, errorMsg )
-    threadCallback( addonName, errorMsg )
-end
-
---[[@Begin
-Signature: thread:registerErrorHandler( addonName, callbackHandler )
-Description: Client addons can register an error callback function to be
-called when an error occurs. The error callback function will be called with
-the error message.
-- addonName (string): The name of the addon in which the thread was created.
-- callbackHandler (function): The error callback function.
-Returns:
-- None
-Usage:
-    local function callbackErrorHandler( addonName, errorMsg )
-        print( errorMsg )
-    end
-    ...
-    thread:registerErrorHandler( addonName, errorHandler )
-@End]]
-function thread:registerErrorHandler( addonName, callbackHandler )
-    if not errorCallbackTable[addonName] then
-        errorCallbackTable[addonName] = callbackHandler
-        DEFAULT_CHAT_FRAME:AddMessage( string.format("Error handler registered for %s", addonName), 0.0, 1.0, 1.0)
-        return
-    end
-    DEFAULT_CHAT_FRAME:AddMessage( string.format("Error handler for %s could not be registered.", addonName), 0.0, 1.0, 1.0)
-end
+-- Will not be available upon release. These are for
+-- WoWThreads development only.
 function thread:debuggingIsEnabled()
     print( "In  debuggingIsEnabled")
 end
@@ -1109,3 +1044,10 @@ local fileName = "WoWThreads.lua"
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
+
+------- PROTOTYPING -------------------------
+
+-- local result = nil
+
+-- local thread_h, result = thread:create( ticks, func )
+-- if not thread_h then  postResult( result ) end
