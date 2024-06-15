@@ -107,12 +107,6 @@ end
 utils.DEBUGGING_ENABLED = true
 local DEBUGGING_ENABLED = utils.DEBUGGING_ENABLED
 
-function utils:dbgAssert( condition, msg )
-    if utils:debuggingIsEnabled() then
-        assert( condition, msg )
-    end
-end
-
 function utils:enableDebugging()
     DEBUGGING_ENABLED = true
 end
@@ -342,6 +336,19 @@ local function createMsgFrame(title)
     createReloadButton(f, "BOTTOMLEFT", f, 5, 5)
     return f
 end
+function utils:simplifyStackTrace(stackTrace)
+    local addonName = string.match(stackTrace, "@Interface/AddOns/(%w+)")
+    local subDirs = string.match(stackTrace, "/(%w+)/(%w+)")
+    local fileName = string.match(stackTrace, "/(%w+%.lua)")
+    local lineNumber = string.match(stackTrace, "(%d+):")
+
+    if subDirs then
+        subDirs = string.gsub(subDirs, "/", "/")
+        return addonName .. "/" .. subDirs .. "/" .. fileName .. ":" .. lineNumber
+    else
+        return addonName .. "/" .. fileName .. ":" .. lineNumber
+    end
+end
 function utils:postMsg( msg )
     if userMsgFrame == nil then
         userMsgFrame = createMsgFrame( "Error Messages (WoWThreads-1.0)" )
@@ -393,19 +400,6 @@ function utils:dbgPrint(...)
     -- Use the unpack function to pass all elements of 'output' as separate arguments to the built-in print function
     -- numArgs = #output
     _G.print(unpack(output))
-end
-function utils:simplifyStackTrace(stackTrace)
-    local addonName = string.match(stackTrace, "@Interface/AddOns/(%w+)")
-    local subDirs = string.match(stackTrace, "/(%w+)/(%w+)")
-    local fileName = string.match(stackTrace, "/(%w+%.lua)")
-    local lineNumber = string.match(stackTrace, "(%d+):")
-
-    if subDirs then
-        subDirs = string.gsub(subDirs, "/", "/")
-        return addonName .. "/" .. subDirs .. "/" .. fileName .. ":" .. lineNumber
-    else
-        return addonName .. "/" .. fileName .. ":" .. lineNumber
-    end
 end
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
