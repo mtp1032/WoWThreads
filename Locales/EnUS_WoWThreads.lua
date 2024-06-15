@@ -69,6 +69,7 @@ if LOCALE == "enUS" then
     L["NO_THREAD_CONTEXT"]      = "ERROR: Caller is likely the WoW client (WoW.exe) "
     L["HANDLE_NOT_SPECIFIED"]   = "ERROR: Handle not specified "
     L["THREAD_CREATE_FAILED"]   = "Failed to create thread "
+    L["HANDLE_NON_EXISTANT"]      = "Failed: Handle does not exist. "
 
 	L["INVALID_EXE_CONTEXT"]    = "ERROR: Operation requires thread context "
 	L["THREAD_IS_DEAD"]	        = "ERROR: Invalid handle. Thread has completed or faulted. "
