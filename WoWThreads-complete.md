@@ -146,16 +146,27 @@ end
 In the example above, cleu_h is the thread responsible for the initial processing of the event info.
 
 ## Function Return Values:
-All WoWThread public functions return two parameters the second of which is the result parameter. If the first parameter is nil, then the function has failed. In this case, the information about the cause of its failure is contained  in the second return parameter, conventionally called the "result.""
+All WoWThread public functions return two parameters the second of which is the result parameter. If the first parameter is nil, then the function has failed. In this case, the information about the cause of its failure is contained  in the second return parameter, conventionally called the "result."
 
 #### Usage
+
+The result return parameter is a two member table:
 ```
-    -- The result return parameter is a two member table:
     result = 
         { errorMsg, -- (string) describes the cause of the failure
           stackTrace -- (string) a stack trace indicating where the error occurred.
         }
+
+    local thread_h, result = thread:sendSignal()
+    if not thread_h then
+        print( result[1], result[2])
+    end
 ```
+
+## The WoWThreads API Services
+
+This section presents a formal description of each thread service offered by the WoWThreads library.
+
 #### Signature:
 thread_h, result = thread:create( addonName, yieldTicks, addonName, func,... )
 
