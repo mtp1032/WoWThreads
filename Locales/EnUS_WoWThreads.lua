@@ -57,16 +57,17 @@ if LOCALE == "enUS" then
 	L["ADDON_MESSAGE"]		= string.format("%s (%s) loaded ",  "WoWThreads-1.0", expansionName )
     L["ERROR_MSG_FRAME_TITLE"] = "Error Messages - WoWThreads-1.0"
  	-- Generic Error MessageS
-	L["INPUT_PARM_NIL"]		= "ERROR: Input parameter nil  "
+    L["INVALID_TYPE"]		= "ERROR: Input parameter nil  "
 	L["INVALID_TYPE"]		= "ERROR: Input datatype invalid "
+    L["INPUT_PARM_NIL"]     = "ERROR: Input parameter nil "
 
 	-- Thread specific messages
 	L["THREAD_HANDLE_NIL"] 		= "ERROR: Thread handle nil "
-    L["INVALID_HANDLE"]         = "ERROR: Invalid handle "
-	L["INVALID_EXE_STATE"]	    = "ERROR: Thread[%d] is %s "
+    L["THREAD_HANDLE_INVALID"]         = "ERROR: Invalid handle "
+	L["THREAD_INVALID_STATE"]	    = "ERROR: Thread[%d] is %s "
 	L["HANDLE_ILL_FORMED"]	    = "ERROR: Thread handle ill-formed "
 	L["NOT_A_THREAD"]           = "ERROR: Specified Thread handle does not reference a coroutine "
-    L["NO_THREAD_CONTEXT"]      = "ERROR: Caller is likely the WoW client (WoW.exe) "
+    L["THREAD_INVALID_CONTEXT"]      = "ERROR: Caller is likely the WoW client (WoW.exe) "
     L["HANDLE_NOT_SPECIFIED"]   = "ERROR: Handle not specified "
     L["THREAD_CREATE_FAILED"]   = "Failed to create thread "
     L["HANDLE_NON_EXISTANT"]      = "Failed: Handle does not exist. "
@@ -76,6 +77,9 @@ if LOCALE == "enUS" then
     
     L["RESUME_FAILED"]          = "Failed to resume thread "
     L["THREAD_NOT_FOUND"]       = "Thread not found. "
+   
+    L["THREAD_ALREADY_SLEEPING"]        = "Specified thread already sleeping. "
+    L["THREAD_NOT_SLEEPING"]    = "Specified thread not sleeping. "
     L["WRONG_ADDON_NAME"]       = "Wrong Addon Name"
 	
 	L["SIGNAL_QUEUE_INVALID"]	= "ERROR: Thread[%d] Invalid signal queue "
@@ -98,7 +102,7 @@ if LOCALE == "frFR" then
 
 	-- Thread specific messages
 	L["THREAD_HANDLE_NIL"]     = "[ERREUR] Descripteur de thread nil "
-	L["INVALID_EXE_STATE"]   = "[ERREUR] Thread[%d] est %s "
+	L["THREAD_INVALID_STATE"]   = "[ERREUR] Thread[%d] est %s "
 	L["HANDLE_ILL_FORMED"]   = "[ERREUR] Descripteur de thread mal formé "
 	L["NOT_A_THREAD"] = "[ERREUR] Le descripteur spécifié ne référence pas une coroutine "
 
@@ -122,7 +126,7 @@ if LOCALE == "deDE" then
 
     -- Thread-spezifische Nachrichten
     L["THREAD_HANDLE_NIL"]           = "[FEHLER] Thread-Handle nil "
-    L["INVALID_EXE_STATE"]    = "[FEHLER] Thread[%d] ist %s "
+    L["THREAD_INVALID_STATE"]    = "[FEHLER] Thread[%d] ist %s "
     L["HANDLE_ILL_FORMED"]    = "[FEHLER] Thread-Handle fehlerhaft "
     L["NOT_A_THREAD"]  = "[FEHLER] Angegebenes Thread-Handle ist keine Coroutine "
 
@@ -146,7 +150,7 @@ if LOCALE == "frFR" then
 
     -- Messages spécifiques aux threads
     L["THREAD_HANDLE_NIL"]           = "[ERREUR] Descripteur de thread nul "
-    L["INVALID_EXE_STATE"]    = "[ERREUR] Thread[%d] est %s "
+    L["THREAD_INVALID_STATE"]    = "[ERREUR] Thread[%d] est %s "
     L["HANDLE_ILL_FORMED"]    = "[ERREUR] Descripteur de thread mal formé "
     L["NOT_A_THREAD"]  = "[ERREUR] Le descripteur de thread spécifié ne référence pas une coroutine "
 
@@ -170,7 +174,7 @@ if LOCALE == "zhCN" then
 
     -- 线程特定消息
     L["THREAD_HANDLE_NIL"]           = "[错误] 线程句柄为空。"
-    L["INVALID_EXE_STATE"]    = "[错误] 线程[%d]为%s。"
+    L["THREAD_INVALID_STATE"]    = "[错误] 线程[%d]为%s。"
     L["HANDLE_ILL_FORMED"]    = "[错误] 线程句柄格式错误。"
     L["NOT_A_THREAD"]  = "[错误] 指定的线程句柄不引用协程。"
 
@@ -194,7 +198,7 @@ if LOCALE == "koKR" then
 
     -- 스레드 특정 메시지
     L["THREAD_HANDLE_NIL"]           = "[오류] 스레드 핸들이 nil입니다 "
-    L["INVALID_EXE_STATE"]    = "[오류] 스레드[%d] 상태가 %s입니다 "
+    L["THREAD_INVALID_STATE"]    = "[오류] 스레드[%d] 상태가 %s입니다 "
     L["HANDLE_ILL_FORMED"]    = "[오류] 스레드 핸들 형식이 잘못되었습니다 "
     L["NOT_A_THREAD"]  = "[오류] 지정된 스레드 핸들이 코루틴을 참조하지 않습니다 "
 
@@ -218,7 +222,7 @@ if LOCALE == "svSE" then
 
     -- Trådspecifika meddelanden
     L["THREAD_HANDLE_NIL"]           = "[FEL] Trådhandtag är null "
-    L["INVALID_EXE_STATE"]    = "[FEL] Tråd[%d] är %s "
+    L["THREAD_INVALID_STATE"]    = "[FEL] Tråd[%d] är %s "
     L["HANDLE_ILL_FORMED"]    = "[FEL] Trådhandtaget är felaktigt formaterat "
     L["NOT_A_THREAD"]  = "[FEL] Angivet trådhandtag refererar inte till en korutin "
 
@@ -242,7 +246,7 @@ if LOCALE == "heIL" then
 
     -- הודעות ספציפיות לתהליכון
     L["THREAD_HANDLE_NIL"]           = "[שגיאה] ידית התהליכון ריקה "
-    L["INVALID_EXE_STATE"]    = "[שגיאה] תהליכון[%d] הוא %s "
+    L["THREAD_INVALID_STATE"]    = "[שגיאה] תהליכון[%d] הוא %s "
     L["HANDLE_ILL_FORMED"]    = "[שגיאה] ידית תהליכון בעייתית "
     L["NOT_A_THREAD"]  = "[שגיאה] ידית התהליכון המצוינת אינה מתייחסת לשגרת הרצה "
 
@@ -265,7 +269,7 @@ if LOCALE == "esES" then
 
     -- Mensajes específicos de hilos
     L["THREAD_HANDLE_NIL"]           = "ERROR: Identificador del hilo nulo "
-    L["INVALID_EXE_STATE"]    = "ERROR: Hilo[%d] está %s "
+    L["THREAD_INVALID_STATE"]    = "ERROR: Hilo[%d] está %s "
     L["HANDLE_ILL_FORMED"]    = "ERROR: Identificador del hilo mal formado "
     L["NOT_A_THREAD"]  = "ERROR: El identificador de hilo especificado no hace referencia a una coroutina "
 
