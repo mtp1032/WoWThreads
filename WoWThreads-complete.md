@@ -31,7 +31,7 @@ However, suppose that the addon's function notified a waiting thread to perform 
 
 Technically, in a threaded addon, however, a thread executes code from its own stack, separate from the WoW client's stack. Thus, code that is executed by the function passed to a thread's coroutine is said to be within a thread context. Let's examine this process in more detail. We begin with thread creation:
 ```
-local thread_h, _, errorMsg = thread:create( yieldTicks, someFunction, ... )
+local thread_h, result = thread:create( yieldTicks, someFunction, ... )
 ```
 The function in the thread creation call, "someFunction," is subsequently passed to a coroutine deep within the bowels of the WoWThreads library.
 
@@ -78,7 +78,7 @@ Note: Conversion to seconds is easy. Sixty (60) ticks is about one second. If a 
 
 With this in mind, let's revisit the thread creation step above:
 ```
-local thread_h, _, errorMsg = thread:create( yieldTicks, someFunction, ... )
+local thread_h, result = thread:create( yieldTicks, someFunction, ... )
 ```
 The yieldTicks parameter is the time (in clock ticks) during which the thread is to be suspended after calling thread:yield(). To manage thread suspension and execution, WoWThreads uses two counters: the yieldTicks parameter stored in thread_h[TH_YIELD_TICKS] and the ticks remaining parameter stored in thread_h[TH_REMAINING_TICKS] to determine when to resume the thread..
 
@@ -146,10 +146,9 @@ end
 In the example above, cleu_h is the thread responsible for the initial processing of the event info.
 
 ## Function Return Values:
-All WoWThread public functions return two parameters the second of which is the result parameter. If the first parameter is nil, then the function has failed. In this case, the information about the cause of its failure is contained  in the second return parameter, conventionally called the "result."
+All WoWThread public functions return two parameters the second of which is the result parameter. If the first parameter is nil, then the function has failed. In this case, the information about the cause of its failure is contained  in the second return parameter, conventionally called the "result.""
 
 #### Usage
-
 The result return parameter is a two member table:
 ```
     result = 
@@ -157,21 +156,25 @@ The result return parameter is a two member table:
           stackTrace -- (string) a stack trace indicating where the error occurred.
         }
 
-    local thread_h, result = thread:sendSignal()
+    -- example
+    local thread_h, result = thread:create( ticks, func )
     if not thread_h then
-        print( result[1], result[2])
+        print( result[1], result[2] )
     end
 ```
 
-## The WoWThreads API Services
+# WoWThreads API Services
 
-This section presents a formal description of each thread service offered by the WoWThreads library.
+In this section, a formal description of each of the library's public services are described.
 
 #### Signature:
 thread_h, result = thread:create( addonName, yieldTicks, addonName, func,... )
 
 #### Description:
-Creates a reference to an executable thread called a thread handle. The thread handle is an opaque reference to the thread's coroutine. The thread handle is used by the library's internals to manage and schedule the thread.
+Creates a reference to an executable thread called a 
+thread handle. The thread handle is an opaque reference to the 
+thread's coroutine. The thread handle is used by the library's 
+internals to manage and schedule the thread.
 
 #### Parameters:
 - addonName (string). The name of the addon that created the thread.
@@ -186,8 +189,9 @@ called the action routine.
 - ... (varargs), Additional arguments to be passed to the thread function.
 
 #### Returns:
-- If successful, a valid thread handle is returned and the result is nil..
-- If failure: nil is returned and the result parameter is as described previously
+- If successful: a valid thread handle is returned and the result is nil.
+- If failure: nil is returned and the result parameter specifies an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -210,12 +214,11 @@ thread was created.
 
 #### Parameters:
 - thread_h (thread handle). A handle to the thread whose addon name is to be 
-obtained. If nil, the addon name of the calling thread is retreived.
+obtained.
 
 #### Returns:
-- If successful, Returns the name of the specified thread's addon. The result
-is nil.
-- If failure, the addonName is nil, and the result table contains an error message (result[1])
+- If successful: Returns the name of the specified thread's addon and the result is nil.
+- If failure: the addonName is nil, and the result parameter contains an error message (result[1])
 and a stack trace (result[2]).
 
 #### Usage:
@@ -229,7 +232,7 @@ and a stack trace (result[2]).
 ```
 
 #### Signature:
-(void) thread:yield()
+local ticks, errorMsg = thread:yield()
 
 #### Description:
 Suspends the calling thread for the number of ticks specified in the
@@ -240,8 +243,9 @@ Thread context required,
 - None.
 
 #### Returns:
-- None
-- Error message (string): The error message if the thread could not be suspended.
+- ticks (number): the actual number of ticks the thread was suspended
+- If failure: the ticks value is nil, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -267,6 +271,32 @@ Thread context required,
 ```
 
 #### Signature:
+local ticksDelayed, errorMsg = thread:delay( ticks )
+
+#### Description:
+Suspends the calling thread for the specified number of ticks.
+
+#### Parameters:
+- ticks (number): the number of ticks the thread is to be delayed.
+Note that when the delay has expired, the thread's specified yield ticks
+will have been
+
+#### Returns:
+- If successful: the handle of the calling thread is returned and the result is nil.
+- If failure: the handle is nil, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
+
+#### Usage:
+```lua
+    -- delay a thread 1 minute
+        local actualDelay, result = thread:delay( 3600 )
+        if actualDelay == nil then 
+            print( result[1], result[2]) 
+            return 
+        end
+```
+
+#### Signature:
 thread:sleep()
 
 #### Description:
@@ -278,7 +308,9 @@ of a SIG_WAKEUP signal.
 - None
 
 #### Returns:
-- None
+- If successful: the handle of the calling thread is returned and the result is nil.
+- If failure: the handle is nil, and the result parameter contains an error
+message (result[1]) and a stack trace (result[2])
 
 #### Usage:
 ```lua
@@ -295,8 +327,9 @@ Gets the handle of the calling thread.
 - None
 
 #### Returns:
-- If successful: returns a thread handle abd a nil result
-- If failure: nil is returned and the result parameter is as described previously
+- If successful: returns a thread handle and the result is nil.
+- If failure: nil is returned, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -313,9 +346,9 @@ Obtains the unique, numerical Id of the specified thread.
 - thread_h (handle):
 
 #### Returns:
-- If successful: returns the numerical Id of the thread.
-- If failure: 'nil' is returned along with an error message in result[1],
-and a stack trace in result[2]
+- If successful: returns the numerical Id of the thread and the result is nil.
+- If failure: nil is returned, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -337,8 +370,9 @@ Determines whether two thread handles are identical.
 - h2 (handle); a thread handle
 
 #### Returns:
-- If successful: returns 'true'. The result is nil
-- If failure: nil is returned and the result parameter is as described previously
+- If successful: returns 'true' and the result is nil.
+- If failure: nil is returned, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -358,8 +392,9 @@ the thread was created by the WoW client it will not have a parent.
 Parameters
 - thread_h (handle): if nil, then the calling thread's parent is returned.
 Returns
-- If successful: returns the handle of the parent thread.
-- If failure: nil is returned and the result parameter is as described previously
+- If successful: returns the handle of the parent thread and the result is nil.
+- If failure: nil is returned, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -378,8 +413,9 @@ Parameters
 - thread_h (handle). If nil, then a table of the child threads of the calling 
 thread is returned.
 Returns
-- If successful: returns a table of thread handles.
-- If failure: nil is returned and the result parameter is as described previously
+- If successful: returns a table of thread handles and the result is nil.
+- If failure: nil is returned, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -401,9 +437,10 @@ three execution states: "suspended," "running," or "dead." Thread context requir
 thread is, by definition, alwaysin the "running" state.
 
 #### Returns:
-- If successful: returns the state of the specified thread ("suspended", "running", or "dead") of the 
-specified thread and the result is nil.
-- If failure: nil is returned and the result parameter is as described previously
+- If successful: returns the state of the specified thread ("suspended", "running", 
+or "dead") of the specified thread. The result is nil.
+- If failure: nil is returned, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -427,9 +464,11 @@ by the target thread.
 - data (any) Data (including functions) to be passed to the receiving thread.
 
 #### Returns:
-- If successful, value = true is returned.
-- If failure, value = false is returned and the signal could NOT delivered. Usually
-this means that the target thread was 'dead.'
+- If successful: value = true is returned and the result is nil.
+- If failure: value = false is returned and the signal could NOT delivered. Usually
+this means that the target thread was 'dead,' non-existent, or the WoW client (WoW.exe).
+The result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -451,13 +490,14 @@ context is required.
 
 #### Parameters:
 - sigEntry (table): sigEntry is a table containing 3 values:
-- sigEntry[1] (number): the numerical signal, e.g., SIG_ALERT, SIG_TERMINATE, etc.
-- sigEntry[2] (handle): the handle of the thread that sent the signal.
-- sigEntry[3] (varargs): data
+sigEntry[1] (number): the numerical signal, e.g., SIG_ALERT, SIG_TERMINATE, etc.
+sigEntry[2] (handle): the handle of the thread that sent the signal.
+sigEntry[3] (varargs): data
 
-#### Returns
-- If successful: returns a signal entry. The result return value is nil.
-- If failure: nil is returned and the result parameter is as described previously
+#### Returns:
+- If successful: returns a signal entry and the result is nil.
+- If failure: nil is returned, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -482,8 +522,9 @@ Gets the string name of the specified signal value.
 - signal (number): the numerical signal whose name is to be returned.
 
 #### Returns:
-- If successful: returns the name associated with the signal value
-- If failure: nil is returned and the result parameter is as described previously
+- If successful: returns the name associated with the signal value and the result is nil.
+- If failure: nil is returned, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
@@ -502,8 +543,9 @@ Gets the number of pending signals for the calling thread.
 
 #### Returns:
 - If successful: returns the number of the threads waiting to be retrieved (i.e., in
-the thread's signal queue).
-- If failure: nil is returned and the result parameter is as described previously
+the thread's signal queue). The result parameter will be nil.
+- If failure: nil is returned, and the result parameter contains an error message (result[1])
+and a stack trace (result[2]).
 
 #### Usage:
 ```lua
