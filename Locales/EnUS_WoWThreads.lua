@@ -80,6 +80,7 @@ if LOCALE == "enUS" then
    
     L["THREAD_ALREADY_SLEEPING"]        = "Specified thread already sleeping. "
     L["THREAD_NOT_SLEEPING"]    = "Specified thread not sleeping. "
+    L["THREAD_SLEEP_FAILED"]    = "Attempt to put thread to sleep failed. "
     L["WRONG_ADDON_NAME"]       = "Wrong Addon Name"
 	
 	L["SIGNAL_QUEUE_INVALID"]	= "ERROR: Thread[%d] Invalid signal queue "
