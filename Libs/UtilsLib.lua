@@ -45,6 +45,9 @@ end
 
 local userMsgFrame = nil
 
+utils.EMPTY_STR = ""
+local EMPTY_STR = utils.EMPTY_STR
+
 -- This is a function that will print all of the visible symbols from an addon's symbol table.
 
 -- Helper function to recursively print the contents of a table
@@ -408,14 +411,12 @@ end
 -- only called when utils:debuggingIsEnabled() is true
 -- Messages are, for the moment, may be non-localized.
 function utils:dbgLog( msg, stackTrace ) -- use debugstack(2)
-    local newMsg = nil
-    local st = ""
+    local st = EMPTY_STR
     if stackTrace ~= nil then
         st = utils:simplifyStackTrace( stackTrace )
     end
-    newMsg = string.format("[LOG] %s : %s\n", msg, st )
+    local newMsg = string.format("[LOG] %s. %s\n", msg, st )
     DEFAULT_CHAT_FRAME:AddMessage( newMsg, 0.0, 1.0, 1.0 )
-    return newMsg
 end
 
 
