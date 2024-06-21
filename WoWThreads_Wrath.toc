@@ -25,9 +25,9 @@ Libs\ACE\AceDB-3.0\AceDB-3.0.xml
 ##---------------------------------------------
 ## WoW Thread Library Code
 ##---------------------------------------------
-Libs\UtilsLib.lua
-Libs\SignalQueue.lua
+Sources\UtilsLib.lua
 Locales\EnUS_WoWThreads.lua
+Sources\SignalQueue.lua
 Sources\WoWThreads.lua
 Sources\OptionsPanel.lua
 Sources\Icon.lua
