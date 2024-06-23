@@ -11,7 +11,6 @@ local utils = UtilsLib
 -- =================================================
 --              PROLOGUE
 -- =================================================
-local sprintf = _G.string.format
 local function getExpansionName( )
     local expansionLevel = GetExpansionLevel()
     local expansionNames = { -- Use a table to map expansion levels to names
@@ -31,13 +30,10 @@ end
 local libName = "UtilsLib"
 local expansionName = getExpansionName()
 local version       = C_AddOns.GetAddOnMetadata( ADDON_NAME, "Version")
-local libraryName   = sprintf("%s-%s", libName, version )
+local libraryName   = string.format("%s-%s", libName, version )
 --                      Initialize the library
 function utils:getVersion()
     return version
-end
-function utils:getLibName()
-    return libraryName
 end
 function utils:getExpansionName()
     return expansionName
@@ -128,76 +124,6 @@ end
 -- function utils:dataCollectionIsEnabled()
 --     return DATA_COLLECTION_ENABLED
 -- end
---======================================================================
---                          STRING FUNCTIONS
--- =====================================================================
-
- -- Removes the Nth occurrence of a character in a specified string.@
- function removeCharByOccurrence(someString, charToRemove, charOccurrence)
-    -- Input validation
-    if type(someString) ~= "string" or type(charToRemove) ~= "string" or type(charOccurrence) ~= "number" then
-        return nil, "Invalid input types!"
-    end
-    if #charToRemove == 0 or charOccurrence <= 0 then
-        return nil, "Character to remove must be a non-empty string and occurrence must be a positive integer!"
-    end
-
-    local count = 0
-    local position = 0
-
-    -- Find the nth occurrence of the character
-    for i = 1, #someString do
-        if someString:sub(i, i) == charToRemove then
-            count = count + 1
-            if count == charOccurrence then
-                position = i
-                break
-            end
-        end
-    end
-
-    -- Error handling for not finding the character or the nth occurrence
-    if count == 0 then
-        return nil, "Specified character not found!"
-    elseif count < charOccurrence then
-        return nil, "Specified character not at specified position!"
-    end
-
-    -- Remove the character from the string
-    if position > 0 then
-        someString = someString:sub(1, position - 1) .. someString:sub(position + 1)
-        return someString
-    else
-        return nil, "Character position exceeds length of string."
-    end
-end
-
-function utils:removeDoubleQuotes(str)
-    return (string.gsub(str, '%"', ""))
-end
--- @Description: Searches for and removes the first occurrence of the specified character in a string.@
-function utils:removeCharacter(str, charToRemove)
-    -- Replace all occurrences of charToRemove in str with an empty string
-    return (string.gsub(str, charToRemove, ""))
-end
--- @Description: Removes all spaces in a strings.@
-function utils:removeSpaces(str)
-    -- Replace all spaces in str with an empty string
-    return (string.gsub(str, "%s", ""))
-end
--- @Description: Returns the position of the nth occurrence of a specified character in a strings.@
-function utils:findCharPosition(str, n, char)
-    local count = 0
-    for i = 1, #str do
-        if str:sub(i, i) == char then
-            count = count + 1
-            if count == n then
-                return i -- Return position as soon as the character is found
-            end
-        end
-    end
-    return nil -- Return nil if the character is not found
-end
 
 --======================================================================
 --                          POST MESSAGE METHODS
@@ -339,6 +265,37 @@ local function createMsgFrame(title)
     createReloadButton(f, "BOTTOMLEFT", f, 5, 5)
     return f
 end
+function utils:postMsg( msg )
+    if userMsgFrame == nil then
+        userMsgFrame = createMsgFrame( "Error Messages (WoWThreads-1.0)" )
+    end
+
+    if msg == nil then
+        utils:dbgPrint("msg is nil" )
+        local stackTrace = debugstack(2)
+        stackTrace = utils:simplifyStackTrace( stackTrace )
+        msg = string.format("Invalid: 'msg' Was nil\nStack Trace:\n%s", stackTrace )
+        utils:postMsg( msg )
+        error( "Error: Program Stopped")
+    end
+	userMsgFrame.Text:Insert( msg )
+	userMsgFrame:Show()
+end
+function utils:postResult( result, threadId )
+    if result == nil then error( L["INPUT_PARM_NIL"]) end
+
+    if userMsgFrame == nil then
+        userMsgFrame = createMsgFrame( "Error Messages" )
+    end
+
+    local resultStr = string.format("[Thread[%d] %s\nStack Trace:\n%s\n", threadId, result[1], result[2])
+	userMsgFrame.Text:Insert( resultStr )
+	userMsgFrame:Show()
+end
+
+--======================================================================
+--                          DEBUG UTILITIES
+-- =====================================================================
 function utils:simplifyStackTrace(stackTrace)
     local addonName = string.match(stackTrace, "@Interface/AddOns/(%w+)")
     local subDirs = string.match(stackTrace, "/(%w+)/(%w+)")
@@ -352,26 +309,6 @@ function utils:simplifyStackTrace(stackTrace)
         return addonName .. "/" .. fileName .. ":" .. lineNumber
     end
 end
-function utils:postMsg( msg )
-    if userMsgFrame == nil then
-        userMsgFrame = createMsgFrame( "Error Messages (WoWThreads-1.0)" )
-    end
-
-    if msg == nil then
-        utils:dbgPrint("msg is nil" )
-        local stackTrace = debugstack(2)
-        stackTrace = utils:simplifyStackTrace( stackTrace )
-        msg = sprintf("Invalid: 'msg' Was nil\nStack Trace:\n%s", stackTrace )
-        utils:postMsg( msg )
-        error( "Error: Program Stopped")
-    end
-	userMsgFrame.Text:Insert( msg )
-	userMsgFrame:Show()
-end
---======================================================================
---                 DEBUG AND ERROR HANDLING METHODS
--- =====================================================================
-
 function utils:dbgPrefix( stackTrace )
 	if stackTrace == nil then stackTrace = debugstack(2) end
 	
@@ -385,7 +322,7 @@ function utils:dbgPrefix( stackTrace )
 	local names = strsplittable( "\/", fileName )
 	local lineNumber = tonumber(pieces[2])
 
-	local location = sprintf("[%s:%d] ", names[#names], lineNumber)
+	local location = string.format("[%s:%d] ", names[#names], lineNumber)
 	return location
 end
 function utils:dbgPrint(...)
