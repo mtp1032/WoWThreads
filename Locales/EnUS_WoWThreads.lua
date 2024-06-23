@@ -75,7 +75,7 @@ if LOCALE == "enUS" then
 	L["INVALID_EXE_CONTEXT"]    = "ERROR: Operation requires thread context "
 	L["THREAD_IS_DEAD"]	        = "ERROR: Invalid handle. Thread has completed or faulted. "
     
-    L["RESUME_FAILED"]          = "Failed to resume thread "
+    L["RESUME_FAILED"]          = "Failed to resume thread[%d]. "
     L["THREAD_NOT_FOUND"]       = "Thread not found. "
    
     L["THREAD_ALREADY_SLEEPING"]        = "Specified thread already sleeping. "
