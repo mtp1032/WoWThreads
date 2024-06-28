@@ -1,0 +1,33 @@
+## Interface: 110000 
+##----------------------------------------------
+## Title: WoWThreads
+## Notes: An Asynchronous Multithreading Library for AddOn development.
+## Author: Michael Peterson
+## IconTexture: 3528459
+## SavedVariablesPerCharacter: WoWThreadsIconDB
+## SavedVariables: 
+## Version: 1.0
+## X-Expansion: WotLK, Classic, Cataclysm, Retail
+## X-github: https://github.com/mtp1032/WoWThreads
+## 24 May, 2023
+## OptionalDeps: LibSharedMedia-3.0, LibDBIcon-1.0, LibDataBroker-1.1
+
+#@no-lib-strip@
+Libs\ACE\LibStub\LibStub.lua
+Libs\ACE\CallbackHandler-1.0\CallbackHandler-1.0.xml 
+Libs\ACE\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\ACE\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\ACE\AceAddon-3.0\AceAddon-3.0.xml
+Libs\ACE\AceConsole-3.0\AceConsole-3.0.xml
+Libs\ACE\AceDB-3.0\AceDB-3.0.xml
+#@end-no-lib-strip@
+
+##---------------------------------------------
+## WoW Thread Library Code
+##---------------------------------------------
+Sources\UtilsLib.lua
+Locales\EnUS_WoWThreads.lua
+Sources\SignalQueue.lua
+Sources\WoWThreads.lua
+##Sources\OptionsPanel.lua
+##Sources\Icon.lua
