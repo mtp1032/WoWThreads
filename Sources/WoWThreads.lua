@@ -8,7 +8,6 @@ local ADDON_NAME, _ = ...
 
 --                      ADMIN, HOUSEKEEPING STUFF
 WoWThreads = WoWThreads or {}
-WoWThreads.WoWThreads = WoWThreads.WoWThreads or {}
 _G.WoWThreads = WoWThreads
 
 -- Import the utility, signal, and localization libraries.
@@ -25,6 +24,14 @@ if not EnUSlib then return end
 
 local L = EnUSlib.L
 
+-- The two variables to be preserved/saved across reloads
+DEBUGGING_ENABLED = nil
+DATA_COLLECTION = nil
+
+utils:dbgPrint("Initial DEBUGGING_ENABLED:", DEBUGGING_ENABLED)
+utils:dbgPrint("Initial DATA_COLLECTION:", DATA_COLLECTION)
+
+
 -- These two operations ensure that the library name comes from
 -- one source - the addon and version names from .TOC file.
 local version = C_AddOns.GetAddOnMetadata(ADDON_NAME, "Version")
@@ -38,17 +45,17 @@ if not thread then return end -- No need to update if the loaded version is newe
 
 --                                  LOCAL DATA
 
-local DEFAULT_YIELD_TICKS   = 2
-local THREAD_SEQUENCE_ID    = 4 -- a number representing the order in which the thread was created
-local ACCUMULATED_TICKS     = 0 -- The system-wide, total number of clock ticks
 
-local threadControlBlock    = {} -- Table to hold all active threads
-local threadSleepTable      = {} -- Table to hold sleeping threads
-local morgue                = {} -- Table to hold the dead threads
-local errorCallbackTable    = {} -- Table to hold the errorHandlers
+local DEFAULT_YIELD_TICKS    = 2
+local THREAD_SEQUENCE_ID     = 4 -- a number representing the order in which the thread was created
+local ACCUMULATED_TICKS      = 0 -- The system-wide, total number of clock ticks
 
-local CLOCK_INTERVAL        = 1/GetFramerate()
-local WoWThreadsStarted     = false
+local threadControlBlock     = {} -- Table to hold all running and suspended threads
+local threadSleepTable       = {} -- Table to hold sleeping threads
+local morgue                 = {} -- Table to hold the dead threads
+
+local CLOCK_INTERVAL         = 1/GetFramerate()
+local WoWThreadsStarted      = false
 -- =====================================================================
 --                      CONSTANTS
 -- =====================================================================
@@ -57,7 +64,7 @@ local TH_UNIQUE_ID          = 2 -- a number representing the order in which the 
 local TH_SIGNAL_QUEUE       = 3 -- a table of all currently pending signals
 local TH_YIELD_TICKS        = 4 -- the number of clock ticks for which a thread must suspend after a yield.
 local TH_REMAINING_TICKS    = 5 -- decremented on every clock tick. When 0 the thread is queued.
-local TH_ACCUM_YIELD_TICKS  = 6 -- The total number of yield ticks the thread is suspended.
+local TH_ACCUM_YIELD_TICKS  = 6 -- The total number of yield ticks for which the thread is suspended.
 local TH_LIFETIME_TICKS     = 7
 local TH_YIELD_COUNT        = 8 -- the number of times a thread yields
 local TH_CHILDREN           = 9
@@ -69,7 +76,7 @@ local TH_COROUTINE_ARGS     = 12
 -- consists of 3 elements: the signal, the sending thread, and data.
 -- the data element, for the moment is unused.
 -- 
--- sigEntry = {signalValue, sender_h, ... }
+-- sigTable = {signalValue, sender_h, ... }
 thread.SIG_GET_DATA     = 1 -- no semantics. Used to execute an immediate normal return.
 thread.SIG_SEND_DATA    = 2 -- no semantics. Used to execute an immediate normal return.
 thread.SIG_BEGIN        = 3 -- no semantics.
@@ -177,38 +184,83 @@ end
 local function getAddonName( thread_h )
     return thread_h[TH_CLIENT_ADDON]
 end
-local function createHandle( addonName, yieldTicks, threadFunction,... )
+-- local function createHandle( addonName, yieldTicks, threadFunction,... )
 
-    if yieldTicks  < DEFAULT_YIELD_TICKS then
-        yieldTicks = DEFAULT_YIELD_TICKS
-    end
+--     if yieldTicks  < DEFAULT_YIELD_TICKS then
+--         yieldTicks = DEFAULT_YIELD_TICKS
+--     end
+--     THREAD_SEQUENCE_ID = THREAD_SEQUENCE_ID + 1
+
+--     local H = {}    -- create an empty handle table, H
+
+--     H[TH_COROUTINE]         = coroutine.create( threadFunction ) 
+--     H[TH_UNIQUE_ID]         = THREAD_SEQUENCE_ID
+--     H[TH_SIGNAL_QUEUE]      = signalQueue.new()
+--     H[TH_YIELD_TICKS]       = yieldTicks
+--     H[TH_REMAINING_TICKS]   = 1
+--     H[TH_ACCUM_YIELD_TICKS] = 0
+--     H[TH_LIFETIME_TICKS]    = 0
+--     H[TH_YIELD_COUNT]       = 0
+--     H[TH_CLIENT_ADDON]      = addonName
+
+--     H[TH_CHILDREN]  = {}
+--     H[TH_PARENT_HANDLE]     = nil
+--     H[TH_COROUTINE_ARGS]    = {...}
+
+--     local parent_h = getCallerHandle()
+--     if parent_h ~= nil then
+--         H[TH_PARENT_HANDLE] = parent_h
+--         -- H will be he child of the calling/parent thread.
+--         table.insert(parent_h[TH_CHILDREN], H)
+--     end
+
+--     return H
+-- end
+local function createHandle(addonName, yieldTicks, threadFunction, ...)
+    yieldTicks = math.max(yieldTicks, DEFAULT_YIELD_TICKS)
     THREAD_SEQUENCE_ID = THREAD_SEQUENCE_ID + 1
 
-    local H = {}    -- create an empty handle table, H
-
-    H[TH_COROUTINE]         = coroutine.create( threadFunction ) 
-    H[TH_UNIQUE_ID]         = THREAD_SEQUENCE_ID
-    H[TH_SIGNAL_QUEUE]      = signalQueue.new()
-    H[TH_YIELD_TICKS]       = yieldTicks
-    H[TH_REMAINING_TICKS]   = 1
-    H[TH_ACCUM_YIELD_TICKS] = 0
-    H[TH_LIFETIME_TICKS]    = 0
-    H[TH_YIELD_COUNT]       = 0
-    H[TH_CLIENT_ADDON]      = addonName
-
-    H[TH_CHILDREN]  = {}
-    H[TH_PARENT_HANDLE]     = nil
-    H[TH_COROUTINE_ARGS]    = {...}
+    local H = {
+        [TH_COROUTINE] = coroutine.create(threadFunction),
+        [TH_UNIQUE_ID] = THREAD_SEQUENCE_ID,
+        [TH_SIGNAL_QUEUE] = signalQueue.new(),
+        [TH_YIELD_TICKS] = yieldTicks,
+        [TH_REMAINING_TICKS] = 1,
+        [TH_ACCUM_YIELD_TICKS] = 0,
+        [TH_LIFETIME_TICKS] = 0,
+        [TH_YIELD_COUNT] = 0,
+        [TH_CLIENT_ADDON] = addonName,
+        [TH_CHILDREN] = {},
+        [TH_PARENT_HANDLE] = nil,
+        [TH_COROUTINE_ARGS] = {...}
+    }
 
     local parent_h = getCallerHandle()
-    if parent_h ~= nil then
+    if parent_h then
         H[TH_PARENT_HANDLE] = parent_h
-        -- H will be he child of the calling/parent thread.
         table.insert(parent_h[TH_CHILDREN], H)
     end
 
     return H
 end
+
+local function transformErrorString(errorString)
+    -- Pattern to match the error string and capture the filename, line number, and error message
+    local pattern = "Interface/AddOns/[^/]+/(.+):(%d+): (.+)"
+    
+    -- Use string.match to capture the required parts
+    local filePath, lineNumber, errorMessage = string.match(errorString, pattern)
+    
+    -- Extract the filename from the full file path
+    local fileName = string.match(filePath, "([^/]+)$")
+    
+    -- Format the result
+    local result = string.format("[%s:%s]: %s", fileName, lineNumber, errorMessage)
+    
+    return result
+end
+
+
 -- returns true if successful, false otherwise + errorMsg
 local function moveToMorgue( H, normalDeath )
     H[TH_LIFETIME_TICKS] = ACCUMULATED_TICKS - H[TH_LIFETIME_TICKS]
@@ -222,7 +274,7 @@ local function moveToMorgue( H, normalDeath )
             if utils:debuggingIsEnabled() then
                 local msg = nil
                 if not normalDeath then
-                    msg = string.format("%s thread[%d] ABNORMAL completion. Moved from TCB to morgue", utils:dbgPrefix(), H[TH_UNIQUE_ID])
+                    msg = string.format("%s thread[%d] ABNORMAL termination. Moved from TCB to morgue", utils:dbgPrefix(), H[TH_UNIQUE_ID])
                 else
                     msg = string.format("%s thread[%d] Normal completion. Moved from TCB to morgue", utils:dbgPrefix(), H[TH_UNIQUE_ID])
                 end
@@ -305,7 +357,7 @@ local function handleIsValid(H)
         return isValid, errorMsg
     end
     if type(H[TH_COROUTINE]) ~= "thread" then
-        errorMsg = L["NOT_A_THREAD"]
+        errorMsg = L["THREAD_INVALID_TYPE"]
         isValid = false
         return isValid, errorMsg
     end
@@ -379,25 +431,20 @@ local function scheduleThreads()
 
             H[TH_REMAINING_TICKS] = H[TH_REMAINING_TICKS] - 1
             
-            if H[TH_REMAINING_TICKS] == 0 then -- switch to H[TH_COROUTINE]
+            if H[TH_REMAINING_TICKS] == 0 then -- resume this thread
                 local result = nil
                 H[TH_REMAINING_TICKS] = H[TH_YIELD_TICKS] -- replenish the remaining ticks
                 local co = H[TH_COROUTINE]
                 pcallSucceeded, coroutineResumed, errorMsg = pcall(coroutine.resume, co, unpack(args) )
                 if not pcallSucceeded then
-                    utils:dbgPrint(errorMsg)
-                    moveToMorgue(H)
-                    local st = utils:simplifyStackTrace( debugstack(2))
-                    result = setResult( fname, errorMsg, st)
+                    moveToMorgue(H, false )
+                    utils:dbgLog(string.format("[FAULT] %s\n", errorMsg))
                 end
+
                 if not coroutineResumed then
-                    moveToMorgue(H)
-                    local st = utils:simplifyStackTrace( debugstack(2))
-                    local prefix = string.format(L["RESUME_FAILED"], H[TH_UNIQUE_ID])
-                    errorMsg = string.format("%s %s ", prefix, errorMsg )
-                    utils:dbgPrint( errorMsg )
-                    -- result = setResult( fname, errorMsg, st)
-                    -- utils:postResult( result )
+                    moveToMorgue(H, false )
+                    errorMsg = transformErrorString( errorMsg )
+                    utils:dbgLog( string.format("[FAULT] %s\n", errorMsg ))
                 end
             end
         end
@@ -429,7 +476,7 @@ end
 --                      PUBLIC (EXPORTED) SERVICES
 
 --[[@Begin 
-Signature: thread_h, result = thread:create( addonName, yieldTicks, addonName, func,... )
+Signature: thread_h, result = thread:create( yieldTicks, addonName, func,... )
 Description: Creates a reference to an executable thread called a 
 thread handle. The thread handle is an opaque reference to the 
 thread's coroutine. The thread handle is used by the library's 
@@ -987,7 +1034,6 @@ function thread:sendSignal( target_h, signal, ... )
     if target_h == nil then
         local st = utils:simplifyStackTrace( debugstack(2))
         result = setResult( fname, L["THREAD_HANDLE_NIL"], st)
-        utils:dbgPrint()
         return nil, result
     end
     -- is the target thread a real thread?
@@ -1150,28 +1196,32 @@ end
 -- Will not be available upon release. These are for
 -- WoWThreads development only.
 function thread:debuggingIsEnabled()
-    print( "In  debuggingIsEnabled")
+    return DEBUGGING_ENABLED
 end
 function thread:enableDebugging()
-    print(  "In enableDebugging()")
+    DEBUGGING_ENABLED = true
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("Debugging %s", tostring(DEBUGGING_ENABLED)),0.0, 1.0, 1.0 )
 end
 function thread:disableDebugging()
-    print(  "In disableDebugging()")
+    DEBUGGING_ENABLED = false
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("Debugging %s", tostring(DEBUGGING_ENABLED)),0.0, 1.0, 1.0 )
 end
 function thread:dataCollectionIsEnabled()
-    print( "In dataCollectionIsEnabled()")
+    return DATA_COLLECTION
 end
 function thread:enableDataCollection()
-    print( "In enableDataCollection()")
+    DATA_COLLECTION = true
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("Data collection %s", tostring(DATA_COLLECTION)),0.0, 1.0, 1.0 )
 end
 function thread:disableDataCollection()
-    print( "In disableDataCollection()")
+    DATA_COLLECTION = false
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("Data collection %s", tostring(DATA_COLLECTION)),0.0, 1.0, 1.0 )
+    
 end
 function thread:result2String( result )
     local str = string.format("%s. Stack trace\n%s. ", result[1], result[2] )
     return str
 end
-
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
@@ -1180,15 +1230,23 @@ local function OnEvent(self, event, ...)
     local numArgs = select("#", ...)    -- unused
     local addonName = select(1, ...)
 
-
     if event == "ADDON_LOADED" and ADDON_NAME == addonName then
-
-        DEFAULT_CHAT_FRAME:AddMessage( L["ADDON_MESSAGE"], 0.0, 1.0, 1.0 )
-        DEFAULT_CHAT_FRAME:AddMessage( L["CLOCK_INTERVAL"], 0.0, 1.0, 1.0 )
+        DEFAULT_CHAT_FRAME:AddMessage(L["ADDON_MESSAGE"], 0.0, 1.0, 1.0)
+        DEFAULT_CHAT_FRAME:AddMessage(L["TICK_INTERVAL"], 0.0, 1.0, 1.0)
         eventFrame:UnregisterEvent("ADDON_LOADED")
 
         WoWThreadLibInit()
+
+        if DEBUGGING_ENABLED == nil then
+            DEBUGGING_ENABLED = false   -- this is the first time. Set to default values
+        end
+
+        if DATA_COLLECTION == nil then
+            DATA_COLLECTION = false
+        end
+        print( utils:dbgPrefix(), "DEBUGGING_ENABLED", DEBUGGING_ENABLED, "DATA_COLLECTION", DATA_COLLECTION)
     end
+
     return
 end
 eventFrame:SetScript("OnEvent", OnEvent)
@@ -1197,5 +1255,3 @@ local fileName = "WoWThreads.lua"
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
 end
-
-------- PROTOTYPING -------------------------
