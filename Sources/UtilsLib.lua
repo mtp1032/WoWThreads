@@ -22,7 +22,8 @@ local function getExpansionName( )
 
         [LE_EXPANSION_MISTS_OF_PANDARIA] = "Classic (Mists of Pandaria",
         [LE_EXPANSION_LEGION] = "Classic (Legion)",
-        [LE_EXPANSION_BATTLE_FOR_AZEROTH] = "Classic (Battle for Azeroth)"
+        [LE_EXPANSION_BATTLE_FOR_AZEROTH] = "Classic (Battle for Azeroth)",
+        [10]   = "The War Within"
     }
     return expansionNames[expansionLevel] -- Directly return the mapped name
 end
@@ -103,17 +104,17 @@ end
 -- =================================================
 --                  DEBUGGING UTILITIES
 -- =================================================
-utils.DEBUGGING_ENABLED = true
-local DEBUGGING_ENABLED = utils.DEBUGGING_ENABLED
+utils.IS_DEBUGGING_ENABLED = true
+local IS_DEBUGGING_ENABLED = utils.IS_DEBUGGING_ENABLED
 
 function utils:enableDebugging()
-    DEBUGGING_ENABLED = true
+    IS_DEBUGGING_ENABLED = true
 end
 function utils:disableDebugging()
-    DEBUGGING_ENABLED = false
+    IS_DEBUGGING_ENABLED = false
 end
 function utils:debuggingIsEnabled()
-    return DEBUGGING_ENABLED
+    return IS_DEBUGGING_ENABLED
 end
 -- function utils:enableDataCollection()
 --     DATA_COLLECTION_ENABLED = true
@@ -271,11 +272,9 @@ function utils:postMsg( msg )
     end
 
     if msg == nil then
-        utils:dbgPrint("msg is nil" )
         local stackTrace = debugstack(2)
         stackTrace = utils:simplifyStackTrace( stackTrace )
-        msg = string.format("Invalid: 'msg' Was nil\nStack Trace:\n%s", stackTrace )
-        utils:postMsg( msg )
+        msg = string.format("%s - Stack Trace:\n%s\n", L["INPUT_PARM_NIL"], stackTrace )
         error( "Error: Program Stopped")
     end
 	userMsgFrame.Text:Insert( msg )
