@@ -25,11 +25,8 @@ if not EnUSlib then return end
 local L = EnUSlib.L
 
 -- The two variables to be preserved/saved across reloads
-DEBUGGING_ENABLED = nil
-DATA_COLLECTION = nil
-
-utils:dbgPrint("Initial DEBUGGING_ENABLED:", DEBUGGING_ENABLED)
-utils:dbgPrint("Initial DATA_COLLECTION:", DATA_COLLECTION)
+local DEBUGGING_ENABLED = false
+local DATA_COLLECTION = false
 
 
 -- These two operations ensure that the library name comes from
@@ -274,9 +271,9 @@ local function moveToMorgue( H, normalDeath )
             if utils:debuggingIsEnabled() then
                 local msg = nil
                 if not normalDeath then
-                    msg = string.format("%s thread[%d] ABNORMAL termination. Moved from TCB to morgue", utils:dbgPrefix(), H[TH_UNIQUE_ID])
+                    msg = string.format("thread[%d] ABNORMAL termination. Moved threade[%d] from TCB to morgue", H[TH_UNIQUE_ID])
                 else
-                    msg = string.format("%s thread[%d] Normal completion. Moved from TCB to morgue", utils:dbgPrefix(), H[TH_UNIQUE_ID])
+                    msg = string.format("thread[%d] normal termination. Moved thread[%d] from TCB to morgue", H[TH_UNIQUE_ID])
                 end
                 utils:dbgLog( msg )
             end
@@ -294,11 +291,9 @@ local function putToSleep( H )
         if H[TH_UNIQUE_ID] == entry[TH_UNIQUE_ID] then
             table.remove(threadControlBlock, i)
             table.insert( threadSleepTable, H )
-            if utils:debuggingIsEnabled() then
-                if utils:debuggingIsEnabled() then
-                    local logMsg = string.format("%s Thread[%d] removed from TCB, inserted into sleep table.\n", utils:dbgPrefix(), H[TH_UNIQUE_ID])
-                    utils:dbgLog( logMsg )
-                end
+        if utils:debuggingIsEnabled() then
+                local logMsg = string.format("%s Thread[%d] removed from TCB, inserted into sleep table.\n", utils:dbgPrefix(), H[TH_UNIQUE_ID])
+                utils:dbgLog( logMsg )
                 successful = true
                 break
             end
@@ -307,8 +302,8 @@ local function putToSleep( H )
 
     if not successful then
         errorMsg = L["THREAD_NOT_FOUND"]
-        local msg = string.format("%s thread[%d] not found in TCB.\n",utils:dbgPrefix(),  H[TH_UNIQUE_ID])
         if utils:debuggingIsEnabled() then
+            local msg = string.format("%s thread[%d] not found in TCB.\n",utils:dbgPrefix(),  H[TH_UNIQUE_ID])
             utils:dbgLog( msg )
         end
     end
@@ -336,7 +331,7 @@ local function wakeup(H)
     if not successful then
         errorMsg = string.format("%s thread[%d] not found in sleep table.\n", utils:dbgPrefix(), H[TH_UNIQUE_ID])
         if utils:debuggingIsEnabled() then
-            utils:dbgLog( errorMsg, debugstack(2) )
+            utils:dbgLog( errorMsg )
         end
         return successful, errorMsg
     end
@@ -438,13 +433,17 @@ local function scheduleThreads()
                 pcallSucceeded, coroutineResumed, errorMsg = pcall(coroutine.resume, co, unpack(args) )
                 if not pcallSucceeded then
                     moveToMorgue(H, false )
-                    utils:dbgLog(string.format("[FAULT] %s\n", errorMsg))
+                    if thread:debuggingIsEnabled() then
+                        utils:dbgLog(errorMsg)
+                    end
                 end
 
                 if not coroutineResumed then
                     moveToMorgue(H, false )
-                    errorMsg = transformErrorString( errorMsg )
-                    utils:dbgLog( string.format("[FAULT] %s\n", errorMsg ))
+                    if thread:debuggingIsEnabled() then
+                        errorMsg = transformErrorString( errorMsg )
+                        utils:dbgLog( errorMsg )
+                    end
                 end
             end
         end
@@ -1225,9 +1224,9 @@ end
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
+eventFrame:RegisterEvent("PLAYER_LOGOUT")
 
 local function OnEvent(self, event, ...)
-    local numArgs = select("#", ...)    -- unused
     local addonName = select(1, ...)
 
     if event == "ADDON_LOADED" and ADDON_NAME == addonName then
@@ -1237,18 +1236,18 @@ local function OnEvent(self, event, ...)
 
         WoWThreadLibInit()
 
-        if DEBUGGING_ENABLED == nil then
-            DEBUGGING_ENABLED = false   -- this is the first time. Set to default values
-        end
-
-        if DATA_COLLECTION == nil then
-            DATA_COLLECTION = false
-        end
-        print( utils:dbgPrefix(), "DEBUGGING_ENABLED", DEBUGGING_ENABLED, "DATA_COLLECTION", DATA_COLLECTION)
+        DEBUGGING_ENABLED = _G["WoWThreads_DEBUGGING_ENABLED"] or false
+        DATA_COLLECTION   = _G["WoWThreads_DATA_COLLECTION"] or false        
+        -- print( utils:dbgPrefix(), "DEBUGGING_ENABLED", DEBUGGING_ENABLED, "DATA_COLLECTION", DATA_COLLECTION)
+    
+    elseif event == "PLAYER_LOGOUT" then
+        print("Player Logging Out")
+        _G["WoWThreads_DEBUGGING_ENABLED"] = DEBUGGING_ENABLED
+        _G["WoWThreads_DATA_COLLECTION"] = DATA_COLLECTION
+        -- print("Saved Values - DEBUGGING_ENABLED:", DEBUGGING_ENABLED, "DATA_COLLECTION:", DATA_COLLECTION)
     end
-
-    return
 end
+
 eventFrame:SetScript("OnEvent", OnEvent)
 
 local fileName = "WoWThreads.lua"
