@@ -4,7 +4,7 @@
 ## Notes: An Asynchronous Multithreading Library for AddOn development.
 ## Author: Michael Peterson
 ## IconTexture: 3528459
-## SavedVariablesPerCharacter: WoWThreadsIconDB
+## SavedVariablesPerCharacter: WoWThreadsIconDB, DEBUGGING_ENABLED, DATA_COLLECTION
 ## SavedVariables: 
 ## Version: 1.0
 ## X-Expansion: WotLK, Classic, Cataclysm, Retail
