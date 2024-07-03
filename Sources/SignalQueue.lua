@@ -1,8 +1,6 @@
  -- SignalQueue.lua
  local ADDON_NAME, _ = ... 
 
-local sprintf = _G.string.format
-
 -- Import the Utils library
 local UtilsLib = LibStub("UtilsLib")
 local utils = UtilsLib
