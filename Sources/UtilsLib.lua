@@ -8,39 +8,21 @@ local LibStub = LibStub -- If LibStub is not global, adjust accordingly
 local UtilsLib, oldVersion = LibStub:NewLibrary(LIBSTUB_MAJOR, LIBSTUB_MINOR)
 if not UtilsLib then return end -- No need to update if the version loaded is newer
 local utils = UtilsLib
+
+local EnUSlib = LibStub("EnUSlib")
+if not EnUSlib then return end
+
+local L = EnUSlib.L
+
 -- =================================================
 --              PROLOGUE
 -- =================================================
-local function getExpansionName( )
-    local expansionLevel = GetExpansionLevel()
-    local expansionNames = { -- Use a table to map expansion levels to names
-        [LE_EXPANSION_DRAGONFLIGHT] = "Dragon Flight",
-        [LE_EXPANSION_SHADOWLANDS] = "Shadowlands",
-        [LE_EXPANSION_CATACLYSM] = "Classic (Cataclysm)",
-        [LE_EXPANSION_WRATH_OF_THE_LICH_KING] = "Classic (WotLK)",
-        [LE_EXPANSION_CLASSIC] = "Classic (Vanilla)",
-
-        [LE_EXPANSION_MISTS_OF_PANDARIA] = "Classic (Mists of Pandaria",
-        [LE_EXPANSION_LEGION] = "Classic (Legion)",
-        [LE_EXPANSION_BATTLE_FOR_AZEROTH] = "Classic (Battle for Azeroth)",
-        [10]   = "The War Within"
-    }
-    return expansionNames[expansionLevel] -- Directly return the mapped name
-end
-
 local libName = "UtilsLib"
-local expansionName = getExpansionName()
 local version       = C_AddOns.GetAddOnMetadata( ADDON_NAME, "Version")
 local libraryName   = string.format("%s-%s", libName, version )
 --                      Initialize the library
-function utils:getVersion()
-    return version
-end
-function utils:getExpansionName()
-    return expansionName
-end
 
-local userMsgFrame = nil
+local notificationFrame = nil
 
 utils.EMPTY_STR = ""
 local EMPTY_STR = utils.EMPTY_STR
@@ -267,29 +249,27 @@ local function createMsgFrame(title)
     return f
 end
 function utils:postMsg( msg )
-    if userMsgFrame == nil then
-        userMsgFrame = createMsgFrame( "Error Messages (WoWThreads-1.0)" )
+    if notificationFrame == nil then
+        notificationFrame = createMsgFrame( "Info Message(s)" )
     end
 
     if msg == nil then
         local stackTrace = debugstack(2)
         stackTrace = utils:simplifyStackTrace( stackTrace )
-        msg = string.format("%s - Stack Trace:\n%s\n", L["INPUT_PARM_NIL"], stackTrace )
+        msg = string.format("%s - Stack Trace:\n%s\n", L["PARAMETER_NIL"], stackTrace )
         error( "Error: Program Stopped")
     end
-	userMsgFrame.Text:Insert( msg )
-	userMsgFrame:Show()
+	notificationFrame.Text:Insert( msg )
+	notificationFrame:Show()
 end
-function utils:postResult( result, threadId )
-    if result == nil then error( L["INPUT_PARM_NIL"]) end
-
-    if userMsgFrame == nil then
-        userMsgFrame = createMsgFrame( "Error Messages" )
+function utils:postResult ( result )
+    if notificationFrame == nil then
+        notificationFrame = createMsgFrame( L["NOTIFICATION_FRAME_TITLE"] )
     end
 
-    local resultStr = string.format("[Thread[%d] %s\nStack Trace:\n%s\n", threadId, result[1], result[2])
-	userMsgFrame.Text:Insert( resultStr )
-	userMsgFrame:Show()
+    local resultStr = string.format( "\n%s\nStack Trace:%s\n", result[1], result[2])
+	notificationFrame.Text:Insert( resultStr )
+	notificationFrame:Show()
 end
 
 --======================================================================
@@ -300,6 +280,7 @@ function utils:simplifyStackTrace(stackTrace)
     local subDirs = string.match(stackTrace, "/(%w+)/(%w+)")
     local fileName = string.match(stackTrace, "/(%w+%.lua)")
     local lineNumber = string.match(stackTrace, "(%d+):")
+    local s = nil
 
     if subDirs then
         subDirs = string.gsub(subDirs, "/", "/")
