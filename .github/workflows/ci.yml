@@ -1,0 +1,43 @@
+name: Build and Deploy WoW Addon
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run tests
+      run: npm test
+
+    - name: Build Addon Package
+      run: |
+        # Create a zip package of the addon
+        zip -r WoWThreads.zip WoWThreads
+
+    - name: Upload to CurseForge
+      env:
+        CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+      run: |
+        # Install the CurseForge upload tool
+        npm install -g @cf-uploads/upload-addon
+
+        # Upload the package
+        upload-addon --api-key $CURSEFORGE_API_KEY --file WoWThreads.zip --changelog "Auto-generated changelog" --changelog-type markdown
