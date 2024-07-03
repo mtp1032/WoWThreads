@@ -54,11 +54,13 @@ local function drawLine(f, yPos)
 end
 
 local function showExecutionOptions(frame, yPos)
+
     -- Create check button to toggle strict debugging
     local debuggingButton = CreateFrame("CheckButton", "Toggle_DebuggingButton", frame, "ChatConfigCheckButtonTemplate")
     debuggingButton:SetPoint("TOPLEFT", 20, yPos)
     debuggingButton.tooltip = L["TOOLTIP_DEBUGGING"]
-    _G[debuggingButton:GetName().."Text"]:SetText("Check to enable error logging.")
+    _G[debuggingButton:GetName().."Text"]:SetText(L["ENABLE_ERROR_LOGGING"])
+    print( "line 63 debuggingIsEnabled()", thread:debuggingIsEnabled())
     debuggingButton:SetChecked( thread:debuggingIsEnabled() )
     debuggingButton:SetScript("OnClick", 
         function(self)
@@ -76,6 +78,7 @@ local function showExecutionOptions(frame, yPos)
     dataCollectionButton:SetPoint("TOPLEFT", 290, yPos)
     dataCollectionButton.tooltip = L["TOOLTIP_DATA_COLLECTION"]
     _G[dataCollectionButton:GetName().."Text"]:SetText(L["ENABLE_DATA_COLLECTION"])
+    print( "line 81 dataCollectionIsEnabled()", thread:dataCollectionIsEnabled())
     dataCollectionButton:SetChecked( thread:dataCollectionIsEnabled() )
     dataCollectionButton:SetScript("OnClick", 
         function(self)
@@ -172,9 +175,13 @@ local function createOptionsPanel()
     return frame
 end
 
-local optionsPanel = createOptionsPanel()
+
+local optionsPanel = nil
 
 function minimap:showOptionsPanel()
+    if optionsPanel == nil then
+        optionsPanel = createOptionsPanel()
+    end
     optionsPanel:Show()
 end
 
