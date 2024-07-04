@@ -1,4 +1,4 @@
-#### WoWThreads V 1.0
+#### WoWThreads V 0.9.0
  
 ##### SUMMARY: 
 Enables a WoW AddOn to handle events delivered by the WoW Client's OnEvent service asynchronously.
