@@ -1,6 +1,6 @@
-Archived/*
-Docs/*
-Docs/TestDoc/*
-Docs/DevNotes/*
+.vscode/*
+Docs/DirectoryStructure.txt
+Docs/lua2Markdown.py
 Libs/*
-Sources/SignalQueue-original.lua
+WoWThreads.code-workspace
+
