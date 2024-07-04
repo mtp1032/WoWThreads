@@ -4,9 +4,9 @@
 Enables a WoW AddOn to handle events delivered by the WoW Client's OnEvent service asynchronously.
 
 ##### DESCRIPTION:
-WoWThreads is a library whose services provide asynchronous, non-preemptive multithreading for WoW Addon developers. WoWThreads provides the major features you would expect such as thread creation, signaling, delay, yield, and so forth.
+WoWThreads is a library whose services provide asynchronous, non-preemptive multithreading for WoW Addon developers. WoWThreads provides the major features you would expect in a threads package such as thread creation, signaling (including inter-thread communications), delay, yield, and so forth.
 
-The library is designed to enable an addon to execute independently of the WoW game client (WoW.exe) event provider. More specifically, developers can use threads to handle events delivered by the OnEvent service. In this way, once the WoW client delivers an event to an addon's thread, the WoW client can immediately return. In the absence of WoWThreads, the WoW Client must wait for the AddOn to complete its handling before returning to the main game loop.
+The library is designed to enable an addon to execute asynchronously relative tothe WoW game client's (WoW.exe) event provider. More specifically, developers can use WoWThreads to handle events delivered by the OnEvent service. In this way, once the WoW client delivers an event to an addon's thread, the WoW client can immediately return. In the absence of WoWThreads, the WoW Client must wait for the addon to complete its handling before returning to the main game loop.
 
 For more information and examples, a guide has been provided, the WoWThreads-complete.md in the Docs directory.
 
