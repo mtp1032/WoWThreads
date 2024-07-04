@@ -271,7 +271,7 @@ local function putToSleep( H )
     end
 
     if not successful then
-        errorMsg = L["THREAD_OPERATION_FAILED"]
+        errorMsg = L["THREAD_NOT_FOUND"]
         if thread:debuggingIsEnabled() then
             local msg = string.format("Thread[%d] not found in TCB.\n", H[TH_UNIQUE_ID])
             utils:dbgLog( msg )
@@ -362,13 +362,13 @@ local function signalIsValid(signal)
 
     if signal == nil or signal == "" then
         isValid = false
-        errorMsg = L["SIGNAL_INVALID"]
+        errorMsg = L["SIGNAL_IS_NIL"]
         return isValid, errorMsg
     end
 
     if type(signal) ~= "number" then 
         isValid = false
-        errorMsg = L["WRONG_TYPE"]
+        errorMsg = L["SIGNAL_INVALID_TYPE"]
         return isValid, errorMsg
     end  
 
@@ -1003,7 +1003,9 @@ function thread:sendSignal( target_h, signal, ... )
         local result = setResult( errorMsg, fname, debugstack(2))
         return nil, result
     end
-
+    if type( signal ) ~= "number" then
+        result = setResult( L["INVALID_TYPE"])
+    end
     -- check that the signal is valid
     if signal == SIG_NONE_PENDING then
         result = setResult( L["SIGNAL_INVALID_OPERATION"], fname, debugstack(2))
