@@ -83,11 +83,12 @@ if LOCALE == "enUS" then
 	L["THREAD_HANDLE_ILL_FORMED"]	= "ERROR: Thread handle ill-formed. Check table size. "
 
 	L["THREAD_COROUTINE_DEAD"]      = "ERROR: Invalid handle. Thread has completed or faulted. "
-    L["THREAD_OPERATION_FAILED"]  = "ERROR: Thread not found. "
+    L["THREAD_NOT_FOUND"]    = "ERROR: Thread not found. "
 
     -- Signal failure
 	L["SIGNAL_OUT_OF_RANGE"]	    = "ERROR: Signal is out of range "
-    L["SIGNAL_INVALID"]			    = "ERROR: Signal is unknown or nil "
+    L["SIGNAL_IS_NIL"]	            = "ERROR: Signal is unknown or nil "
+    L["SIGNAL_INVALID_TYPE"]        = "ERROR: Signal type is invalid. Should be 'number' "
     L["SIGNAL_INVALID_OPERATION"]   = "ERROR: SIG_NONE_PENDING can not be sent "
 end
 if LOCALE == "frFR" then
