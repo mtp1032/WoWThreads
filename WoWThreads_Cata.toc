@@ -6,7 +6,7 @@
 ## IconTexture: 3528459
 ## SavedVariablesPerCharacter: WoWThreadsIconDB
 ## SavedVariables: 
-## Version: 1.0
+## Version: 0.9.0
 ## X-Expansion: WotLK, Retail
 ## X-github: https://github.com/mtp1032/WoWThreads
 ## 24 May, 2023
