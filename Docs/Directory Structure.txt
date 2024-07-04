@@ -1,0 +1,69 @@
+# WoWThreads Addon Directory Structure
+
+The following is the directory structure of the WoWThreads addon project:
+
+WoWThreads/
+├── LICENSE
+├── README.md
+├── WoWThreads_Mainline.toc
+├── WoWThreads_Cata.toc
+├── WoWThreads_Vanilla.toc
+├── WoWThreads_Wrath.toc
+├── Docs/
+│ └── WoWThreads-complete.md
+├── Libs/
+│ └── ACE/
+│ ├── LibStub/
+│ │ └── LibStub.lua
+│ ├── CallbackHandler-1.0/
+│ │ └── CallbackHandler-1.0.xml
+│ ├── LibDataBroker-1.1/
+│ │ └── LibDataBroker-1.1.lua
+│ ├── LibDBIcon-1.0/
+│ │ └── LibDBIcon-1.0.lua
+│ ├── AceAddon-3.0/
+│ │ └── AceAddon-3.0.xml
+│ ├── AceConsole-3.0/
+│ │ └── AceConsole-3.0.xml
+│ └── AceDB-3.0/
+│ └── AceDB-3.0.xml
+├── LibStub/
+├── Locales/
+│ └── EnUS_WoWThreads.lua
+└── Sources/
+├── Icon.lua
+├── OptionsLib.lua
+├── SignalQueue.lua
+├── UtilsLib.lua
+└── WoWThreads.lua
+
+
+## Description of Important Files
+
+- **LICENSE:** The license file for the project.
+- **README.md:** The main documentation file for the project.
+- **WoWThreads_Mainline.toc:** Table of Contents file for the mainline version of the addon.
+- **WoWThreads_Cata.toc:** Table of Contents file for the Cataclysm version of the addon.
+- **WoWThreads_Vanilla.toc:** Table of Contents file for the Vanilla version of the addon.
+- **WoWThreads_Wrath.toc:** Table of Contents file for the Wrath of the Lich King version of the addon.
+- **WoWThreads_WarWithin.toc:** Table of Contents file for the War Within version of the addon.
+- **Docs/WoWThreads-complete.md:** Complete documentation for the addon.
+- **Libs/ACE/**: Directory containing ACE library files.
+  - **LibStub/LibStub.lua:** LibStub library file.
+  - **CallbackHandler-1.0/CallbackHandler-1.0.xml:** CallbackHandler library file.
+  - **LibDataBroker-1.1/LibDataBroker-1.1.lua:** LibDataBroker library file.
+  - **LibDBIcon-1.0/LibDBIcon-1.0.lua:** LibDBIcon library file.
+  - **AceAddon-3.0/AceAddon-3.0.xml:** AceAddon library file.
+  - **AceConsole-3.0/AceConsole-3.0.xml:** AceConsole library file.
+  - **AceDB-3.0/AceDB-3.0.xml:** AceDB library file.
+- **LibStub/:** Directory containing LibStub library.
+- **Locales/EnUS_WoWThreads.lua:** Localization file for English (US).
+- **Sources/:** Directory containing source files for the addon.
+  - **Icon.lua:** Icon source file.
+  - **OptionsLib.lua:** Options library source file.
+  - **SignalQueue.lua:** Signal queue source file.
+  - **UtilsLib.lua:** Utility library source file.
+  - **WoWThreads.lua:** Main source file for the addon.
+
+
+This Markdown representation includes the directory structure and brief descriptions of the important files. You can include this in your `README.md` or other documentation files as needed.
