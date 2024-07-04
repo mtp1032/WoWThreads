@@ -27,7 +27,7 @@ local function getExpansionName( )
     }
     return expansionNames[expansionLevel] -- Directly return the mapped name
 end
-local version       = C_AddOns.GetAddOnMetadata( ADDON_NAME, "Version")
+local version = C_AddOns.GetAddOnMetadata( ADDON_NAME, "Version")
 
 -- =====================================================================
 --                      LOCALIZATION
