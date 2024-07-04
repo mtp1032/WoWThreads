@@ -606,18 +606,21 @@ Usage:
 function thread:yield()
     local fname = "thread:yield()"
 
+    if thread:dataCollectionIsEnabled() then
     local H, errorMsg = getHandleOfCallingThread()
-    if H == nil then
-        local result = setResult( errorMsg, fname, debugstack(2))
-        error( utils:postResult( result ) )
-    end
-    local beforeTicks = ACCUMULATED_TICKS
+        if H == nil then
+            local result = setResult( errorMsg, fname, debugstack(2))
+            error( utils:postResult( result ) )
+        end
+        
+        local beforeTicks = ACCUMULATED_TICKS
 
-    coroutine.yield()
-    
-    H[TH_YIELD_COUNT] = H[TH_YIELD_COUNT] + 1
-    local deltaTicks = ACCUMULATED_TICKS - beforeTicks
-    H[TH_ACCUM_YIELD_TICKS] = H[TH_ACCUM_YIELD_TICKS] + deltaTicks
+        coroutine.yield()
+        
+        H[TH_YIELD_COUNT] = H[TH_YIELD_COUNT] + 1
+        local deltaTicks = ACCUMULATED_TICKS - beforeTicks
+        H[TH_ACCUM_YIELD_TICKS] = H[TH_ACCUM_YIELD_TICKS] + deltaTicks
+    end
 end
 
 --[[@Begin
