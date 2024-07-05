@@ -696,6 +696,7 @@ function thread:sleep()
     local errorMsg = nil
     local successful = false
     local stackTrace = nil
+    local isAsleep = true
     local result = nil
 
     local H, errorMsg = getHandleOfCallingThread()
@@ -709,7 +710,7 @@ function thread:sleep()
         result = setResult( errorMsg, fname, debugstack(2) ) --@@
         return nil, result
     end
-    return H, result
+    return isSleeping, result
 end
 
 --[[@Begin
