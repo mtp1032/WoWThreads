@@ -24,7 +24,7 @@ jobs:
         # Copy only the necessary files to the package directory
         cp -r src package/
         cp README.md package/
-        cp Docs/WoWThreads.md package/
+        cp Docs/WoWThreads-complete.md package/
         # Create the zip file excluding .github, .vscode, and .gitignore
         cd package
         zip -r ../WoWThreads.zip ./*
