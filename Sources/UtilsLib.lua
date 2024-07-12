@@ -262,11 +262,14 @@ function utils:postMsg( msg )
 	notificationFrame.Text:Insert( msg )
 	notificationFrame:Show()
 end
-function utils:postResult ( result )
+function utils:postResult( result )
+    if result == nil then error( "Input 'result' was nil!") end
+    if type(result) ~= 'table' then error( "Input 'result' not a table") end
+
     if notificationFrame == nil then
         notificationFrame = createMsgFrame( L["NOTIFICATION_FRAME_TITLE"] )
     end
-
+        
     local resultStr = string.format( "\n%s\nStack Trace:%s\n", result[1], result[2])
 	notificationFrame.Text:Insert( resultStr )
 	notificationFrame:Show()
@@ -302,8 +305,8 @@ function utils:dbgPrefix( stackTrace )
 	local names = strsplittable( "\/", fileName )
 	local lineNumber = tonumber(pieces[2])
 
-	local location = string.format("[%s:%d] ", names[#names], lineNumber)
-	return location
+	local prefix = string.format("[%s:%d] ", names[#names], lineNumber)
+	return prefix
 end
 function utils:dbgPrint(...)
     local prefix = utils:dbgPrefix( debugstack(2) )
@@ -311,29 +314,19 @@ function utils:dbgPrint(...)
     -- The '...' collects all extra arguments passed to the function
     local args = {...}  -- This creates a table 'args' containing all extra arguments
 
-    -- Convert all arguments into strings to ensure proper formatting for print
+    -- Convert all arguments into strings to ensure proper formatting for print with
+    -- the 'prefix' as the first element of the string to be printed.
     local output = {prefix}
     for i, v in ipairs(args) do
         table.insert(output, tostring(v))
     end
 
-    -- Use the unpack function to pass all elements of 'output' as separate arguments to the built-in print function
-    -- numArgs = #output
+    -- Use the unpack function to pass all elements of 'output' as separate arguments 
+    -- to the built-in print function
     _G.print(unpack(output))
 end
 if utils:debuggingIsEnabled() then
     DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
-end
-
--- only called when utils:debuggingIsEnabled() is true
--- Messages are, for the moment, may be non-localized.
-function utils:dbgLog( msg, stackTrace ) -- use debugstack(2)
-    local st = EMPTY_STR
-    if stackTrace ~= nil then
-        st = utils:simplifyStackTrace( stackTrace )
-    end
-    local newMsg = string.format("[LOG] %s. %s\n", msg, st )
-    DEFAULT_CHAT_FRAME:AddMessage( newMsg, 0.0, 1.0, 1.0 )
 end
 
 
