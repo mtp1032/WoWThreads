@@ -21,17 +21,14 @@ jobs:
     - name: Package addon
       run: |
         mkdir -p package
-        # Copy only the necessary files to the package directory
-        cp Docs/WoWThreads-complete.md package/
-        cp -r Libs package/
-        cp -r Locales
-        cp -r Sources package/
-        cp LICENSE package/
-        cp README.md package/
-        cp WoWThreads*.toc package/
-
-        # Check if src directory exists and copy it if present
-        if [ -d "src" ]; then cp -r src package/; fi
+        # Copy necessary files and directories to the package directory
+        rsync -av --progress Docs/WoWThreads-complete.md package/
+        rsync -av --progress Libs/ package/Libs/
+        rsync -av --progress Locales/ package/Locales/
+        rsync -av --progress Sources/ package/Sources/
+        rsync -av --progress LICENSE package/
+        rsync -av --progress README.md package/
+        rsync -av --progress WoWThreads*.toc package/
         # Create the zip file excluding .github, .vscode, and .gitignore
         cd package
         zip -r ../WoWThreads.zip ./*
