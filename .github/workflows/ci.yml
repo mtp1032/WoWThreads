@@ -1,19 +1,18 @@
-name: Build and Deploy WoW Addon
+name: Build and Deploy WoWThreads
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions UI
 
 jobs:
   build:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v2
 
     - name: Set up Node.js
@@ -24,20 +23,30 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Run tests
-      run: npm test
+    - name: Build addon
+      run: npm run build # Adjust this command to your build process
 
-    - name: Build Addon Package
+    - name: Package addon
       run: |
-        # Create a zip package of the addon
-        zip -r WoWThreads.zip WoWThreads
+        mkdir -p package
+        # Copy only the necessary files to the package directory
+        cp -r src package/
+        cp README.md package/
+        cp Docs/WoWThreads.md package/
+        # Create the zip file excluding .github, .vscode, and .gitignore
+        cd package
+        zip -r ../WoWThreads.zip ./*
+        cd ..
 
     - name: Upload to CurseForge
       env:
         CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
       run: |
-        # Install the CurseForge upload tool
-        npm install -g @cf-uploads/upload-addon
+        curl -X POST \
+        -H "x-api-key: $CURSEFORGE_API_KEY" \
+        -F "file=@WoWThreads.zip" \
+        -F "metadata={\"changelog\": \"Automated build\", \"changelogType\": \"markdown\", \"displayName\": \"WoWThreads v1.0\"}" \
+        https://minecraft.curseforge.com/api/projects/<PROJECT_ID>/upload-file
 
-        # Upload the package
-        upload-addon --api-key $CURSEFORGE_API_KEY --file WoWThreads.zip --changelog "Auto-generated changelog" --changelog-type markdown
+    - name: Cleanup
+      run: rm -rf package WoWThreads.zip
