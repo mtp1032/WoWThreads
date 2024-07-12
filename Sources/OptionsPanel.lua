@@ -2,9 +2,10 @@ local ADDON_NAME, _ = ...
 
 WoWThreads = WoWThreads or {}
 
-local thread = LibStub:GetLibrary("WoWThreads-1.0")
+
+local thread = LibStub:GetLibrary( ADDON_NAME )
 if not thread then 
-    DEFAULT_CHAT_FRAME:AddMessage("WoWThreads-1.0 not found!")
+    DEFAULT_CHAT_FRAME:AddMessage( ADDON_NAME .. " not found!")
     return 
 end
 
@@ -188,3 +189,5 @@ end
 local function hideOptionsPanel()
     optionsPanel:Hide()
 end
+
+print("Options Panel Loaded.")
