@@ -8,17 +8,17 @@ on:
 
 jobs:
   build:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
-        node-version: '14'
+        node-version: '20'
 
     - name: Install dependencies
       run: npm install
@@ -37,6 +37,12 @@ jobs:
         cd package
         zip -r ../WoWThreads.zip ./*
         cd ..
+    
+    - name: List files for debugging
+      run: ls -alh package/
+    
+    - name: List root directory files for debugging
+      run: ls -alh
 
     - name: Upload to CurseForge
       env:
