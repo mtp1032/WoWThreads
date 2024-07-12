@@ -10,6 +10,13 @@ if not EnUSlib then
     return 
 end
 
+-- Form a string representing the library's version number (see WoWThreads.lua).
+local MAJOR = C_AddOns.GetAddOnMetadata(ADDON_NAME, "X-MAJOR")
+local MINOR = C_AddOns.GetAddOnMetadata(ADDON_NAME, "X-MINOR")
+local PATCH = C_AddOns.GetAddOnMetadata(ADDON_NAME, "X-PATCH")
+
+local version = string.format("%s.%s.%s", MAJOR, MINOR, PATCH )
+
 local tickInterval = 1000 / GetFramerate() -- Milliseconds
 local function getExpansionName( )
     local expansionLevel = GetExpansionLevel()
@@ -27,7 +34,6 @@ local function getExpansionName( )
     }
     return expansionNames[expansionLevel] -- Directly return the mapped name
 end
-local version = C_AddOns.GetAddOnMetadata( ADDON_NAME, "Version")
 
 -- =====================================================================
 --                      LOCALIZATION
@@ -71,7 +77,6 @@ if LOCALE == "enUS" then
     L["ENABLE_ERROR_LOGGING"]   = "Check to enable error logging."
     L["TOOLTIP_DEBUGGING"]      = "If checked, writes additional error information to the Chat Window."
 
-
     --                          Generic Error MessageS
 	L["WRONG_TYPE"]		= "ERROR: Datatype unexpected "
     L["PARAMETER_NIL"]  = "ERROR: Parameter nil "
@@ -82,9 +87,10 @@ if LOCALE == "enUS" then
 	L["THREAD_NO_COROUTINE"]        = "ERROR: Handle does not reference a coroutine "
     L["THREAD_INVALID_CONTEXT"]     = "ERROR: Caller is likely the WoW client (WoW.exe) "
 	L["THREAD_HANDLE_ILL_FORMED"]	= "ERROR: Thread handle ill-formed. Check table size. "
+    L["THREAD_NOT_SLEEPING"]        = "ERROR: Thread handle not found in sleep queue. "
 
 	L["THREAD_COROUTINE_DEAD"]      = "ERROR: Invalid handle. Thread has completed or faulted. "
-    L["THREAD_NOT_FOUND"]    = "ERROR: Thread not found. "
+    L["THREAD_NOT_FOUND"]           = "ERROR: Thread not found. "
 
     -- Signal failure
 	L["SIGNAL_OUT_OF_RANGE"]	    = "ERROR: Signal is out of range "
