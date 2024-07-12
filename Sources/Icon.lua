@@ -5,26 +5,20 @@
 -- ORIGINAL DATE: 13 March, 2021
 --=================================================================================
 local ADDON_NAME, _ = ...
-
 WoWThreads = WoWThreads or {}
-WoWThreads.WoWThreads = WoWThreads.WoWThreads or {}
+-- WoWThreads.WoWThreads = WoWThreads.WoWThreads or {}
 _G.WoWThreads = WoWThreads
 
 WoWThreads.minimap = WoWThreads.minimap or {}
 local minimap = WoWThreads.minimap
 
--- Import the utility, signal, and localization libraries.
-local UtilsLib = LibStub("UtilsLib")
-if not UtilsLib then return end
-local utils = UtilsLib
+-- Access WoWThreads using LibStub
+local thread = LibStub("WoWThreads")
+if not thread then
+    print("Error: WoWThreads library not found!")
+    return
+end
 
-local EnUSlib = LibStub("EnUSlib")
-if not EnUSlib then return end
-local L = EnUSlib.L
-
-local MAJOR, MINOR = "WoWThreads", 1
-local thread, _ = LibStub:NewLibrary(MAJOR, MINOR)
-if not thread then return end -- No need to update if the loaded version is newer or the same
 
 -- Minimap icon implementation starts here!
 local ICON_WOWTHREADS = 3528459
@@ -48,7 +42,6 @@ local WoWThreadsIconDB = LibStub("LibDataBroker-1.1"):NewDataObject(dataObject,
         end
     end,
 })
-
 local icon = LibStub("LibDBIcon-1.0")
 function addon:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("WoWThreadsIconDB", 
@@ -65,7 +58,6 @@ function addon:OnInitialize()
 
     self:RegisterChatCommand("wowthreads", "iconCommands") 
 end -- terminates OnInitialize
-
 function addon:iconCommands() 
     self.db.profile.minimap.hide = not self.db.profile.minimap.hide 
     if self.db.profile.minimap.hide then 
