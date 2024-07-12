@@ -22,8 +22,14 @@ jobs:
       run: |
         mkdir -p package
         # Copy only the necessary files to the package directory
+        cp Libs/* package/
+        cp Locales/EnUS_WoWThreads.lua package/
+        cp Sources/* package/
+        cp LICENSE package/
         cp README.md package/
-        cp Docs/WoWThreads-complete.md package/
+        cp Docs/WoWThreads.md package/
+        cp WoWThreads*.toc package/
+
         # Check if src directory exists and copy it if present
         if [ -d "src" ]; then cp -r src package/; fi
         # Create the zip file excluding .github, .vscode, and .gitignore
@@ -48,7 +54,7 @@ jobs:
         -H "x-api-key: $CURSEFORGE_API_KEY" \
         -F "file=@WoWThreads.zip" \
         -F "metadata={\"changelog\": \"Automated build\", \"changelogType\": \"markdown\", \"displayName\": \"WoWThreads v1.0\"}" \
-        https://minecraft.curseforge.com/api/projects/<PROJECT_ID>/upload-file
+        https://minecraft.curseforge.com/api/projects/YOUR_PROJECT_ID/upload-file
 
     - name: Cleanup
       run: rm -rf package WoWThreads.zip
