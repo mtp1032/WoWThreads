@@ -22,12 +22,12 @@ jobs:
       run: |
         mkdir -p package
         # Copy only the necessary files to the package directory
-        cp Libs/* package/
-        cp Locales/EnUS_WoWThreads.lua package/
-        cp Sources/* package/
+        cp Docs/WoWThreads-complete.md package/
+        cp -r Libs package/
+        cp -r Locales
+        cp -r Sources package/
         cp LICENSE package/
         cp README.md package/
-        cp Docs/WoWThreads.md package/
         cp WoWThreads*.toc package/
 
         # Check if src directory exists and copy it if present
