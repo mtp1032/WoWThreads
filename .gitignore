@@ -1,6 +1,17 @@
-.vscode/*
-Docs/DirectoryStructure.txt
-Docs/lua2Markdown.py
-Libs/*
-WoWThreads.code-workspace
+
+# Example .gitignore adjustments
+!.gitignore
+# Ignore everything
+*
+# But not these files...
+!README.md
+!Docs/
+!src/
+!Libs/
+!Libs/**/*
+!Locales/
+!Sources/
+!LICENSE
+!WoWThreads*.toc
+
 
