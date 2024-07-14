@@ -5,34 +5,20 @@
 ##### V1.0.0
 - Initial release
  
-##### DESCRIPTION:
+##### DESCRIPTION
 WoWThreads is a library whose services provide asynchronous, non-preemptive multithreading for WoW Addon developers. WoWThreads provides the major features you would expect in a threads package such as thread creation, signaling (including inter-thread communications), delay, yield, sleep, and so forth.
 
-The library is designed to enable an addon to execute asynchronously relative to the WoW game client's (WoW.exe) event provider. More specifically, developers can use WoWThreads to handle events delivered by the OnEvent service. In this way, once the WoW client delivers an event to an addon's thread, the WoW client can immediately return. In the absence of WoWThreads, the WoW Client must wait for the addon to complete its handling before returning to the main game loop.
+The library is designed to enable an addon to execute asynchronously relative to the WoW game client's (WoW.exe) event provider. More specifically, developers can use WoWThreads to handle events delivered by the OnEvent service. For example, consider an addon that logs and displays combat log information (e.g., from the Combat Log Event [Unfiltered]). When the event fires, the WoW client sends a signal to one of the addon's threads waiting to handle the event and its payload. Once the handler thread is signaled, the WoW Client returns to the game loop to wait for more events to fire. In other words, the WoW client hands control to the addon and returns to the game. In the absence of WoWThreads, the WoW Client must wait for the addon to complete its handling before returning to the main game loop.
 
-##### USAGE
-Click on the addon's threads minimap icon to bring up the options menu which offers two options:
+##### INSTALLATION
 
-- Check to enable error logging
-- Check to collect system overhead data.
-  
-During development, you'll want to have both of these options checked.
-
-##### KNOWN BUGS
-None Yet!
-
-##### LOCALIZATION
-Localization entries have been generated for 12 languages recommended by Blizzard. However, the translations were done using an AI Chatbot (ChatGPT Code Pilot), so I'm sure they could be improved. I would welcome people to review and correct the translations.
-
-##### INSTALLATION:
-
-- Download and install WoWThreads from CurseForge
-- In your Addon's TOC, add WoWThreads as a dependency for example:
+- Download and install WoWThreads from CurseForge.
+- In your Addon's TOC files, add WoWThreads as a dependency for example:
 ```
   ##Dependencies: WoWThreads
 ```
 
-- Access to the WoWThreads library is through LibStub. So, at the top of each of your Addon's .lua file that will use the WoWThreads' services, insert the following:
+- Access to the WoWThreads library is through LibStub. So, at the top of each of your Addon's .lua file that need to access WoWThreads' services, insert the following:
 
 ```
 -- Access WoWThreads using LibStub
@@ -59,6 +45,25 @@ local SIG_WAKEUP       = thread.SIG_WAKEUP
 local SIG_TERMINATE    = thread.SIG_TERMINATE
 local SIG_NONE_PENDING = thread.SIG_NONE_PENDING
 ```
+##### USAGE
+The WoWThreads package has passed its regression tests on _classic_, _classic_era_, _retail_ expansions.
+
+When you begin incorporating WoWThreads into your addon, I recommend (emphatically) that you enable error logging and thread congestion date. To do this, click on the addon's threads minimap icon to bring up the options menu which offers two options:
+
+- Check to enable error logging
+- Check to collect system overhead data.
+
+##### KNOWN BUGS
+None Yet!
+
+##### TODO
+- Localize debugging log strings.
+- Continue to update the documentation - both the README.md (this doc) and the Programmer's guide (WoWThreads-Complete.md 
+in the Docs directory).
+
+##### LOCALIZATION
+Localization entries have been generated for 12 languages recommended by Blizzard. However, the translations were done using an AI Chatbot (ChatGPT Code Pilot), so I'm sure they could be improved. I would invite people to review and correct the translations.
+
 
 ##### SUPPORT
 For more information and examples, a guide can be found in the WoWThreads' Docs directory (WoWThreads-complete.md). 
