@@ -178,12 +178,20 @@ local function handleIsInMorgue( H )
 end
 local function wakeupThread(H)
     local isInTable = false
+
     if #threadSleepTable == 0 then 
         return isInTable
     end
-    
-    for _, entry in ipairs(threadSleepTable) do
+
+    for i, entry in ipairs(threadSleepTable) do
         if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
+            table.remove( threadSleepTable, i )
+            table.insert( threadControlBlock, H )
+            if thread:debuggingIsEnabled() then 
+                local resultStr = string.format("Moved thread[%d] from sleep to TCB.", H[TH_UNIQUE_ID])
+                dbgLog( resultStr )
+            end
+        
             H[TH_REMAINING_TICKS] = 1
             isInTable = true
             return isInTable
@@ -624,10 +632,10 @@ function thread:getMetrics( thread_h )
 
     local id = thread_h[TH_UNIQUE_ID]
 
-    utils:dbgPrint( "Thread", id, "LifetimeTicks", thread_h[TH_LIFETIME_TICKS]) -- 90
-    utils:dbgPrint( "Thread", id, "Resumptions", thread_h[TH_RESUMPTIONS]) -- 0
-    utils:dbgPrint( "Thread", id, "yieldTicks", thread_h[TH_YIELD_TICKS]) -- 2
-    utils:dbgPrint( "Thread", id, "accumYieldTicks", thread_h[TH_ACCUM_YIELD_TICKS]) -- 0
+    -- utils:dbgPrint( "Thread", id, "LifetimeTicks", thread_h[TH_LIFETIME_TICKS]) -- 90
+    -- utils:dbgPrint( "Thread", id, "Resumptions", thread_h[TH_RESUMPTIONS]) -- 0
+    -- utils:dbgPrint( "Thread", id, "yieldTicks", thread_h[TH_YIELD_TICKS]) -- 2
+    -- utils:dbgPrint( "Thread", id, "accumYieldTicks", thread_h[TH_ACCUM_YIELD_TICKS]) -- 0
 
     
     local ms_per_tick      = CLOCK_INTERVAL -- ms per tick
@@ -637,10 +645,10 @@ function thread:getMetrics( thread_h )
     local actualYieldTicks  = thread_h[TH_ACCUM_YIELD_TICKS]
 
     local overheadTicks     = actualYieldTicks - idealYieldTicks
-    utils:dbgPrint( overheadTicks, actualYieldTicks, idealYieldTicks )
+    -- utils:dbgPrint( overheadTicks, actualYieldTicks, idealYieldTicks )
     local congestion        = (actualYieldTicks -idealYieldTicks) / idealYieldTicks
     local runtimeTicks = (elapsedTicks - (overheadTicks + actualYieldTicks ))
-    utils:dbgPrint( "runtimeTicks", runtimeTicks )
+    -- utils:dbgPrint( "runtimeTicks", runtimeTicks )
     local runtime = ms_per_tick/runtimeTicks
     local elapsedTime = ms_per_tick * elapsedTicks
 
@@ -1031,7 +1039,6 @@ function thread:sendSignal( target_h, signal, ... )
     -- check that the target handle is valid
     if target_h == nil then
         result = setResult( L["THREAD_HANDLE_NIL"], fname, debugstack(2))
-        utils:dbgPrint()
         return nil, result
     end
     if type( target_h) ~= "table" then
