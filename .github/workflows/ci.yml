@@ -50,8 +50,8 @@ jobs:
         curl -X POST \
         -H "x-api-key: $CURSEFORGE_API_KEY" \
         -F "file=@WoWThreads.zip" \
-        -F "metadata={\"changelog\": \"Automated build\", \"changelogType\": \"markdown\", \"displayName\": \"WoWThreads v1.0\"}" \
-        https://minecraft.curseforge.com/api/projects/YOUR_PROJECT_ID/upload-file
+        -F "metadata={\"changelog\": \"Automated build\", \"changelogType\": \"markdown\", \"displayName\": \"WoWThreads v1.0.0\"}" \
+        https://minecraft.curseforge.com/api/projects/1062198/upload-file
 
     - name: Cleanup
       run: rm -rf package WoWThreads.zip
