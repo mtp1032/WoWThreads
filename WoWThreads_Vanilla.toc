@@ -1,4 +1,4 @@
-## Interface: 11502 
+## Interface: 11503 
 ##----------------------------------------------
 ## Title: WoWThreads
 ## Notes: An Asynchronous Multithreading Library for AddOn development.
