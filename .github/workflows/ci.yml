@@ -46,8 +46,7 @@ jobs:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
           CURSEFORGE_EMAIL: ${{ secrets.CURSEFORGE_EMAIL }}
         run: |
-          response=$(curl -v --http1.1 -X POST \
-            -H "x-api-key: $CURSEFORGE_API_KEY" \
+          response=$(curl -v --http1.1 -u "$CURSEFORGE_EMAIL:$CURSEFORGE_API_KEY" -X POST \
             -F "file=@WoWThreads.zip" \
             -F "metadata={\"changelog\": \"Automated build\", \"changelogType\": \"markdown\", \"displayName\": \"WoWThreads v1.0.0\"}" \
             https://www.curseforge.com/api/upload)
