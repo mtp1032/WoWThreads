@@ -12,48 +12,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Build addon
-      run: echo "Building the addon..." # Adjust this command to your build process
+      - name: Build addon
+        run: echo "Building the addon..." # Adjust this command to your build process
 
-    - name: Package addon
-      run: |
-        mkdir -p package
-        # Copy necessary files and directories to the package directory
-        rsync -av --progress Docs/WoWThreads-complete.md package/
-        rsync -av --progress Libs/ package/Libs/
-        rsync -av --progress Locales/ package/Locales/
-        rsync -av --progress Sources/ package/Sources/
-        rsync -av --progress LICENSE package/
-        rsync -av --progress README.md package/
-        rsync -av --progress WoWThreads*.toc package/
-        # Create the zip file excluding .github, .vscode, and .gitignore
-        cd package
-        zip -r ../WoWThreads.zip ./*
-        cd ..
-    
-    - name: List files for debugging
-      run: ls -alh package/
-    
-    - name: List root directory files for debugging
-      run: ls -alh
+      - name: Package addon
+        run: |
+          mkdir -p package
+          rsync -av --progress Docs/WoWThreads-complete.md package/
+          rsync -av --progress Libs/ package/Libs/
+          rsync -av --progress Locales/ package/Locales/
+          rsync -av --progress Sources/ package/Sources/
+          rsync -av --progress LICENSE package/
+          rsync -av --progress README.md package/
+          rsync -av --progress WoWThreads*.toc package/
+          cd package
+          zip -r ../WoWThreads.zip ./*
+          cd ..
 
-    - name: Check zip file
-      run: unzip -l WoWThreads.zip
+      - name: List files for debugging
+        run: ls -alh package/
 
-    - name: Upload to CurseForge
-      env:
-        CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-        CURSEFORGE_EMAIL: ${{ secrets.CURSEFORGE_EMAIL }}
-      run: |
-        curl -v --http1.1 -X POST \
-          -H "x-api-key: $CURSEFORGE_API_KEY" \
-          -u "$CURSEFORGE_EMAIL:$CURSEFORGE_API_KEY" \
-          -F "file=@WoWThreads.zip" \
-          -F "metadata={\"changelog\": \"Automated build\", \"changelogType\": \"markdown\", \"displayName\": \"WoWThreads v1.0.0\"}" \
-          https://www.curseforge.com/api/upload
+      - name: List root directory files for debugging
+        run: ls -alh
 
-    - name: Cleanup
-      run: rm -rf package WoWThreads.zip
+      - name: Check zip file
+        run: unzip -l WoWThreads.zip
+
+      - name: Upload to CurseForge
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          CURSEFORGE_EMAIL: ${{ secrets.CURSEFORGE_EMAIL }}
+        run: |
+          response=$(curl -v --http1.1 -X POST \
+            -H "x-api-key: $CURSEFORGE_API_KEY" \
+            -F "file=@WoWThreads.zip" \
+            -F "metadata={\"changelog\": \"Automated build\", \"changelogType\": \"markdown\", \"displayName\": \"WoWThreads v1.0.0\"}" \
+            https://www.curseforge.com/api/upload)
+          echo "Response: $response"
+          if echo "$response" | grep -q "error"; then
+            echo "Upload failed!"
+            exit 1
+          else
+            echo "Upload succeeded!"
+          fi
+
+      - name: Cleanup
+        run: rm -rf package WoWThreads.zip
