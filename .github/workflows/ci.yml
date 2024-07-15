@@ -46,9 +46,11 @@ jobs:
     - name: Upload to CurseForge
       env:
         CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        CURSEFORGE_EMAIL: ${{ secrets.CURSEFORGE_EMAIL }}
       run: |
+        base64auth=$(echo -n "${{ secrets.CURSEFORGE_EMAIL }}:${{ secrets.CURSEFORGE_API_KEY }}" | base64)
         curl -X POST \
-          -H "x-api-key: $CURSEFORGE_API_KEY" \
+          -H "Authorization: Basic $base64auth" \
           -F "file=@WoWThreads.zip" \
           -F "metadata={\"changelog\": \"Automated build\", \"changelogType\": \"markdown\", \"displayName\": \"WoWThreads v1.0.0\"}" \
           https://www.curseforge.com/api/upload
