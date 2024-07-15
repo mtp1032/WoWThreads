@@ -54,5 +54,5 @@ jobs:
         run: |
           curl -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
           -H "x-api-token: $CURSEFORGE_API_KEY" \
-          -F "file=@./WoWThreads.zip" \
+          -F "file=@WoWThreads.zip" \
           -F "metadata=<metadata.json"
