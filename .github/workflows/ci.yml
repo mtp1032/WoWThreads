@@ -7,30 +7,28 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  package:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build the project
-        run: npm run build
-
       - name: Package files
         run: |
-          mkdir -p package
-          cp -r path/to/your/files/* package/
+          mkdir -p package/WoWThreads
+          cp -r Docs package/WoWThreads/
+          cp -r Libs package/WoWThreads/
+          cp -r Locales package/WoWThreads/
+          cp -r Sources package/WoWThreads/
+          cp LICENSE package/WoWThreads/
+          cp README.md package/WoWThreads/
+          cp WoWThreads.code-workspace package/WoWThreads/
+          cp WoWThreads_Cata.toc package/WoWThreads/
+          cp WoWThreads_Mainline.toc package/WoWThreads/
+          cp WoWThreads_Vanilla.toc package/WoWThreads/
           cd package
-          zip -r ../WoWThreads.zip .
+          zip -r ../WoWThreads.zip WoWThreads
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -39,7 +37,7 @@ jobs:
           path: WoWThreads.zip
 
   publish:
-    needs: build
+    needs: package
     runs-on: ubuntu-latest
 
     steps:
