@@ -1,64 +1,60 @@
-name: Build and Deploy WoWThreads
+name: Publish to CurseForge
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch: # Allows triggering from the GitHub Actions UI
+  workflow_dispatch:
 
 jobs:
   build:
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
-      - name: Build addon
-        run: echo "Building the addon..." # Adjust this command to your build process
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
 
-      - name: Package addon
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the project
+        run: npm run build
+
+      - name: Package files
         run: |
           mkdir -p package
-          rsync -av --progress Docs/WoWThreads-complete.md package/
-          rsync -av --progress Libs/ package/Libs/
-          rsync -av --progress Locales/ package/Locales/
-          rsync -av --progress Sources/ package/Sources/
-          rsync -av --progress LICENSE package/
-          rsync -av --progress README.md package/
-          rsync -av --progress WoWThreads*.toc package/
+          cp -r path/to/your/files/* package/
           cd package
-          zip -r ../WoWThreads.zip ./*
-          cd ..
+          zip -r ../WoWThreads.zip .
 
-      - name: List files for debugging
-        run: ls -alh package/
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: WoWThreads
+          path: WoWThreads.zip
 
-      - name: List root directory files for debugging
-        run: ls -alh
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
 
-      - name: Check zip file
-        run: unzip -l WoWThreads.zip
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: WoWThreads
+          path: ./WoWThreads.zip
 
-      - name: Upload to CurseForge
+      - name: Publish to CurseForge
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
           CURSEFORGE_EMAIL: ${{ secrets.CURSEFORGE_EMAIL }}
         run: |
-          AUTH=$(echo -n "${{ secrets.CURSEFORGE_EMAIL }}:${{ secrets.CURSEFORGE_API_KEY }}" | base64)
-          response=$(curl -v --http1.1 -X POST \
-            -H "Authorization: Basic $AUTH" \
-            -F "file=@WoWThreads.zip" \
-            -F "metadata={\"changelog\": \"Automated build\", \"changelogType\": \"markdown\", \"displayName\": \"WoWThreads v1.0.0\"}" \
-            https://www.curseforge.com/api/upload)
-          echo "Response: $response"
-          if echo "$response" | grep -q "error"; then
-            echo "Upload failed!"
-            exit 1
-          else
-            echo "Upload succeeded!"
-          fi
-
-      - name: Cleanup
-        run: rm -rf package WoWThreads.zip
+          curl -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
+          -H "x-api-token: $CURSEFORGE_API_KEY" \
+          -F "file=@./WoWThreads.zip" \
+          -F "metadata=<metadata.json"
