@@ -47,8 +47,15 @@ jobs:
           name: WoWThreads
           path: ./WoWThreads.zip
 
-      - name: List files
+      - name: Print working directory
+        run: pwd
+
+      - name: List files in working directory
         run: ls -la
+
+      - name: Check existence of ZIP file
+        run: |
+          if [ -f "WoWThreads.zip" ]; then echo "File exists"; else echo "File does not exist"; fi
 
       - name: Publish to CurseForge
         env:
