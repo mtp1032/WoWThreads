@@ -73,11 +73,12 @@ jobs:
         pwd
         echo "Listing files:"
         ls -la
+        echo "Content of metadata.json:"
+        cat metadata.json
 
     - name: Publish to CurseForge
       env:
         CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-        CURSEFORGE_EMAIL: ${{ secrets.CURSEFORGE_EMAIL }}
       run: |
         response=$(curl -s -w "%{http_code}" -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
         -H "x-api-token: $CURSEFORGE_API_KEY" \
@@ -91,6 +92,7 @@ jobs:
 
         if [ "$http_code" -ne 200 ]; then
           echo "Upload failed with status code $http_code"
+          cat response.json  # Print response content for debugging
           exit 1
         else
           echo "Upload succeeded"
