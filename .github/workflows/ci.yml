@@ -45,18 +45,17 @@ jobs:
       with:
         name: WoWThreads
 
-    - name: Check existence of ZIP file in subdirectory
+    - name: Ensure WoWThreads.zip exists
       run: |
-        if [ -f "WoWThreads/WoWThreads.zip" ]; then
-          mv WoWThreads/WoWThreads.zip WoWThreads.zip
+        if [ ! -f "WoWThreads.zip" ]; then
+          echo "File WoWThreads.zip does not exist"
+          exit 1
         fi
 
-    - name: Check existence of ZIP file
+    - name: Ensure metadata.json exists
       run: |
-        if [ -f "WoWThreads.zip" ]; then
-          echo "File exists"
-        else
-          echo "File does not exist"
+        if [ ! -f "metadata.json" ]; then
+          echo "File metadata.json does not exist"
           exit 1
         fi
 
@@ -74,8 +73,8 @@ jobs:
       run: |
         response=$(curl -s -w "%{http_code}" -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
         -H "x-api-token: $CURSEFORGE_API_KEY" \
-        -F "file=@WoWThreads.zip" \
-        -F "metadata=<metadata.json" -o response.json)
+        -F "file=@$(pwd)/WoWThreads.zip" \
+        -F "metadata=@$(pwd)/metadata.json" -o response.json)
         http_code=$(tail -n1 <<< "$response")
         content=$(sed '$d' <<< "$response")
 
