@@ -59,14 +59,3 @@ jobs:
 
       - name: Check existence of ZIP file
         run: |
-          if [ -f "WoWThreads.zip" ]; then echo "File exists"; else echo "File does not exist"; fi
-
-      - name: Publish to CurseForge
-        env:
-          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-          CURSEFORGE_EMAIL: ${{ secrets.CURSEFORGE_EMAIL }}
-        run: |
-          curl -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
-          -H "x-api-token: $CURSEFORGE_API_KEY" \
-          -F "file=@WoWThreads.zip" \
-          -F "metadata=<metadata.json"
