@@ -46,7 +46,7 @@ jobs:
         name: WoWThreads
 
     - name: Move artifact
-      run: mv WoWThreads/WoWThreads.zip WoWThreads.zip
+      run: mv WoWThreads.zip WoWThreads.zip || mv */WoWThreads.zip WoWThreads.zip
 
     - name: Check existence of ZIP file
       run: |
