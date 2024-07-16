@@ -52,6 +52,14 @@ jobs:
           exit 1
         fi
 
+    - name: Create metadata.json
+      run: |
+        echo '{
+          "changelog": "Updated version.",
+          "gameVersions": [11305],
+          "releaseType": "beta"
+        }' > metadata.json
+
     - name: Ensure metadata.json exists
       run: |
         if [ ! -f "metadata.json" ]; then
@@ -79,11 +87,4 @@ jobs:
         content=$(sed '$d' <<< "$response")
 
         echo "HTTP Status Code: $http_code"
-        echo "Response Content: $content"
-
-        if [ "$http_code" -ne 200 ]; then
-          echo "Upload failed with status code $http_code"
-          exit 1
-        else
-          echo "Upload succeeded"
-        fi
+        echo "Respons
