@@ -45,12 +45,20 @@ jobs:
       with:
         name: WoWThreads
 
-    - name: Move artifact
-      run: mv WoWThreads.zip WoWThreads.zip || mv */WoWThreads.zip WoWThreads.zip
+    - name: Check existence of ZIP file in subdirectory
+      run: |
+        if [ -f "WoWThreads/WoWThreads.zip" ]; then
+          mv WoWThreads/WoWThreads.zip WoWThreads.zip
+        fi
 
     - name: Check existence of ZIP file
       run: |
-        if [ -f "WoWThreads.zip" ]; then echo "File exists"; else echo "File does not exist"; fi
+        if [ -f "WoWThreads.zip" ]; then
+          echo "File exists"
+        else
+          echo "File does not exist"
+          exit 1
+        fi
 
     - name: Publish to CurseForge
       env:
@@ -64,12 +72,4 @@ jobs:
         http_code=$(tail -n1 <<< "$response")
         content=$(sed '$d' <<< "$response")
 
-        echo "HTTP Status Code: $http_code"
-        echo "Response Content: $content"
-
-        if [ "$http_code" -ne 200 ]; then
-          echo "Upload failed with status code $http_code"
-          exit 1
-        else
-          echo "Upload succeeded"
-        fi
+        echo "HTTP Status Code: $http_c
