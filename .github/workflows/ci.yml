@@ -4,63 +4,58 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  publish:
+  package:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Setup Node.js environment
-      uses: actions/setup-node@v2
-      with:
-        node-version: '14'
+      - name: Package files
+        run: |
+          mkdir -p package/WoWThreads
+          cp -r Docs package/WoWThreads/
+          cp -r Libs package/WoWThreads/
+          cp -r Locales package/WoWThreads/
+          cp -r Sources package/WoWThreads/
+          cp LICENSE package/WoWThreads/
+          cp README.md package/WoWThreads/
+          cp WoWThreads.code-workspace package/WoWThreads/
+          cp WoWThreads_Cata.toc package/WoWThreads/
+          cp WoWThreads_Mainline.toc package/WoWThreads/
+          cp WoWThreads_Vanilla.toc package/WoWThreads/
+          cd package
+          zip -r ../WoWThreads.zip WoWThreads
 
-    - name: Setup metadata.json
-      run: |
-        echo '{
-          "displayName": "WoWThreads",
-          "changelog": "Added new features and bug fixes.",
-          "gameVersions": ["1.13.6", "2.5.1", "9.1.0"]
-        }' > metadata.json
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: WoWThreads
+          path: WoWThreads.zip
 
-    - name: Download build artifact
-      uses: actions/download-artifact@v2
-      with:
-        name: WoWThreads
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
 
-    - name: Rename downloaded directory to ZIP
-      run: mv WoWThreads/WoWThreads.zip WoWThreads.zip
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: WoWThreads
+          path: ./WoWThreads
 
-    - name: Print working directory
-      run: pwd
+      - name: Rename downloaded directory to ZIP
+        run: |
+          mv WoWThreads/WoWThreads.zip WoWThreads.zip
 
-    - name: List files in working directory
-      run: ls -la
+      - name: Print working directory
+        run: pwd
 
-    - name: Check existence of ZIP file
-      run: if [ -f "WoWThreads.zip" ]; then echo "File exists"; else echo "File does not exist"; fi
+      - name: List files in working directory
+        run: ls -la
 
-    - name: Publish to CurseForge
-      env:
-        CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-      run: |
-        response=$(curl -s -w "%{http_code}" -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
-          -H "x-api-token: $CURSEFORGE_API_KEY" \
-          -F "file=@$(pwd)/WoWThreads.zip" \
-          -F "metadata=@$(pwd)/metadata.json" -o response.json)
-        http_code=$(tail -n1 <<< "$response")
-        content=$(sed '$d' <<< "$response")
-
-        echo "HTTP Status Code: $http_code"
-        echo "Response Content: $content"
-
-        if [ "$http_code" -ne 200 ]; then
-          echo "Upload failed with status code $http_code"
-          cat response.json  # Print response content for debugging
-          exit 1
-        else
-          echo "Upload succeeded"
-        fi
+      - name: Check existence of ZIP file
+        run: |
