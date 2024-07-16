@@ -76,6 +76,10 @@ jobs:
         echo "Content of metadata.json:"
         cat metadata.json
 
+    - name: Debug API Token Length
+      run: |
+        echo "API Token length: ${#CURSEFORGE_API_KEY}"
+
     - name: Publish to CurseForge
       env:
         CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
