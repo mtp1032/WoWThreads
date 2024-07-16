@@ -45,7 +45,11 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: WoWThreads
-          path: ./WoWThreads.zip
+          path: ./WoWThreads
+
+      - name: Rename downloaded directory to ZIP
+        run: |
+          mv WoWThreads/WoWThreads.zip WoWThreads.zip
 
       - name: Print working directory
         run: pwd
