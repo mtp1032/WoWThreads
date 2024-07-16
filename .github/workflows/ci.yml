@@ -60,6 +60,13 @@ jobs:
           exit 1
         fi
 
+    - name: Debug Current Directory
+      run: |
+        echo "Current working directory:"
+        pwd
+        echo "Listing files:"
+        ls -la
+
     - name: Publish to CurseForge
       env:
         CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
@@ -72,4 +79,12 @@ jobs:
         http_code=$(tail -n1 <<< "$response")
         content=$(sed '$d' <<< "$response")
 
-        echo "HTTP Status Code: $http_c
+        echo "HTTP Status Code: $http_code"
+        echo "Response Content: $content"
+
+        if [ "$http_code" -ne 200 ]; then
+          echo "Upload failed with status code $http_code"
+          exit 1
+        else
+          echo "Upload succeeded"
+        fi
