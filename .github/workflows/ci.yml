@@ -87,4 +87,11 @@ jobs:
         content=$(sed '$d' <<< "$response")
 
         echo "HTTP Status Code: $http_code"
-        echo "Respons
+        echo "Response Content: $content"
+
+        if [ "$http_code" -ne 200 ]; then
+          echo "Upload failed with status code $http_code"
+          exit 1
+        else
+          echo "Upload succeeded"
+        fi
