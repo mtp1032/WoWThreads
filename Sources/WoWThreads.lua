@@ -150,7 +150,7 @@ local function setResult( errorMsg, fname, stackTrace )
     errorMsg = string.format("%s occurred in %s. ", errorMsg, fname )
     result = {errorMsg, st }
     if thread:debuggingIsEnabled() then 
-        local resultStr = string.format("%s\n%s\n", errorMsg, st )
+        local resultStr = string.format("%s %s\n%s\n", utils:dbgPrefix(), errorMsg, st )
         dbgLog( resultStr )
     end
     return result
@@ -188,7 +188,7 @@ local function wakeupThread(H)
             table.remove( threadSleepTable, i )
             table.insert( threadControlBlock, H )
             if thread:debuggingIsEnabled() then 
-                local resultStr = string.format("Moved thread[%d] from sleep to TCB.", H[TH_UNIQUE_ID])
+                local resultStr = string.format("%s Moved thread[%d] from sleep to TCB.", utils:dbgPrefix(), H[TH_UNIQUE_ID])
                 dbgLog( resultStr )
             end
         
@@ -254,9 +254,9 @@ local function moveToMorgue( H, normalCompletion )
             if thread:debuggingIsEnabled() then
                 local msg = nil
                 if normalCompletion == false then
-                    msg = string.format("*** ABNORMAL *** termination. Moved thread[%d] from TCB to morgue", H[TH_UNIQUE_ID])
+                    msg = string.format("%s *** ABNORMAL *** termination. Moved thread[%d] from TCB to morgue", utils:dbgPrefix(), H[TH_UNIQUE_ID])
                 else
-                    msg = string.format("Normal termination. Moved thread[%d] from TCB to morgue", H[TH_UNIQUE_ID])
+                    msg = string.format("%s Normal termination. Moved thread[%d] from TCB to morgue",utils:dbgPrefix(),  H[TH_UNIQUE_ID])
                 end
                 dbgLog( msg )
             end
@@ -276,7 +276,7 @@ local function moveToSleepTable( H )
             table.insert( threadSleepTable, H )
             successful = true
             if thread:debuggingIsEnabled() then
-                local msg = string.format("Thread[%d] removed from TCB, inserted into sleep table.\n", H[TH_UNIQUE_ID])
+                local msg = string.format("%s Thread[%d] removed from TCB, inserted into sleep table.\n", utils:dbgPrefix(), H[TH_UNIQUE_ID])
                 dbgLog( msg )
             end
             return successful, nil
@@ -286,7 +286,7 @@ local function moveToSleepTable( H )
     if not successful then
         errorMsg = L["THREAD_NOT_FOUND"]
         if thread:debuggingIsEnabled() then
-            local msg = string.format("Thread[%d] not found in TCB.\n", H[TH_UNIQUE_ID])
+            local msg = string.format("%s Thread[%d] not found in TCB.\n", utils:dbgPrefix(), H[TH_UNIQUE_ID])
             dbgLog( msg )
         end
     end
@@ -390,7 +390,7 @@ local function scheduleThreads()
                 if not pcallSucceeded then
                     moveToMorgue(H, false )
                     if thread:debuggingIsEnabled() then
-                        errorMsg = transformErrorString( errorMsg )
+                        errorMsg = string.format("%s %s", utils:dbgPrefix(), transformErrorString( errorMsg ))
                         utils:postMsg( errorMsg )
                         dbgLog( errorMsg )
                     end
@@ -399,9 +399,9 @@ local function scheduleThreads()
                 if not coroutineResumed then
 
                     if thread:debuggingIsEnabled() then
-                        local errorStr = transformErrorString( errorMsg )
-                        utils:postMsg( string.format("\n    %s\n", errorStr ))
-                        dbgLog( errorStr )
+                        errorMsg = string.format("%s %s", utils:dbgPrefix(), transformErrorString( errorMsg ))
+                        utils:postMsg( string.format("\n    %s\n", errorMsg))
+                        dbgLog( errorMsg )
                     end
                     moveToMorgue(H, false )
                 end
@@ -499,7 +499,7 @@ function thread:create( yieldTicks, threadFunction,... )
 
     table.insert( threadControlBlock, H )
     if thread:debuggingIsEnabled() then
-        dbgLog( string.format("Thread[%d] inserted into TCB.", H[TH_UNIQUE_ID]))
+        dbgLog( string.format("%s Thread[%d] inserted into TCB.", utils:dbgPrefix(),  H[TH_UNIQUE_ID]))
     end
     return H, nil
 end
@@ -1253,8 +1253,3 @@ local function OnEvent(self, event, ...)
 end
 
 eventFrame:SetScript("OnEvent", OnEvent)
-
-local fileName = "WoWThreads.lua"
-if thread:debuggingIsEnabled() then
-    DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
-end
