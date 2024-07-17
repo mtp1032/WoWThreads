@@ -189,5 +189,3 @@ end
 local function hideOptionsPanel()
     optionsPanel:Hide()
 end
-
-print("Options Panel Loaded.")
