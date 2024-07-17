@@ -82,32 +82,6 @@ SlashCmdList["PRINTGLOBALS"] = function(msg)
     end
 end
 
-
--- =================================================
---                  DEBUGGING UTILITIES
--- =================================================
-utils.IS_DEBUGGING_ENABLED = true
-local IS_DEBUGGING_ENABLED = utils.IS_DEBUGGING_ENABLED
-
-function utils:enableDebugging()
-    IS_DEBUGGING_ENABLED = true
-end
-function utils:disableDebugging()
-    IS_DEBUGGING_ENABLED = false
-end
-function utils:debuggingIsEnabled()
-    return IS_DEBUGGING_ENABLED
-end
--- function utils:enableDataCollection()
---     DATA_COLLECTION_ENABLED = true
--- end
--- function utils:disableDataCollection()
---     DATA_COLLECTION_ENABLED = false
--- end
--- function utils:dataCollectionIsEnabled()
---     return DATA_COLLECTION_ENABLED
--- end
-
 --======================================================================
 --                          POST MESSAGE METHODS
 -- =====================================================================
@@ -325,13 +299,4 @@ function utils:dbgPrint(...)
     -- to the built-in print function
     _G.print(unpack(output))
 end
-if utils:debuggingIsEnabled() then
-    DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
-end
 
-
-
-local fileName = "UtilsLib.lua"
-if utils:debuggingIsEnabled() then
-    DEFAULT_CHAT_FRAME:AddMessage( fileName, 0.0, 1.0, 1.0 )
-end
