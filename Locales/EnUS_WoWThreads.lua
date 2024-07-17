@@ -546,5 +546,3 @@ if LOCALE == "svSE" then
     L["SIGNAL_INVALID_TYPE"]    = "FEL: Signaltypen är ogiltig. Bör vara 'number'"
     L["SIGNAL_INVALID_OPERATION"] = "FEL: SIG_NONE_PENDING kan inte skickas"
 end
-
-
