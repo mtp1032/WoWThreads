@@ -34,8 +34,13 @@ jobs:
           cd package
           zip -r ../WoWThreads.zip WoWThreads
 
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
       - name: Install GitHub CLI
-        uses: actions/setup-gh-cli@v2
+        run: npm install -g @githubnext/github-cli
 
       - name: Create Release
         env:
@@ -44,12 +49,12 @@ jobs:
           tag_name="v${{ env.VERSION }}"
           release_name="WoWThreads Release $tag_name"
           release_body="Release description"
-          gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
           gh release create $tag_name WoWThreads.zip --title "$release_name" --notes "$release_body"
 
       - name: List release files for verification
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
           gh release view "v${{ env.VERSION }}"
