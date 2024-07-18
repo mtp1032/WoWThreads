@@ -3,8 +3,8 @@ name: Create Release and Upload Asset
 on:
   push:
     branches:
-      - main 
-  workflow_dispatch: 
+      - main
+  workflow_dispatch:
 
 jobs:
   package:
@@ -13,6 +13,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Retrieve version
+        id: get_version
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
 
       - name: Package files
         run: |
@@ -31,28 +35,21 @@ jobs:
           zip -r ../WoWThreads.zip WoWThreads
 
       - name: Install GitHub CLI
-        run: |
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
-          sudo apt-get install software-properties-common -y
-          sudo add-apt-repository -y ppa:git-core/ppa
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt update
-          sudo apt install gh -y
+        uses: actions/setup-gh-cli@v2
 
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag_name="v1.0.0"  # Update the version as needed
+          tag_name="v${{ env.VERSION }}"
           release_name="WoWThreads Release $tag_name"
           release_body="Release description"
-          echo "$GITHUB_TOKEN" | gh auth login --with-token
+          gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
           gh release create $tag_name WoWThreads.zip --title "$release_name" --notes "$release_body"
 
       - name: List release files for verification
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "$GITHUB_TOKEN" | gh auth login --with-token
-          gh release view $tag_name
+          gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+          gh release view "v${{ env.VERSION }}"
