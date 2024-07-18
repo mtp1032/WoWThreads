@@ -3,7 +3,7 @@ name: Create Release and Upload Asset
 on:
   push:
     branches:
-      - main
+      - main 
   workflow_dispatch: 
 
 jobs:
