@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download build artifact 
+      - name: Download build artifact
         uses: actions/download-artifact@v2
         with:
           name: WoWThreads
@@ -68,7 +68,7 @@ jobs:
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
-          response=$(curl -s -w "\n%{http_code}" -o response.json -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
+          response=$(curl -s -w "%{http_code}" -o response.json -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
           -H "x-api-token: $CURSEFORGE_API_KEY" \
           -F "file=@$(pwd)/WoWThreads.zip" \
           -F "metadata=@$(pwd)/metadata.json")
