@@ -34,13 +34,12 @@ jobs:
           cd package
           zip -r ../WoWThreads.zip WoWThreads
 
-      - name: Install Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-
       - name: Install GitHub CLI
-        run: npm install -g @githubnext/github-cli
+        run: |
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+          sudo apt-add-repository https://cli.github.com/packages
+          sudo apt update
+          sudo apt install gh -y
 
       - name: Create Release
         env:
