@@ -64,17 +64,32 @@ jobs:
             exit 1
           fi
 
-      - name: Upload to CurseForge using curl
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+          sudo apt-add-repository https://cli.github.com/packages
+          sudo apt update
+          sudo apt install gh
+
+      - name: Authenticate GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo $GITHUB_TOKEN | gh auth login --with-token
+
+      - name: Upload to CurseForge using GitHub CLI
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
-          response=$(curl -s -w "\n%{http_code}" -o response.json -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
-          -H "x-api-token: $CURSEFORGE_API_KEY" \
-          -F "file=@$(pwd)/WoWThreads.zip" \
-          -F "metadata=@$(pwd)/metadata.json")
-          
-          http_code=$(echo "$response" | tail -n1)
-          content=$(cat response.json)
+          gh api -H "x-api-token: $CURSEFORGE_API_KEY" \
+          -F file=@WoWThreads.zip \
+          -F metadata=@metadata.json \
+          https://wow.curseforge.com/api/projects/1062198/upload-file --silent --include --raw-field statusCode=response.statusCode --raw-field content=response.body > response.json
+
+      - name: Check Upload Response
+        run: |
+          http_code=$(jq -r .statusCode response.json)
+          content=$(jq -r .content response.json)
           
           echo "HTTP Status Code: $http_code"
           echo "Response Content: $content"
