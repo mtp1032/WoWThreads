@@ -64,7 +64,7 @@ jobs:
             exit 1
           fi
 
-      - name: Upload to CurseForge
+      - name: Upload to CurseForge 
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
