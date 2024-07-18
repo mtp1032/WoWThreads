@@ -68,13 +68,13 @@ jobs:
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
-          response=$(curl -s -w "%{http_code}" -o response.json -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
+          curl -s -w "%{http_code}" -o response.json -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
           -H "x-api-token: $CURSEFORGE_API_KEY" \
           -F "file=@$(pwd)/WoWThreads.zip" \
-          -F "metadata=@$(pwd)/metadata.json")
+          -F "metadata=@$(pwd)/metadata.json" > curl_output.txt
           
-          http_code=$(tail -n1 <<< "$response")
-          content=$(sed '$d' <<< "$response")
+          http_code=$(tail -n1 curl_output.txt)
+          content=$(cat response.json)
           
           echo "HTTP Status Code: $http_code"
           echo "Response Content: $content"
