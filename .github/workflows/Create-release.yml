@@ -1,0 +1,55 @@
+name: Create Release and Upload Asset
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: 
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Package files
+        run: |
+          mkdir -p package/WoWThreads
+          cp -r Docs package/WoWThreads/
+          cp -r Libs package/WoWThreads/
+          cp -r Locales package/WoWThreads/
+          cp -r Sources package/WoWThreads/
+          cp LICENSE package/WoWThreads/
+          cp README.md package/WoWThreads/
+          cp WoWThreads.code-workspace package/WoWThreads/
+          cp WoWThreads_Cata.toc package/WoWThreads/
+          cp WoWThreads_Mainline.toc package/WoWThreads/
+          cp WoWThreads_Vanilla.toc package/WoWThreads/
+          cd package
+          zip -r ../WoWThreads.zip WoWThreads
+
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+          echo "deb [arch=amd64] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list
+          sudo apt update
+          sudo apt install gh -y
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag_name="v1.0.0"  # Update the version as needed
+          release_name="WoWThreads Release $tag_name"
+          release_body="Release description"
+          echo "$GITHUB_TOKEN" | gh auth login --with-token
+          gh release create $tag_name WoWThreads.zip --title "$release_name" --notes "$release_body"
+
+      - name: List release files for verification
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GITHUB_TOKEN" | gh auth login --with-token
+          gh release view $tag_name
