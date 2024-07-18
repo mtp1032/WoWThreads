@@ -1,4 +1,3 @@
-
 name: Create Release and Upload Asset
 
 on:
@@ -48,11 +47,9 @@ jobs:
 
       - name: Authenticate GitHub CLI
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          echo "${{ secrets.PERSONAL_ACCESS_TOKEN }}" | gh auth login --with-token
 
       - name: Create Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag_name="v${{ env.VERSION }}"
           release_name="WoWThreads Release $tag_name"
