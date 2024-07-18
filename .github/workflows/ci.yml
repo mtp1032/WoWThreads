@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  workflow_dispatch: 
 
 jobs:
   package:
@@ -59,3 +59,31 @@ jobs:
 
       - name: Check existence of ZIP file
         run: |
+          if [ ! -f "WoWThreads.zip" ]; then
+            echo "WoWThreads.zip not found"
+            exit 1
+          fi
+
+      - name: Upload to CurseForge
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: |
+          response=$(curl -s -w "%{http_code}" -o response.json -X POST "https://wow.curseforge.com/api/projects/1062198/upload-file" \
+          -H "x-api-token: $CURSEFORGE_API_KEY" \
+          -F "file=@$(pwd)/WoWThreads.zip" \
+          -F "metadata=@$(pwd)/metadata.json")
+          
+          http_code=$(tail -n1 <<< "$response")
+          content=$(sed '$d' <<< "$response")
+          
+          echo "HTTP Status Code: $http_code"
+          echo "Response Content: $content"
+          
+          if [ "$http_code" -ne 200 ]; then
+            echo "Upload failed with status code $http_code"
+            cat response.json  # Print response content for debugging
+            exit 1
+          else
+            echo "Upload succeeded"
+            cat response.json  # Print response content for verification
+          fi
