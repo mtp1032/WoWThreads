@@ -18,7 +18,7 @@ jobs:
         id: get_version
         run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
 
-      - name: Package files
+      - name: Package files 
         run: |
           mkdir -p package/WoWThreads
           cp -r Docs package/WoWThreads/
