@@ -27,7 +27,6 @@ jobs:
           cp -r Sources package/WoWThreads/
           cp LICENSE package/WoWThreads/
           cp README.md package/WoWThreads/
-          cp WoWThreads.code-workspace package/WoWThreads/
           cp WoWThreads_Cata.toc package/WoWThreads/
           cp WoWThreads_Mainline.toc package/WoWThreads/
           cp WoWThreads_Vanilla.toc package/WoWThreads/
