@@ -2,7 +2,7 @@
 ##### WoWThreads Asynchronous, Non-preemptive Multithreading
 
 ### CHANGELOG
-##### V1.0.0
+##### V1.0.3
 - Initial release
  
 ##### DESCRIPTION
