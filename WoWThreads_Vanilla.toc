@@ -6,10 +6,10 @@
 ## IconTexture: 3528459
 ## SavedVariablesPerCharacter: WoWThreadsIconDB, WoWThreads_DEBUGGING_ENABLED, WoWThreads_DATA_COLLECTION
 ## SavedVariables: 
-## Version: 1.0.0
+## Version: 1.0.3
 ## X-MAJOR: 1
 ## X-MINOR: 0
-## X-PATCH: 0
+## X-PATCH: 3
 ## X-Expansion: WotLK, Classic, Cataclysm, Retail, WorldWithin
 ## X-github: https://github.com/mtp1032/WoWThreads
 ## 24 May, 2023
