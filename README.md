@@ -2,7 +2,7 @@
 ##### WoWThreads Asynchronous, Non-preemptive Multithreading
 
 ### CHANGELOG
-##### V1.0.1
+##### v1.0.1
 - Split WoWThreads-complete.md into two documents: a reference manaul and a programmer's guide.
  
 ##### DESCRIPTION
