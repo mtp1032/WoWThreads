@@ -28,7 +28,7 @@ if not thread then
     return
 end
 ```
-Below the LibStub entry, add the following constants (signals):
+Then, below the LibStub entry, add the following constants (signals):
 ```
 local SIG_GET_DATA     = thread.SIG_GET_DATA
 local SIG_SEND_DATA    = thread.SIG_SEND_DATA
@@ -48,7 +48,7 @@ local SIG_NONE_PENDING = thread.SIG_NONE_PENDING
 ##### USAGE
 The WoWThreads package has passed its regression tests on _classic_, _classic_era_, _retail_ expansions.
 
-When you begin incorporating WoWThreads into your addon, I recommend (emphatically) that you enable error logging and thread congestion date. To do this, click on the addon's threads minimap icon to bring up the options menu which offers two options:
+When you begin incorporating WoWThreads into your addon, I recommend (emphatically) that you enable error logging. To do this, click on the addon's threads minimap icon to bring up the options menu which offers two options:
 
 - Check to enable error logging
 - Check to collect system overhead data.
@@ -66,9 +66,16 @@ Localization entries have been generated for 12 languages recommended by Blizzar
 
 
 ##### SUPPORT
-For more information and examples, a guide can be found in the WoWThreads' Docs directory (WoWThreads-complete.md). 
+For more information and examples, two documents can be found in the your local WoWThreads' Docs directory or in the addon's github docs directory:
 
-The same document can also be accessed from github:
-https://github.com/mtp1032/WoWThreads/blob/main/Docs/WoWThreads-complete.md. 
+- A Programming Guide: This document details some of the more important concept to keep in mind when designing code that uses threads. You can click the URL below.
 
-Finally, you may want to join the WoWThreads' discord server, https://discord.gg/K4QhU458SQ
+https://github.com/mtp1032/WoWThreads/blob/main/Docs/WoWThreads-Programming-Guide.md. 
+
+- An API Reference Manual: This document is a quasi-formal description of the public services
+supported by WoWThreads. Click the URL below to access the manual.
+
+https://github.com/mtp1032/WoWThreads/blob/main/Docs/WoWThreads-API-Reference-Manual.md.
+
+
+Finally, if you have specific questions. comments, or suggestions you may want to join the WoWThreads' discord server, https://discord.gg/K4QhU458SQ

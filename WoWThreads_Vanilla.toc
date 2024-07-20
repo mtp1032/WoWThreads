@@ -1,4 +1,4 @@
-## Interface: 11503 
+## Interface: 11503
 ##----------------------------------------------
 ## Title: WoWThreads
 ## Notes: An Asynchronous Multithreading Library for AddOn development.
@@ -6,10 +6,10 @@
 ## IconTexture: 3528459
 ## SavedVariablesPerCharacter: WoWThreadsIconDB, WoWThreads_DEBUGGING_ENABLED, WoWThreads_DATA_COLLECTION
 ## SavedVariables: 
-## Version: 1.0.1
+## Version: 1.0.2
 ## X-MAJOR: 1
 ## X-MINOR: 0
-## X-PATCH: 1
+## X-PATCH: 2
 ## X-Expansion: WotLK, Classic, Cataclysm, Retail, WorldWithin
 ## X-github: https://github.com/mtp1032/WoWThreads
 ## 24 May, 2023
