@@ -123,6 +123,7 @@ local signalNameTable = {
 -- this function is used to extract a useful stack trace from an error encountered
 -- during the coroutine's function (aka, the thread's function.)
 local function transformErrorString(errorString)
+    utils:postMsg( errorString )
 
     -- Pattern to match the error string and capture the filename, line number, and error message
     local pattern = "Interface/AddOns/[^/]+/(.+):(%d+): (.+)"
@@ -603,11 +604,11 @@ Note: at this point, only completed threads can be queried.
 Parameters:
 - thread_h (thread_handle): the thread handle whose metrics are to be returned.
 Returns:
-- Success: then the runtime and the congestion metrics are returned and he result is set to nil.
+- Success: then the thread's elapsed time and its congestion metric are returned and the result is set to nil.
 - Failure: the runtime and congestion metrics are nil, and the result parameter contains an error message (result[1])
 and a stack trace (result[2]).
 Usage:
-    local runtime, congestion, result = thread:getMetrics( thread_h )
+    local elapsedTime, congestion, result = thread:getMetrics( thread_h )
     if runtime == nil then 
         print( result[1], result[2]) 
         return 
@@ -630,7 +631,7 @@ function thread:getMetrics( thread_h )
         return nil, nil, result
     end
 
-    local id = thread_h[TH_UNIQUE_ID]
+    -- local id = thread_h[TH_UNIQUE_ID]
 
     -- utils:dbgPrint( "Thread", id, "LifetimeTicks", thread_h[TH_LIFETIME_TICKS]) -- 90
     -- utils:dbgPrint( "Thread", id, "Resumptions", thread_h[TH_RESUMPTIONS]) -- 0
@@ -644,15 +645,10 @@ function thread:getMetrics( thread_h )
     local idealYieldTicks   = thread_h[TH_RESUMPTIONS] * thread_h[TH_YIELD_TICKS]
     local actualYieldTicks  = thread_h[TH_ACCUM_YIELD_TICKS]
 
-    local overheadTicks     = actualYieldTicks - idealYieldTicks
-    -- utils:dbgPrint( overheadTicks, actualYieldTicks, idealYieldTicks )
-    local congestion        = (actualYieldTicks -idealYieldTicks) / idealYieldTicks
-    local runtimeTicks = (elapsedTicks - (overheadTicks + actualYieldTicks ))
-    -- utils:dbgPrint( "runtimeTicks", runtimeTicks )
-    local runtime = ms_per_tick/runtimeTicks
+    local congestion  = (actualYieldTicks -idealYieldTicks) / idealYieldTicks
     local elapsedTime = ms_per_tick * elapsedTicks
 
-    return runtime, elapsedTime, congestion, result
+    return elapsedTime, congestion
 end
 
 --[[@Begin
