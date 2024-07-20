@@ -1,6 +1,5 @@
 # The WoWThreads API Reference Manual
-This manual constitutes the quasi-formal reference manual for the application 
-programming interface (API) for the WoWThreads library. 
+This manual constitutes the quasi-formal description of each public service (function) exported by the WoWThreads interface. 
 
 #### Signature:
 thread_h, result = thread:create( yieldTicks, func [,...] )

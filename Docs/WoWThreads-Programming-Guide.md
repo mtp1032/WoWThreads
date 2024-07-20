@@ -2,12 +2,12 @@
 
 
 > If your only tool is a hammer, all problems look like nails
--- Abraham Maslow
+>-- Abraham Maslow
 
 >I’ve never met a young engineer who didn’t think threads were great. I’ve never met an older engineer who didn’t shun them like the plague.
--- Anonymous_
+>-- Anonymous_
 ## Caveat
-I am a developer of the second kind. I’m old, I’m a [former] software engineer/architect and I have a love-hate relationship with threading. I’ve written thousands of lines of multithreaded user-mode applications and protected-mode operating system internals. For Linux, I wrote the first POSIX thread package, *PCThreads*. Over the years, I’ve learned that while experience with multithreading can be impressive on a resume, using multiple threads seldom live up to their hype. And so it is with threads when applied to WoW Addon programming. They can be quite useful, but lead to madness if not applied appropriately.
+I am a developer who could have wrote that second aphorism. I’m a [former] software engineer/architect and I have a love-hate relationship with threading. I’ve written thousands of lines of multithreaded applications including protected-mode operating system internals. For Linux, I wrote the first POSIX thread package, *PCThreads*. Over the years, I’ve learned that while experience with multithreading can be impressive on a resume, using multiple threads seldom live up to their hype. And so it is with threads when applied to WoW Addon programming. They can be quite useful, but lead to madness if not applied appropriately.
 
 WoWThreads was motivated by some WoW addon work I did for personal use. Over the course of playing World of Warcraft, I noted that many of the WoW addons I used were quite impressive. The code was clean and functional. None seemed overly complex, especially for complexity’s sake, as is so often the case with code written by less experienced engineers. Writing addons looked to be fun (and useful), so I jumped in. Initially, I wrote a couple of simple addons, one to display information when my character experienced a skillup and [yet another] bank management addon . But, as I gained more familiarity with Blizzard’s addon programming and especially its event-driven execution model, I couldn’t help but wonder if threading, rightly applied, might be useful. So, I wrote a simple combat logger and immediately ran into difficulty.
 
