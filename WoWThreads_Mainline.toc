@@ -6,9 +6,9 @@
 ## IconTexture: 3528459
 ## SavedVariablesPerCharacter: WoWThreadsIconDB, WoWThreads_DEBUGGING_ENABLED, WoWThreads_DATA_COLLECTION
 ## SavedVariables: 
-## Version: 1.0.2
+## Version: 1.1.2
 ## X-MAJOR: 1
-## X-MINOR: 0
+## X-MINOR: 1
 ## X-PATCH: 2
 ## X-Expansion: WotLK, Classic, Cataclysm, Retail, WorldWithin
 ## X-github: https://github.com/mtp1032/WoWThreads
