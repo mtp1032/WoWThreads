@@ -88,6 +88,8 @@ if LOCALE == "enUS" then
     L["THREAD_INVALID_CONTEXT"]     = "ERROR: Caller is likely the WoW client (WoW.exe) "
 	L["THREAD_HANDLE_ILL_FORMED"]	= "ERROR: Thread handle ill-formed. Check table size. "
     L["THREAD_NOT_SLEEPING"]        = "ERROR: Thread handle not found in sleep queue. "
+    L["THREAD_NOT_COMPLETED"]        = "ERROR: Thread has not yet completed. "
+
 
 	L["THREAD_COROUTINE_DEAD"]      = "ERROR: Invalid handle. Thread has completed or faulted. "
     L["THREAD_NOT_FOUND"]           = "ERROR: Thread not found. "
