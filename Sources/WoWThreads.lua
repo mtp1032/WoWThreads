@@ -599,12 +599,11 @@ end
 Signature: local overhead, errorMsg = thread:getMetrics( thread_h )
 Description: Gets some some basic execution metrics; the runtime (ms) and
 congestion (how long the thread had to wait to begin execution after having
-been resumed).
-Note: at this point, only completed threads can be queried.
+been resumed). Note: at this point, only completed threads can be queried.
 Parameters:
 - thread_h (thread_handle): the thread handle whose metrics are to be returned.
 Returns:
-- Success: then the thread's elapsed time and its congestion metric are returned and the result is set to nil.
+- Success: then the thread's elapsed time and congestion metrics are returned and the result is set to nil.
 - Failure: the runtime and congestion metrics are nil, and the result parameter contains an error message (result[1])
 and a stack trace (result[2]).
 Usage:
@@ -631,13 +630,17 @@ function thread:getMetrics( thread_h )
         return nil, nil, result
     end
 
+    if not handleIsInMorgue( thread_h ) then
+        local result = setResult( L["THREAD_NOT_COMPLETED"], fname, debugstack(2))
+        return nil, nil, result
+    end
+
     -- local id = thread_h[TH_UNIQUE_ID]
 
     -- utils:dbgPrint( "Thread", id, "LifetimeTicks", thread_h[TH_LIFETIME_TICKS]) -- 90
     -- utils:dbgPrint( "Thread", id, "Resumptions", thread_h[TH_RESUMPTIONS]) -- 0
     -- utils:dbgPrint( "Thread", id, "yieldTicks", thread_h[TH_YIELD_TICKS]) -- 2
     -- utils:dbgPrint( "Thread", id, "accumYieldTicks", thread_h[TH_ACCUM_YIELD_TICKS]) -- 0
-
     
     local ms_per_tick      = CLOCK_INTERVAL -- ms per tick
     local elapsedTicks     = thread_h[TH_LIFETIME_TICKS]
