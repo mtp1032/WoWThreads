@@ -111,25 +111,25 @@ is always fatal if the caller is NOT a thread.
 ```
 
 #### Signature:
-local elapsedTime, congestion, result = thread:getMetrics( thread_h )
+local overhead, errorMsg = thread:getMetrics( thread_h )
 
 #### Description:
-Gets some some basic execution metrics; the thread's elapsed time (ms) and its congestion
-(how long the thread had to wait to begin execution after having been resumed).
+Gets some some basic execution metrics; the runtime (ms) and
+congestion (how long the thread had to wait to begin execution after having
+been resumed). Note: at this point, only completed threads can be queried.
 
 #### Parameters:
 - thread_h (thread_handle): the thread handle whose metrics are to be returned.
 
 #### Returns:
-- Success: then the elapsed time and the congestion metrics are returned and he result is set to nil. Note:
-the congestion is a raw fraction. To express the percent congestion, multiply the metric by 100.
+- Success: the thread's elapsed time and congestion metrics are returned and the result is set to nil.
 - Failure: the runtime and congestion metrics are nil, and the result parameter contains an error message (result[1])
 and a stack trace (result[2]).
 
 #### Usage:
 ```lua
     local elapsedTime, congestion, result = thread:getMetrics( thread_h )
-        if elapsedTime == nil then 
+        if runtime == nil then 
             print( result[1], result[2]) 
             return 
         end
