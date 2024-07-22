@@ -3,14 +3,14 @@
 ## Title: WoWThreads
 ## Notes: An Asynchronous Multithreading Library for AddOn development.
 ## Author: Michael Peterson
-## IconTexture: 3528459
+## IconTexture: 3528459 
 ## SavedVariablesPerCharacter: WoWThreadsIconDB, WoWThreads_DEBUGGING_ENABLED, WoWThreads_DATA_COLLECTION
 ## SavedVariables: 
-## Version: 1.1.3
+## Version: 1.2.3
 ## X-MAJOR: 1
-## X-MINOR: 1
+## X-MINOR: 2
 ## X-PATCH: 3
-## X-Expansion: WotLK, Classic, Cataclysm, Retail, WorldWithin
+## X-Expansion: Classic, Cataclysm, Retail
 ## X-github: https://github.com/mtp1032/WoWThreads
 ## 24 May, 2023
 ## OptionalDeps: LibSharedMedia-3.0, LibDBIcon-1.0, LibDataBroker-1.1
