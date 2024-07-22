@@ -680,6 +680,7 @@ function thread:delay( delayTicks )
     local result = nil
     local stackTrace = nil
     local errorMsg = nil
+    local H = nil
 
     if delayTicks == nil then
         result = setResult( L["PARAMETER_NIL"], fname, debugstack(2) )
@@ -691,7 +692,7 @@ function thread:delay( delayTicks )
         return nil, result
     end
 
-    local H, errorMsg = getHandleOfCallingThread()
+    H, errorMsg = getHandleOfCallingThread()
     if H == nil then
         if H == nil then
             result = setResult( errorMsg, fname, debugstack(2) )
@@ -929,7 +930,7 @@ function thread:getChildThreads(thread_h)
     local errorMsg = nil
 
     if thread_h == nil then
-        local thread_h, errorMsg = getHandleOfCallingThread()
+        thread_h, errorMsg = getHandleOfCallingThread()
         if not thread_h then
             local result = setResult( errorMsg, fname, debugstack(2))
             return nil, result
@@ -967,6 +968,7 @@ Usage:
 function thread:getExeState(thread_h)
     local fname = "thread:getState()"
     local errorMsg = nil
+    
     if thread_h == nil then 
         thread_h, errorMsg = getHandleOfCallingThread()
         if thread_h == nil then
