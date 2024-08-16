@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+## Interface: 11502, 11503, 20504, 30403, 40400, 100207, 110000, 110002
 ##----------------------------------------------
 ## Title: WoWThreads
 ## Notes: An Asynchronous Multithreading Library for AddOn development.
@@ -33,3 +35,41 @@ Sources\SignalQueue.lua
 Sources\WoWThreads.lua
 Sources\OptionsPanel.lua 
 Sources\Icon.lua
+=======
+## Interface: 11502, 11503, 20504, 30403, 40400, 100207, 110000, 110002
+##----------------------------------------------
+## Title: WoWThreads
+## Notes: An Asynchronous Multithreading Library for AddOn development.
+## Author: Michael Peterson
+## IconTexture: 3528459
+## SavedVariablesPerCharacter: WoWThreadsIconDB, WoWThreads_DEBUGGING_ENABLED, WoWThreads_DATA_COLLECTION
+## SavedVariables: 
+## Version: 1.2.3
+## X-MAJOR: 1
+## X-MINOR: 2
+## X-PATCH: 3
+## X-Expansion: Classic, Cataclysm, Retail
+## X-github: https://github.com/mtp1032/WoWThreads
+## 24 May, 2023
+## OptionalDeps: LibSharedMedia-3.0, LibDBIcon-1.0, LibDataBroker-1.1
+
+#@no-lib-strip@
+Libs\ACE\LibStub\LibStub.lua
+Libs\ACE\CallbackHandler-1.0\CallbackHandler-1.0.xml 
+Libs\ACE\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\ACE\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\ACE\AceAddon-3.0\AceAddon-3.0.xml 
+Libs\ACE\AceConsole-3.0\AceConsole-3.0.xml
+Libs\ACE\AceDB-3.0\AceDB-3.0.xml
+#@end-no-lib-strip@
+
+##---------------------------------------------
+## WoW Thread Library Code
+##---------------------------------------------
+Locales\EnUS_WoWThreads.lua
+Sources\UtilsLib.lua
+Sources\SignalQueue.lua
+Sources\WoWThreads.lua
+Sources\OptionsPanel.lua 
+Sources\Icon.lua
+>>>>>>> 4dcdebf1a895d5b60d519537ce1ce9b539478477
