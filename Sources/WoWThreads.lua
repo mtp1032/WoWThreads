@@ -120,6 +120,30 @@ local signalNameTable = {
 
 --                          LOCAL FUNCTIONS 
 
+function thread:debuggingIsEnabled()
+    return DEBUGGING_ENABLED
+end
+function thread:enableDebugging()
+    DEBUGGING_ENABLED = true
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("Debugging %s", tostring(DEBUGGING_ENABLED)),0.0, 1.0, 1.0 )
+end
+function thread:disableDebugging()
+    DEBUGGING_ENABLED = false
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("Debugging %s", tostring(DEBUGGING_ENABLED)),0.0, 1.0, 1.0 )
+end
+function thread:dataCollectionIsEnabled()
+    return DATA_COLLECTION
+end
+function thread:enableDataCollection()
+    DATA_COLLECTION = true
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("Data collection %s", tostring(DATA_COLLECTION)),0.0, 1.0, 1.0 )
+end
+function thread:disableDataCollection()
+    DATA_COLLECTION = false
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("Data collection %s", tostring(DATA_COLLECTION)),0.0, 1.0, 1.0 )
+end
+
+
 -- this function is used to extract a useful stack trace from an error encountered
 -- during the coroutine's function (aka, the thread's function.)
 local function transformErrorString(errorString)
@@ -1205,29 +1229,6 @@ function thread:getNumPendingSignals()
         return H, result
     end
     return H[TH_SIGNAL_QUEUE]:size(), result
-end
-
-function thread:debuggingIsEnabled()
-    return DEBUGGING_ENABLED
-end
-function thread:enableDebugging()
-    DEBUGGING_ENABLED = true
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("Debugging %s", tostring(DEBUGGING_ENABLED)),0.0, 1.0, 1.0 )
-end
-function thread:disableDebugging()
-    DEBUGGING_ENABLED = false
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("Debugging %s", tostring(DEBUGGING_ENABLED)),0.0, 1.0, 1.0 )
-end
-function thread:dataCollectionIsEnabled()
-    return DATA_COLLECTION
-end
-function thread:enableDataCollection()
-    DATA_COLLECTION = true
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("Data collection %s", tostring(DATA_COLLECTION)),0.0, 1.0, 1.0 )
-end
-function thread:disableDataCollection()
-    DATA_COLLECTION = false
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("Data collection %s", tostring(DATA_COLLECTION)),0.0, 1.0, 1.0 )
 end
 
 local eventFrame = CreateFrame("Frame")
