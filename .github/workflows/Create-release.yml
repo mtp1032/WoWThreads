@@ -39,8 +39,7 @@ jobs:
           cp -r Sources package/WoWThreads/
           cp LICENSE package/WoWThreads/
           cp README.md package/WoWThreads/
-          cp WoWThreads_Mainline.toc package/WoWThreads/
-          cp WoWThreads_Vanilla.toc package/WoWThreads/
+          cp WoWThreads.toc package/WoWThreads/
           cd package
           zip -r ../WoWThreads.zip WoWThreads
 
