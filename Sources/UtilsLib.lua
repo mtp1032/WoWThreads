@@ -299,4 +299,35 @@ function utils:dbgPrint(...)
     -- to the built-in print function
     _G.print(unpack(output))
 end
+function utils:Prefix(stackTrace)
+    stackTrace = stackTrace or debugstack(2)
+    
+    -- Extract the relevant part of the stack trace (filename and line number)
+    local fileName, lineNumber = stackTrace:match("[\\/]([^\\/:]+):(%d+)")
+    if not fileName or not lineNumber then
+        return "[Unknown:0] "
+    end
+
+    -- Remove any trailing unwanted characters (e.g., `"]`, `*]`, `"`) from the filename
+    fileName = fileName:gsub("[%]*\"]", "")
+
+    -- Create the prefix with file name and line number, correctly formatted
+    local prefix = string.format("[%s:%d] ", fileName, tonumber(lineNumber))
+    return prefix
+end
+function utils:Print(...)
+    local prefix = utils:Prefix(debugstack(2))
+
+    -- Convert all arguments to strings and concatenate them with a space delimiter
+    local args = {...}
+    for i, v in ipairs(args) do
+        args[i] = tostring(v)
+    end
+
+    local output = prefix .. table.concat(args, " ")
+
+    -- Directly call the global print function
+    print(output)
+end
+
 
