@@ -30,8 +30,9 @@ local function getExpansionName( )
         [LE_EXPANSION_MISTS_OF_PANDARIA] = "Classic (Mists of Pandaria",
         [LE_EXPANSION_LEGION] = "Classic (Legion)",
         [LE_EXPANSION_BATTLE_FOR_AZEROTH] = "Classic (Battle for Azeroth)",
-        [LE_EXPANSION_WAR_WITHIN]   = "Retail (The War Within)"                            }
-    }
+        [LE_EXPANSION_WAR_WITHIN]   = "Retail (The War Within)"  
+                              }
+
     return expansionNames[expansionLevel] -- Directly return the mapped name
 end
 
