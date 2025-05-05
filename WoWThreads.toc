@@ -1,4 +1,4 @@
-## Interface: 11502, 11503, 20504, 30403, 40400, 100207, 110000, 110002
+## Interface: 11504, 11503, 11507, 20504, 30403, 40400, 40401, 40401,40402, 110005, 110000, 110002, 110105
 ##----------------------------------------------
 ## Title: WoWThreads
 ## Notes: An Asynchronous Multithreading Library for AddOn development.
