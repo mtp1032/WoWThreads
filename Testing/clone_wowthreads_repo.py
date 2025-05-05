@@ -3,14 +3,19 @@ import shutil
 import subprocess
 import tempfile
 
+# USAGE:
+# copy py clone_wowheads_repo.py ..
+# python clone_<file>_repo.py
+
 # Define the GitHub repository URL
 repo_url = "https://github.com/mtp1032/WoWThreads.git"
 
 # Define the list of target directories
+# Copies WoWTreads from _retail_dir to target dirs below
 target_directories = [
-    r"C:\Program Files (x86)\World of Warcraft\_ptr_\Interface\AddOns",             # Retail PTR
+#    r"C:\Program Files (x86)\World of Warcraft\_ptr_\Interface\AddOns",             # Retail PTR
     r"C:\Program Files (x86)\World of Warcraft\_classic_\Interface\AddOns",         # Cataclysm classic
-    r"C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\AddOns",    # Cataclysm classic beta
+    r"C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\AddOns",    # MOP classic beta
     r"C:\Program Files (x86)\World of Warcraft\_classic_era_\Interface\AddOns",    # Classic Vanilla
     r"G:\My Drive\Addons-github-clones"
 ]   
