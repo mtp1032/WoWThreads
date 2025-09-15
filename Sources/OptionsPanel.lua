@@ -1,20 +1,16 @@
-local ADDON_NAME, _ = ...
-
 WoWThreads = WoWThreads or {}
+WoWThreads.OptionsPanel = WoWThreads.OptionsPanel or {}
 
-
-local thread = LibStub:GetLibrary( ADDON_NAME )
-if not thread then 
-    DEFAULT_CHAT_FRAME:AddMessage( ADDON_NAME .. " not found!")
-    return 
+if not WoWThreads.Mgmt.loaded then
+    DEFAULT_CHAT_FRAME:AddMessage( "WoWThreadsMgmt.lua not loaded.", 1, 0, 0)
+    return
 end
 
-WoWThreads.minimap = WoWThreads.minimap or {}
-local minimap = WoWThreads.minimap
+local thread = WoWThreads.ThreadLib
 
-local EnUSlib = LibStub("EnUSlib")
-if not EnUSlib then return end
-local L = EnUSlib.L
+local options = WoWThreads.OptionsPanel
+
+local L = WoWThreads.Locales.L
 
 local WIDTH_TITLE_BAR = 500
 local HEIGHT_TITLE_BAR = 45
@@ -61,8 +57,8 @@ local function showExecutionOptions(frame, yPos)
     debuggingButton:SetPoint("TOPLEFT", 20, yPos)
     debuggingButton.tooltip = L["TOOLTIP_DEBUGGING"]
     _G[debuggingButton:GetName().."Text"]:SetText(L["ENABLE_ERROR_LOGGING"])
-    print( "line 63 debuggingIsEnabled()", thread:debuggingIsEnabled())
-    debuggingButton:SetChecked( thread:debuggingIsEnabled() )
+    print( "line 63 debuggingIsEnabled()", thread:isDebuggingEnabled() )
+    debuggingButton:SetChecked( thread:isDebuggingEnabled() )
     debuggingButton:SetScript("OnClick", 
         function(self)
             local isTrue = self:GetChecked() and true or false
@@ -179,7 +175,7 @@ end
 
 local optionsPanel = nil
 
-function minimap:showOptionsPanel()
+function options:showOptionsPanel()
     if optionsPanel == nil then
         optionsPanel = createOptionsPanel()
     end
@@ -187,5 +183,7 @@ function minimap:showOptionsPanel()
 end
 
 local function hideOptionsPanel()
-    optionsPanel:Hide()
+	if optionsPanel then optionsPanel:Hide() end
 end
+
+WoWThreads.OptionsPanel.loaded = true

@@ -6,7 +6,6 @@
 # But not these files...
 !README.md
 !Docs/
-!src/
 !Libs/
 !Libs/**/*
 !Locales/

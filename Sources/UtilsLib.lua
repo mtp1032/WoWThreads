@@ -1,28 +1,21 @@
-local ADDON_NAME, _ = ...
+-- UtilsLib.lua
+WoWthreads = WoWthreads or {}
+WoWThreads.UtilsLib = WoWThreads.UtilsLib or {}
 
--- Make sure the LibStub is available
-local LIBSTUB_MAJOR, LIBSTUB_MINOR = "UtilsLib", 1
-local LibStub = LibStub -- If LibStub is not global, adjust accordingly
+if not WoWThreads.Locales.loaded then
+    DEFAULT_CHAT_FRAME:AddMessage("Localizations.lua not loaded", 1, 0, 0 )
+    return
+end
 
--- Create a new library instance, or get the existing one
-local UtilsLib, oldVersion = LibStub:NewLibrary(LIBSTUB_MAJOR, LIBSTUB_MINOR)
-if not UtilsLib then return end -- No need to update if the version loaded is newer
-local utils = UtilsLib
-
-local EnUSlib = LibStub("EnUSlib")
-if not EnUSlib then return end
-
-local L = EnUSlib.L
+local utils = WoWThreads.UtilsLib
+local L = WoWThreads.Locales.L
 
 -- =================================================
 --              PROLOGUE
 -- =================================================
-local libName = "UtilsLib"
-local version       = C_AddOns.GetAddOnMetadata( ADDON_NAME, "Version")
-local libraryName   = string.format("%s-%s", libName, version )
---                      Initialize the library
 
-local notificationFrame = nil
+local infoNotificationFrame = nil
+local resultNotificationFrame = nil
 
 utils.EMPTY_STR = ""
 local EMPTY_STR = utils.EMPTY_STR
@@ -103,7 +96,7 @@ local function createResizeButton( f )
  
 	resizeButton:SetScript("OnMouseUp", function(self, button)
 		f:StopMovingOrSizing()
-		frameWidth, frameHeight= f:GetSize()
+		local frameWidth, frameHeight= f:GetSize()
 	end)
 end
 local function createClearButton( f, placement, offX, offY )
@@ -201,7 +194,9 @@ local function createTextDisplay(f)
 end
 local function createMsgFrame(title)
     local f = createTopFrame( "ErrorMsgFrame",DEFAULT_FRAME_WIDTH, DEFAULT_FRAME_HEIGHT, 0, 0 )
-    f:SetPoint("CENTER", 0, 200)
+    -- f:SetPoint("CENTER", 0, 200)
+	    f:SetPoint("CENTER", 100, 200)
+
     f:SetFrameStrata("BACKGROUND")
     f:EnableMouse(true)
     f:EnableMouseWheel(true)
@@ -223,8 +218,8 @@ local function createMsgFrame(title)
     return f
 end
 function utils:postMsg( msg )
-    if notificationFrame == nil then
-        notificationFrame = createMsgFrame( "Info Message(s)" )
+    if infoNotificationFrame == nil then
+        infoNotificationFrame = createMsgFrame( "LOG: WoWThreads Message(s)" )
     end
 
     if msg == nil then
@@ -233,73 +228,89 @@ function utils:postMsg( msg )
         msg = string.format("%s - Stack Trace:\n%s\n", L["PARAMETER_NIL"], stackTrace )
         error( "Error: Program Stopped")
     end
-	notificationFrame.Text:Insert( msg )
-	notificationFrame:Show()
+	infoNotificationFrame.Text:Insert( msg )
+	infoNotificationFrame:Show()
 end
 function utils:postResult( result )
     if result == nil then error( "Input 'result' was nil!") end
     if type(result) ~= 'table' then error( "Input 'result' not a table") end
 
-    if notificationFrame == nil then
-        notificationFrame = createMsgFrame( L["NOTIFICATION_FRAME_TITLE"] )
+    if resultNotificationFrame == nil then
+        resultNotificationFrame = createMsgFrame( "Results" )
     end
         
     local resultStr = string.format( "\n%s\nStack Trace:%s\n", result[1], result[2])
-	notificationFrame.Text:Insert( resultStr )
-	notificationFrame:Show()
+	if infoNotificationFrame then infoNotificationFrame.Text:Insert( resultStr ) end
+	if infoNotificationFrame then infoNotificationFrame:Show()end
 end
 
 --======================================================================
 --                          DEBUG UTILITIES
 -- =====================================================================
 function utils:simplifyStackTrace(stackTrace)
-    local addonName = string.match(stackTrace, "@Interface/AddOns/(%w+)")
-    local subDirs = string.match(stackTrace, "/(%w+)/(%w+)")
-    local fileName = string.match(stackTrace, "/(%w+%.lua)")
-    local lineNumber = string.match(stackTrace, "(%d+):")
-    local s = nil
+    local addonName = string.match(stackTrace, "AddOns/([^/]+)")
+    local subDirs = string.match(stackTrace, "AddOns/[^/]+/(.-)/[^/]+%.lua")
+    local fileName = string.match(stackTrace, "/([^/]+%.lua)")
+    local lineNumber = string.match(stackTrace, ":(%d+):")
+
+    if not addonName or not fileName or not lineNumber then
+        return stackTrace -- fallback to raw trace
+    end
 
     if subDirs then
-        subDirs = string.gsub(subDirs, "/", "/")
-        return addonName .. "/" .. subDirs .. "/" .. fileName .. ":" .. lineNumber
+        return string.format("%s/%s/%s:%s", addonName, subDirs, fileName, lineNumber)
     else
-        return addonName .. "/" .. fileName .. ":" .. lineNumber
+        return string.format("%s/%s:%s", addonName, fileName, lineNumber)
     end
 end
-function utils:dbgPrefix( stackTrace )
-	if stackTrace == nil then stackTrace = debugstack(2) end
-	
-	local pieces = {strsplit( ":", stackTrace, 5 )}
-	local segments = {strsplit( "\\", pieces[1], 5 )}
 
-	local fileName = segments[#segments]
-	
-	local strLen = string.len( fileName )
-	local fileName = string.sub( fileName, 1, strLen - 2 )
-	local names = strsplittable( "\/", fileName )
-	local lineNumber = tonumber(pieces[2])
+local DEBUG_ENABLED = true
 
-	local prefix = string.format("[%s:%d] ", names[#names], lineNumber)
-	return prefix
+function utils:isDebuggingEnabled()
+    return DEBUG_ENABLED
 end
-function utils:dbgPrint(...)
-    local prefix = utils:dbgPrefix( debugstack(2) )
-
-    -- The '...' collects all extra arguments passed to the function
-    local args = {...}  -- This creates a table 'args' containing all extra arguments
-
-    -- Convert all arguments into strings to ensure proper formatting for print with
-    -- the 'prefix' as the first element of the string to be printed.
-    local output = {prefix}
-    for i, v in ipairs(args) do
-        table.insert(output, tostring(v))
-    end
-
-    -- Use the unpack function to pass all elements of 'output' as separate arguments 
-    -- to the built-in print function
-    _G.print(unpack(output))
+function utils:enableDebugging()
+    DEBUG_ENABLED = true
 end
-function utils:Prefix(stackTrace)
+function utils:disableDebugging()
+    DEBUG_ENABLED = false
+end
+
+-- function utils:dbgPrefix( stackTrace )
+-- 	if stackTrace == nil then stackTrace = debugstack(2) end
+	
+-- 	local pieces = {strsplit( ":", stackTrace, 5 )}
+-- 	local segments = {strsplit( "\\", pieces[1], 5 )}
+
+-- 	local fileName = segments[#segments]
+	
+-- 	local strLen = string.len( fileName )
+-- 	local fileName = string.sub( fileName, 1, strLen - 2 )
+-- 	local names = strsplittable( "\/", fileName )
+-- 	local lineNumber = tonumber(pieces[2])
+
+-- 	local prefix = string.format("[%s:%d] ", names[#names], lineNumber)
+-- 	return prefix
+-- end
+-- function utils:dbgPrefix(stackTrace)
+--     if not stackTrace then
+--         stackTrace = debugstack(2)
+--     end
+
+--     local pieces = {strsplit(":", stackTrace, 5)}
+--     if not pieces[1] or not pieces[2] then
+--         return "[unknown:0] "
+--     end
+
+--     local segments = {strsplit("\\", pieces[1], 5)}
+--     local rawFileName = segments[#segments]:gsub("[%s\r\n]+$", "")
+--     local lineNumber = tonumber(pieces[2]) or 0
+
+--     local names = strsplittable("\\/", rawFileName)
+--     local prefix = string.format("[%s:%d] ", names[#names] or "unknown", lineNumber)
+--     return prefix
+-- end
+function utils:dbgPrefix(stackTrace)
     stackTrace = stackTrace or debugstack(2)
     
     -- Extract the relevant part of the stack trace (filename and line number)
@@ -312,11 +323,30 @@ function utils:Prefix(stackTrace)
     fileName = fileName:gsub("[%]*\"]", "")
 
     -- Create the prefix with file name and line number, correctly formatted
-    local prefix = string.format("[%s:%d] ", fileName, tonumber(lineNumber))
+    -- local prefix = string.format("[%s:%d] ", fileName, tonumber(lineNumber))
+        local prefix = string.format("[%s:%d] ", fileName, tonumber(lineNumber))
+        -- DEFAULT_CHAT_FRAME:AddMessage(prefix)
     return prefix
 end
-function utils:Print(...)
-    local prefix = utils:Prefix(debugstack(2))
+-- function utils:dbgPrint(...)
+--     local prefix = utils:dbgPrefix( debugstack(2) )
+
+--     -- The '...' collects all extra arguments passed to the function
+--     local args = {...}  -- This creates a table 'args' containing all extra arguments
+
+--     -- Convert all arguments into strings to ensure proper formatting for print with
+--     -- the 'prefix' as the first element of the string to be printed.
+--     local output = {prefix}
+--     for i, v in ipairs(args) do
+--         table.insert(output, tostring(v))
+--     end
+
+--     -- Use the unpack function to pass all elements of 'output' as separate arguments 
+--     -- to the built-in print function
+--     _G.print(unpack(output))
+-- end
+function utils:dbgPrint(...)
+    local prefix = utils:dbgPrefix(debugstack(2))
 
     -- Convert all arguments to strings and concatenate them with a space delimiter
     local args = {...}
@@ -324,10 +354,12 @@ function utils:Print(...)
         args[i] = tostring(v)
     end
 
+    prefix = string.format("|cffff9900%s|r", prefix)
     local output = prefix .. table.concat(args, " ")
 
     -- Directly call the global print function
-    print(output)
+    DEFAULT_CHAT_FRAME:AddMessage(output)
 end
 
+WoWThreads.UtilsLib.loaded = true
 

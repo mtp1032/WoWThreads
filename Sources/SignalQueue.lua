@@ -1,16 +1,19 @@
 -- Filename: SignalQueue.lua
 
-local ADDON_NAME, _ = ...
 WoWThreads = WoWThreads or {}
-WoWThreads.SignalQueue = {}
-local sig = WoWThreads.SignalQueue
+WoWThreads.SignalQueue = WoWThreads.SignalQueue or {}
+
+if not WoWThreads.UtilsLib.loaded then
+    DEFAULT_CHAT_FRAME:AddMessage("UtilsLib.lua not loaded.", 1, 0, 0 )
+end
+local signal = WoWThreads.SignalQueue
 
 -- SignalQueue class definition
 local SignalQueue = {}
 SignalQueue.__index = SignalQueue
 
 -- Constructor
-function sig.new()
+function signal.new()
     local self = setmetatable({}, SignalQueue)
     self.front = 1
     self.rear = 0
@@ -68,3 +71,4 @@ end
 function SignalQueue:size()
     return self.rear - self.front + 1
 end
+WoWThreads.SignalQueue.loaded = true
