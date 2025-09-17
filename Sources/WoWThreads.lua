@@ -628,7 +628,7 @@ function thread:yield()
     local errorMsg = nil
 	local result = nil
 
-    coroutine.yield()
+    coroutine.yield()  
 
 	H = getHandleOfCallingThread()
     if DATA_COLLECTION then  
