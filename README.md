@@ -25,14 +25,14 @@ end
 ```
 Then, below the LibStub entry, add the following constants (signals):
 ```
-local SIG_GET_DATA     = thread.SIG_GET_DATA
-local SIG_SEND_DATA    = thread.SIG_SEND_DATA
+local SIG_GET_PAYLOAD  = thread.SIG_GET_PAYLOAD
+local SIG_SEND_PAYLOAD = thread.SIG_SEND_PAYLOAD
 local SIG_BEGIN        = thread.SIG_BEGIN
 local SIG_HALT         = thread.SIG_HALT
 local SIG_IS_COMPLETE  = thread.SIG_IS_COMPLETE
 local SIG_SUCCESS      = thread.SIG_SUCCESS.
 local SIG_FAILURE      = thread.SIG_FAILURE
-local SIG_READY        = thread.SIG_READY
+local SIG_IS_READY        = thread.SIG_IS_READY
 local SIG_CALLBACK     = thread.SIG_CALLBACK
 local SIG_THREAD_DEAD  = thread.SIG_THREAD_DEAD
 local SIG_ALERT        = thread.SIG_ALERT
