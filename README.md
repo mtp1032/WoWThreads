@@ -8,7 +8,7 @@ The library is designed to enable an addon to execute asynchronously relative to
 ##### INSTALLATION
 
 - Download and install WoWThreads from CurseForge.
-- In your Addon's TOC files, add WoWThreads as a dependency for example:
+- In your Addon's .TOC file, add WoWThreads as a dependency for example:
 ```
   ##Dependencies: WoWThreads
 ```
