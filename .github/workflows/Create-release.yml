@@ -1,4 +1,4 @@
-name: Create Release and Upload Asset
+name: Create Release and Upload Asset for WoWThreads
 
 on:
   push:
@@ -12,19 +12,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4  # Updated to latest version for better compatibility
 
       - name: Install jq
-        run: sudo apt-get install jq -y
+        run: sudo apt-get update && sudo apt-get install jq -y
 
       - name: Retrieve version
         id: get_version
         run: |
-          if [ ! -f VERSION ]; then
-            echo "VERSION file not found!"
+          if [ ! -f VERSION.md ]; then
+            echo "VERSION.md file not found!"
             exit 1
           fi
-          VERSION=$(jq -r '.version' VERSION)
+          VERSION=$(jq -r '.version' VERSION.md)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Clean up previous builds
@@ -33,13 +33,21 @@ jobs:
       - name: Package files
         run: |
           mkdir -p package/WoWThreads
-          cp -r Docs package/WoWThreads/
-          cp -r Libs package/WoWThreads/
-          cp -r Locales package/WoWThreads/
-          cp -r Sources package/WoWThreads/
-          cp LICENSE package/WoWThreads/
-          cp README.md package/WoWThreads/
-          cp WoWThreads.toc package/WoWThreads/
+          # Copy relevant directories and files, excluding .git, Notes, Testing, and WoWThreads.code-workspace
+          cp -r AutoEquip package/WoWThreads/  # Assuming AutoEquip is a dependency or directory
+          cp -r LibACE package/WoWThreads/    # If applicable, adjust for your dependencies
+          cp -r Locales package/WoWThreads/   # Localization files
+          cp -r Sources package/WoWThreads/   # Core source files
+          cp -r Utils package/WoWThreads/     # Utility files
+          cp WoWThreads.toc package/WoWThreads/  # TOC file for WoWThreads
+          cp LICENSE package/WoWThreads/      # License file
+          cp README.md package/WoWThreads/    # Readme
+          cp VERSION.md package/WoWThreads/   # Version file
+          # Exclude .git, Notes, Testing, and WoWThreads.code-workspace explicitly
+          find package/WoWThreads -name ".git" -exec rm -rf {} +
+          find package/WoWThreads -name "Notes" -exec rm -rf {} +
+          find package/WoWThreads -name "Testing" -exec rm -rf {} +
+          find package/WoWThreads -name "WoWThreads.code-workspace" -exec rm -rf {} +
           cd package
           zip -r ../WoWThreads.zip WoWThreads
 
@@ -51,5 +59,5 @@ jobs:
         run: |
           tag_name="v${{ env.VERSION }}"
           release_name="WoWThreads Release $tag_name"
-          release_body="Release description"
+          release_body="WoWThreads release for version ${{ env.VERSION }}"
           gh release create $tag_name WoWThreads.zip --title "$release_name" --notes "$release_body"
