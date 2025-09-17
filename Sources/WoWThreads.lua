@@ -23,7 +23,7 @@ if not thread then return end  -- no upgrade needed
 --=======================================================
 
 --                                  LOCAL DATA
-local DEBUGGING_ENABLED     = false
+local DEBUGGING_ENABLED     = true
 local DATA_COLLECTION       = false
 local CURRENT_RUNNING_THREAD = nil
 local DEFAULT_YIELD_TICKS    = 1
@@ -218,6 +218,7 @@ local function wakeupThread(H)
     end
     return isInTable
 end
+-- deprecated
 local function getHandleOfCallingThread()
     return CURRENT_RUNNING_THREAD
 end
@@ -347,36 +348,44 @@ local function signalIsValid(signal)
 
     return true, nil
 end
+local function resumeOnError()
 
+end
 local function resumeThread(H)
     local co = H[TH_COROUTINE]
     local args = H[TH_COROUTINE_ARGS] or {} -- Ensure args is a table
-    
+
     if DEBUGGING_ENABLED then
         dbgLog(string.format("%s Resuming Thread[%d]", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
     end
-    CURRENT_RUNNING_THREAD = H
-    local pcallResults = { pcall(coroutine.resume, co, unpack(args)) }
+
+    -- Define error handler for xpcall using debugstack
+    local function errorHandler(err)
+        return tostring(err) .. "\nStack trace:\n" .. debugstack(2)
+    end
+
+    -- Use xpcall instead of pcall
+	CURRENT_RUNNING_THREAD = H
+    local xpcallResults = { xpcall(coroutine.resume, errorHandler, co, unpack(args)) }
     CURRENT_RUNNING_THREAD = nil
-    
-    local pcallSucceeded = pcallResults[1]
-    if not pcallSucceeded then
+
+    local xpcallSucceeded = xpcallResults[1]
+    if not xpcallSucceeded then
         if DEBUGGING_ENABLED then
-            dbgLog(string.format("%s Thread[%d] pcall failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(pcallResults[2])))
+            dbgLog(string.format("%s Thread[%d] xpcall failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(xpcallResults[2])))
         end
         moveToMorgue(H, true)
-        return false, pcallResults[2]
+        return false, xpcallResults[2]
     end
-    
-    local coroutineSucceeded = pcallResults[2]
+
+    local coroutineSucceeded = xpcallResults[2]
     if not coroutineSucceeded then
         if DEBUGGING_ENABLED then
-            dbgLog(string.format("%s Thread[%d] coroutine failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(pcallResults[3])))
-        end
+			dbgLog(string.format("%s Thread[%d] xpcall failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(xpcallResults[2]):gsub("\n", "\n  ")))        end
         moveToMorgue(H, true)
-        return false, pcallResults[3]
+        return false, xpcallResults[3]
     end
-    
+
     if coroutine.status(co) == "dead" then
         if DEBUGGING_ENABLED then
             dbgLog(string.format("%s Thread[%d] completed", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
@@ -384,8 +393,8 @@ local function resumeThread(H)
         moveToMorgue(H, true)
         return true, nil
     end
-    
-    return true, select(2, unpack(pcallResults))
+
+    return true, select(2, unpack(xpcallResults))
 end
 local function scheduleThreads()
     ACCUMULATED_TICKS = ACCUMULATED_TICKS + 1
