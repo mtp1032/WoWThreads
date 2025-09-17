@@ -35,7 +35,7 @@ jobs:
         run: |
           mkdir -p package/WoWThreads
           # Copy relevant directories and files, excluding .git, Notes, Testing, and WoWThreads.code-workspace
-          cp -r AutoEquip package/WoWThreads/  # Assuming AutoEquip is a dependency or directory
+          cp -r WoWThreads package/WoWThreads/  # Assuming WoWThreads is a dependency or directory
           cp -r LibACE package/WoWThreads/    # If applicable, adjust for your dependencies
           cp -r Locales package/WoWThreads/   # Localization files
           cp -r Sources package/WoWThreads/   # Core source files
