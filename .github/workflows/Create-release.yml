@@ -12,19 +12,20 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4  # Updated to latest version for better compatibility
+        uses: actions/checkout@v4  # Latest version for compatibility
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install jq -y
-
-      - name: Retrieve version
+      - name: Retrieve version from WoWThreads.toc
         id: get_version
         run: |
-          if [ ! -f VERSION.md ]; then
-            echo "VERSION.md file not found!"
+          if [ ! -f WoWThreads.toc ]; then
+            echo "WoWThreads.toc file not found!"
             exit 1
           fi
-          VERSION=$(jq -r '.version' VERSION.md)
+          VERSION=$(grep -E "^## Version:" WoWThreads.toc | sed -E 's/## Version: *([0-9.]+).*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "Version not found in WoWThreads.toc!"
+            exit 1
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Clean up previous builds
@@ -42,7 +43,6 @@ jobs:
           cp WoWThreads.toc package/WoWThreads/  # TOC file for WoWThreads
           cp LICENSE package/WoWThreads/      # License file
           cp README.md package/WoWThreads/    # Readme
-          cp VERSION.md package/WoWThreads/   # Version file
           # Exclude .git, Notes, Testing, and WoWThreads.code-workspace explicitly
           find package/WoWThreads -name ".git" -exec rm -rf {} +
           find package/WoWThreads -name "Notes" -exec rm -rf {} +
