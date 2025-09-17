@@ -276,40 +276,6 @@ function utils:disableDebugging()
     DEBUG_ENABLED = false
 end
 
--- function utils:dbgPrefix( stackTrace )
--- 	if stackTrace == nil then stackTrace = debugstack(2) end
-	
--- 	local pieces = {strsplit( ":", stackTrace, 5 )}
--- 	local segments = {strsplit( "\\", pieces[1], 5 )}
-
--- 	local fileName = segments[#segments]
-	
--- 	local strLen = string.len( fileName )
--- 	local fileName = string.sub( fileName, 1, strLen - 2 )
--- 	local names = strsplittable( "\/", fileName )
--- 	local lineNumber = tonumber(pieces[2])
-
--- 	local prefix = string.format("[%s:%d] ", names[#names], lineNumber)
--- 	return prefix
--- end
--- function utils:dbgPrefix(stackTrace)
---     if not stackTrace then
---         stackTrace = debugstack(2)
---     end
-
---     local pieces = {strsplit(":", stackTrace, 5)}
---     if not pieces[1] or not pieces[2] then
---         return "[unknown:0] "
---     end
-
---     local segments = {strsplit("\\", pieces[1], 5)}
---     local rawFileName = segments[#segments]:gsub("[%s\r\n]+$", "")
---     local lineNumber = tonumber(pieces[2]) or 0
-
---     local names = strsplittable("\\/", rawFileName)
---     local prefix = string.format("[%s:%d] ", names[#names] or "unknown", lineNumber)
---     return prefix
--- end
 function utils:dbgPrefix(stackTrace)
     stackTrace = stackTrace or debugstack(2)
     
@@ -328,23 +294,6 @@ function utils:dbgPrefix(stackTrace)
         -- DEFAULT_CHAT_FRAME:AddMessage(prefix)
     return prefix
 end
--- function utils:dbgPrint(...)
---     local prefix = utils:dbgPrefix( debugstack(2) )
-
---     -- The '...' collects all extra arguments passed to the function
---     local args = {...}  -- This creates a table 'args' containing all extra arguments
-
---     -- Convert all arguments into strings to ensure proper formatting for print with
---     -- the 'prefix' as the first element of the string to be printed.
---     local output = {prefix}
---     for i, v in ipairs(args) do
---         table.insert(output, tostring(v))
---     end
-
---     -- Use the unpack function to pass all elements of 'output' as separate arguments 
---     -- to the built-in print function
---     _G.print(unpack(output))
--- end
 function utils:dbgPrint(...)
     local prefix = utils:dbgPrefix(debugstack(2))
 
