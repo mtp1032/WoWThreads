@@ -1,4 +1,4 @@
-###  README.md
+###  README.md (version 1.5.9)
 
 ##### DESCRIPTION
 WoWThreads is a library whose services provide asynchronous, non-preemptive multithreading for WoW Addon developers. WoWThreads provides the major features you would expect in a threads package such as thread creation, signaling (including inter-thread communications), delay, yield, sleep, and so forth.
