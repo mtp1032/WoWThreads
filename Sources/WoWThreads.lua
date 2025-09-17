@@ -639,7 +639,7 @@ end
 
 --[[@Begin
 Signature: local overhead, errorMsg = thread:getMetrics( thread_h )
-Description: Gets some some basic execution metrics; the runtime (ms) and
+Description: Gets some some basic execution metrics; the runtime (ms) and   
 congestion (how long the thread had to wait to begin execution after having
 been resumed). Note: at this point, only completed threads can be queried.
 Parameters:
