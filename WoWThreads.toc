@@ -1,5 +1,5 @@
-## Interface: 11507, 20504, 40402, 50500, 30505, 110200
-##------------------------------------------------------
+## Interface: 11507, 20504, 40402, 50500, 30505, 110200, 110205
+##-------------------------------------------------------------
 ## Title: WoWThreads Library
 ## Notes: An Asynchronous Multithreading Library for AddOn development.
 ## Author: Michael Peterson
