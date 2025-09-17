@@ -60,14 +60,14 @@ local TH_NUM_HANDLE_ELEMENTS = TH_ELAPSED_TIME
 -- Example: sigTable = {signalValue, sender_h, ... }
 --
 -- These constants are the signal values found in sigTable[1]
-thread.SIG_GET_DATA     = 1 -- TBD
-thread.SIG_SEND_DATA    = 2 -- TBD
+thread.SIG_HAS_PAYLOAD     = 1 -- TBD
+thread.SIG_SEND_PAYLOAD = 2 -- TBD
 thread.SIG_BEGIN        = 3 -- TBD
 thread.SIG_HALT         = 4 -- TBD
 thread.SIG_IS_COMPLETE  = 5 -- info: thread is complete
 thread.SIG_SUCCESS      = 6 -- info: thread completed successfully
 thread.SIG_FAILURE      = 7 -- info: thread completed with failure
-thread.SIG_READY        = 8
+thread.SIG_IS_READY        = 8
 thread.SIG_CALLBACK     = 9  -- info: Signal entry contains a callback function in Sig[3]
 thread.SIG_THREAD_DEAD  = 10 -- info: thread has completed or failed.
 thread.SIG_ALERT        = 11 -- schedule for immediate execution
@@ -76,14 +76,14 @@ thread.SIG_TERMINATE    = 13 -- thread terminates upon receipt.
 thread.SIG_NONE_PENDING = 14 -- signal queue is empty.
 
 thread.signalTable = {
-    SIG_GET_DATA     = thread.SIG_GET_DATA,
-    SIG_SEND_DATA    = thread.SIG_SEND_DATA,
+    SIG_HAS_PAYLOAD     = thread.SIG_HAS_PAYLOAD,
+    SIG_SEND_PAYLOAD    = thread.SIG_SEND_PAYLOAD,
     SIG_BEGIN        = thread.SIG_BEGIN,
     SIG_HALT         = thread.SIG_HALT,
     SIG_IS_COMPLETE  = thread.SIG_IS_COMPLETE,
     SIG_SUCCESS      = thread.SIG_SUCCESS,
     SIG_FAILURE      = thread.SIG_FAILURE,
-    SIG_READY        = thread.SIG_READY,
+    SIG_IS_READY     = thread.SIG_IS_READY,
     SIG_CALLBACK     = thread.SIG_CALLBACK,
     SIG_THREAD_DEAD  = thread.SIG_THREAD_DEAD,
     SIG_ALERT        = thread.SIG_ALERT,
@@ -92,14 +92,14 @@ thread.signalTable = {
     SIG_NONE_PENDING = thread.SIG_NONE_PENDING,
 }
 
-local SIG_GET_DATA     = thread.SIG_GET_DATA
-local SIG_SEND_DATA    = thread.SEND_DATA
+local SIG_HAS_PAYLOAD     = thread.SIG_HAS_PAYLOAD
+local SIG_SEND_PAYLOAD    = thread.SEND_DATA
 local SIG_BEGIN        = thread.SIG_BEGIN
 local SIG_HALT         = thread.SIG_HALT
 local SIG_IS_COMPLETE  = thread.SIG_IS_COMPLETE
 local SIG_SUCCESS      = thread.SIG_SUCCESS
 local SIG_FAILURE      = thread.SIG_FAILURE
-local SIG_READY        = thread.SIG_READY
+local SIG_IS_READY        = thread.SIG_IS_READY
 local SIG_CALLBACK     = thread.SIG_CALLBACK
 local SIG_THREAD_DEAD  = thread.SIG_THREAD_DEAD
 local SIG_ALERT        = thread.SIG_ALERT
@@ -108,14 +108,14 @@ local SIG_TERMINATE    = thread.SIG_TERMINATE
 local SIG_NONE_PENDING = thread.SIG_NONE_PENDING
 
 thread.signalNameTable = {
-    "SIG_GET_DATA",
-    "SIG_SEND_DATA",
+    "SIG_HAS_PAYLOAD",
+    "SIG_SEND_PAYLOAD",
     "SIG_BEGIN",
     "SIG_HALT",
     "SIG_IS_COMPLETE",
     "SIG_SUCCESS",
     "SIG_FAILURE",
-    "SIG_READY",
+    "SIG_IS_READY",
     "SIG_CALLBACK",
     "SIG_THREAD_DEAD",
     "SIG_ALERT",
@@ -341,7 +341,7 @@ local function signalIsValid(signal)
         return false, L["SIGNAL_INVALID_TYPE"]
     end
 
-    if signal < thread.SIG_GET_DATA or signal > thread.SIG_NONE_PENDING then
+    if signal < thread.SIG_HAS_PAYLOAD or signal > thread.SIG_NONE_PENDING then
         return false, L["SIGNAL_OUT_OF_RANGE"]
     end
 
@@ -988,47 +988,41 @@ function thread:sendSignal( target_h, signal, ... )
     local errorMsg = nil
     local result = nil
     local isValid = false
-
-    local sigData = {...}
-
+	
     -- check that the target handle is valid
     if target_h == nil then
         result = setResult( L["THREAD_HANDLE_NIL"], fname, debugstack(2))
-		print(  L["THREAD_HANDLE_NIL"])
         return nil, result
-    end
-    if type( target_h) ~= "table" then
+	end
+
+	if type( target_h) ~= "table" then
         errorMsg = L["INVALID_TYPE"]
         result = setResult( errorMsg, fname, debugstack(2))
-		print( errorMsg )
         return nil, result
     end
     
-    -- is the target thread a real thread?
+	-- is the target thread a real thread?
     isValid = handleIsValid( target_h )
+
     if not isValid then
         result = setResult(  L["THREAD_INVALID_CONTEXT"], fname, debugstack(2))
-		print( "1108", L["THREAD_INVALID_CONTEXT"])
         return nil, result
     end
     isValid, errorMsg = signalIsValid(signal)
-    if not isValid then
+	if not isValid then
         result = setResult( errorMsg, fname, debugstack(2))
-		print( errorMsg )
         return nil, result
     end
     -- User code cannot send SIG_NONE_PENDING signals.
-    if signal == thread.SIG_NONE_PENDING then
+	if signal == thread.SIG_NONE_PENDING then
         result = setResult( L["SIGNAL_INVALID_OPERATION"], fname, debugstack(2))
-		print(L["SIGNAL_INVALID_OPERATION"] )
         return nil, result
     end
-
-    if isHandleInMorgue( target_h ) then
+	if isHandleInMorgue( target_h ) then
         return false, nil 
     end
 
-    if signal == thread.SIG_WAKEUP then
+	if signal == thread.SIG_WAKEUP then
         if wakeupThread( target_h ) then
             return true, nil
         else
@@ -1036,19 +1030,17 @@ function thread:sendSignal( target_h, signal, ... )
         end
     end
 
-    -- Initialize and insert an entry into the recipient thread's signalTable
+	-- Initialize and insert an entry into the recipient thread's signalTable
     local sender_h = getHandleOfCallingThread()
+	local sigEntry = {signal, sender_h, ... }
 
-    local sigEntry = {signal, sender_h, sigData[1] }
-
-    -- local sigEntry = {signal, sender_h, sigData }
     target_h[TH_SIGNAL_QUEUE]:enqueue(sigEntry)
 
-    if signal == thread.SIG_ALERT then
+	if signal == thread.SIG_ALERT then
         target_h[TH_REMAINING_TICKS] = 1
     end
 
-    return wasSent, result
+	return wasSent, result
 end
 
 --[[@Begin
@@ -1087,12 +1079,22 @@ function thread:getSignal()
     local result 	= nil
 
     local H  = getHandleOfCallingThread()
+	if H == nil then
+		result = utils:setResult( L["THREAD_HANDLE_NIL"], fname, debugstack(3) )
+		return nil, result
+	end
+
     if H[TH_SIGNAL_QUEUE]:size() == 0 then
         sigEntry = { SIG_NONE_PENDING, nil, nil }
         return sigEntry, nil
     end
 
     sigEntry = H[TH_SIGNAL_QUEUE]:dequeue()
+	if sigEntry[1] == SIG_HAS_PAYLOAD then
+		utils:dbgPrint( type[sigEntry[1]])
+		utils:dbgPrint( type[sigEntry[2]])
+		utils:dbgPrint( type[sigEntry[3]])
+	end
     return sigEntry, nil
 end
 
