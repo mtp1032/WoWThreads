@@ -20,7 +20,7 @@ The library is designed to enable an addon to execute asynchronously relative to
 local thread = LibStub("WoWThreads")
 if not thread then
     print("Error: WoWThreads library not found!")
-    return
+    return 
 end
 ```
 Then, below the LibStub entry, add the following constants (signals):
