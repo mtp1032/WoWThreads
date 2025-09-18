@@ -3,7 +3,7 @@ WoWThreads = WoWThreads or {}
 WoWThreads.Locales = WoWThreads.Locales or {}
 
 if not WoWThreads.Core.loaded then
-    DEFAULT_CHAT_FRAME:AddMessage( "Core.lua not loaded", 1, 0, 0 )
+    DEFAULT_CHAT_FRAME:AddMessage( "Core.lua not Loaded", 1, 0, 0 )
     return
 end
 
