@@ -51,17 +51,17 @@ jobs:
 
       - name: Check if token exists
         run: |
-          if [ -z "${{ secrets.PERSONAL_ACCESS_TOKEN }}" ]; then
-            echo "PERSONAL_ACCESS_TOKEN is not set or empty."
+          if [ -z "${{ secrets.GITHUB_TOKEN }}" ]; then
+            echo "GITHUB_TOKEN is not set or empty."
             exit 1
           else
-            echo "PERSONAL_ACCESS_TOKEN is set."
+            echo "GITHUB_TOKEN is set."
           fi
 
       - name: Authenticate GitHub CLI
         run: |
-          echo "${{ secrets.PERSONAL_ACCESS_TOKEN }}" | gh auth login --with-token
-          gh auth status || { echo "Authentication failed. Check PERSONAL_ACCESS_TOKEN."; exit 1; }
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          gh auth status || { echo "Authentication failed. Check GITHUB_TOKEN permissions."; exit 1; }
 
       - name: Create Release
         run: |
@@ -69,3 +69,5 @@ jobs:
           release_name="WoWThreads Release $tag_name"
           release_body="WoWThreads release for version ${{ env.VERSION }}"
           gh release create $tag_name WoWThreads.zip --title "$release_name" --notes "$release_body"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
