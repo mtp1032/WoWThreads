@@ -10,14 +10,13 @@ jobs:
   package:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Try write-all if this fails
-      # permissions: write-all  # Uncomment for testing if contents: write fails
+      contents: write  # Required for creating releases
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history to ensure tag creation works
+          fetch-depth: 0  # Fetch all history for tag creation
 
       - name: Retrieve version from WoWThreads.toc
         id: get_version
@@ -43,9 +42,9 @@ jobs:
           cp LICENSE package/WoWThreads/
           cp README.md package/WoWThreads/
           [ -d LibACE ] && cp -r LibACE package/WoWThreads/
-          [ -d Docs ] && cp -r Docs package/WoWThreads/
           [ -d Locales ] && cp -r Locales package/WoWThreads/
           [ -d Sources ] && cp -r Sources package/WoWThreads/
+          [ -d Utils ] && cp -r Utils package/WoWThreads/
           find package/WoWThreads -name ".git" -exec rm -rf {} +
           find package/WoWThreads -name ".github" -exec rm -rf {} +
           find package/WoWThreads -name "Notes" -exec rm -rf {} +
@@ -74,17 +73,25 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Tag $TAG_NAME already exists, skipping creation."
+            echo "Tag $TAG_NAME already exists, updating to current commit."
+            git tag -f $TAG_NAME  # Force-update tag to current commit
+            git push origin $TAG_NAME --force || { echo "Failed to push tag $TAG_NAME."; exit 1; }
           else
             git tag $TAG_NAME
             git push origin $TAG_NAME || { echo "Failed to push tag $TAG_NAME."; exit 1; }
           fi
 
-      - name: Create Release
+      - name: Create or Update Release
         run: |
           tag_name="v${{ env.VERSION }}"
           release_name="WoWThreads Release $tag_name"
           release_body="WoWThreads release for version ${{ env.VERSION }}"
+          # Check if release exists for the tag
+          if gh release view $tag_name >/dev/null 2>&1; then
+            echo "Release for $tag_name exists, deleting and recreating."
+            gh release delete $tag_name --yes || { echo "Failed to delete existing release."; exit 1; }
+          fi
+          # Create new release
           gh release create $tag_name WoWThreads.zip --title "$release_name" --notes "$release_body" --target main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
