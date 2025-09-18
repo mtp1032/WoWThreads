@@ -1,18 +1,19 @@
 
-# Example .gitignore adjustments
-!.gitignore
 # Ignore everything
 *
 # But not these files...
 !README.md
 !Docs/
+!Docs/*
 !Libs/
 !Libs/**/*
 !Locales/
+!Locales/Localizations.lua
 !Sources/
+!Sources/*
 !LICENSE
 !WoWThreads*.toc
-
 # Allow the Testing directory and the clone_repo.py script
 !Testing/
 !Testing/clone_repo.py
+!.gitignore
