@@ -1,4 +1,4 @@
-name: Create Release and Upload Asset for WoWThreads Libary
+name: Create Release and Upload Asset for WoWThreads
 
 on:
   workflow_dispatch:
@@ -9,10 +9,15 @@ on:
 jobs:
   package:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Try write-all if this fails
+      # permissions: write-all  # Uncomment for testing if contents: write fails
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to ensure tag creation works
 
       - name: Retrieve version from WoWThreads.toc
         id: get_version
@@ -63,11 +68,23 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
           gh auth status || { echo "Authentication failed. Check GITHUB_TOKEN permissions."; exit 1; }
 
+      - name: Ensure tag exists
+        run: |
+          TAG_NAME="v${{ env.VERSION }}"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists, skipping creation."
+          else
+            git tag $TAG_NAME
+            git push origin $TAG_NAME || { echo "Failed to push tag $TAG_NAME."; exit 1; }
+          fi
+
       - name: Create Release
         run: |
           tag_name="v${{ env.VERSION }}"
           release_name="WoWThreads Release $tag_name"
           release_body="WoWThreads release for version ${{ env.VERSION }}"
-          gh release create $tag_name WoWThreads.zip --title "$release_name" --notes "$release_body"
+          gh release create $tag_name WoWThreads.zip --title "$release_name" --notes "$release_body" --target main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
