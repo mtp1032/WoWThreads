@@ -144,7 +144,7 @@ local function createOptionsPanel()
     frame.acceptButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
     frame.acceptButton:SetScript("OnClick",
         function(self)
-            if enableDebugging then 
+            if enableDebugging then  
                 thread:enableDebugging() 
             else 
                 thread:disableDebugging() 
