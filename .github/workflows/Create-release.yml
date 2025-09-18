@@ -1,10 +1,10 @@
 name: Create Release and Upload Asset for WoWThreads
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   package:
@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4  # Latest version for compatibility
+        uses: actions/checkout@v4
 
       - name: Retrieve version from WoWThreads.toc
         id: get_version
@@ -34,16 +34,13 @@ jobs:
       - name: Package files
         run: |
           mkdir -p package/WoWThreads
-          # Copy relevant directories and files, excluding .git, Notes, Testing, and WoWThreads.code-workspace
-          cp -r WoWThreads package/WoWThreads/  # Assuming WoWThreads is a dependency or directory
-          cp -r LibACE package/WoWThreads/    # If applicable, adjust for your dependencies
-          cp -r Locales package/WoWThreads/   # Localization files
-          cp -r Sources package/WoWThreads/   # Core source files
-          cp -r Utils package/WoWThreads/     # Utility files
-          cp WoWThreads.toc package/WoWThreads/  # TOC file for WoWThreads
-          cp LICENSE package/WoWThreads/      # License file
-          cp README.md package/WoWThreads/    # Readme
-          # Exclude .git, Notes, Testing, .github and WoWThreads.code-workspace explicitly
+          cp WoWThreads.toc package/WoWThreads/
+          cp LICENSE package/WoWThreads/
+          cp README.md package/WoWThreads/
+          [ -d LibACE ] && cp -r LibACE package/WoWThreads/
+          [ -d Locales ] && cp -r Locales package/WoWThreads/
+          [ -d Sources ] && cp -r Sources package/WoWThreads/
+          [ -d Utils ] && cp -r Utils package/WoWThreads/
           find package/WoWThreads -name ".git" -exec rm -rf {} +
           find package/WoWThreads -name ".github" -exec rm -rf {} +
           find package/WoWThreads -name "Notes" -exec rm -rf {} +
@@ -52,9 +49,19 @@ jobs:
           cd package
           zip -r ../WoWThreads.zip WoWThreads
 
+      - name: Check if token exists
+        run: |
+          if [ -z "${{ secrets.PERSONAL_ACCESS_TOKEN }}" ]; then
+            echo "PERSONAL_ACCESS_TOKEN is not set or empty."
+            exit 1
+          else
+            echo "PERSONAL_ACCESS_TOKEN is set."
+          fi
+
       - name: Authenticate GitHub CLI
         run: |
           echo "${{ secrets.PERSONAL_ACCESS_TOKEN }}" | gh auth login --with-token
+          gh auth status || { echo "Authentication failed. Check PERSONAL_ACCESS_TOKEN."; exit 1; }
 
       - name: Create Release
         run: |
