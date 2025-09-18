@@ -1,4 +1,4 @@
-name: Create Release and Upload Asset for WoWThreads
+name: Create Release and Upload Asset for WoWThreads Libary
 
 on:
   workflow_dispatch:
