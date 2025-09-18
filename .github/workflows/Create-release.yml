@@ -43,8 +43,9 @@ jobs:
           cp WoWThreads.toc package/WoWThreads/  # TOC file for WoWThreads
           cp LICENSE package/WoWThreads/      # License file
           cp README.md package/WoWThreads/    # Readme
-          # Exclude .git, Notes, Testing, and WoWThreads.code-workspace explicitly
+          # Exclude .git, Notes, Testing, .github and WoWThreads.code-workspace explicitly
           find package/WoWThreads -name ".git" -exec rm -rf {} +
+          find package/WoWThreads -name ".github" -exec rm -rf {} +
           find package/WoWThreads -name "Notes" -exec rm -rf {} +
           find package/WoWThreads -name "Testing" -exec rm -rf {} +
           find package/WoWThreads -name "WoWThreads.code-workspace" -exec rm -rf {} +
