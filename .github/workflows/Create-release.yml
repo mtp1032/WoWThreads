@@ -41,15 +41,11 @@ jobs:
           cp WoWThreads.toc package/WoWThreads/
           cp LICENSE package/WoWThreads/
           cp README.md package/WoWThreads/
-          [ -d LibACE ] && cp -r LibACE package/WoWThreads/
-          [ -d Locales ] && cp -r Locales package/WoWThreads/
-          [ -d Sources ] && cp -r Sources package/WoWThreads/
-          [ -d Utils ] && cp -r Utils package/WoWThreads/
-          find package/WoWThreads -name ".git" -exec rm -rf {} +
-          find package/WoWThreads -name ".github" -exec rm -rf {} +
-          find package/WoWThreads -name "Notes" -exec rm -rf {} +
-          find package/WoWThreads -name "Testing" -exec rm -rf {} +
-          find package/WoWThreads -name "WoWThreads.code-workspace" -exec rm -rf {} +
+          cp -r Docs package/WoWThreads/
+          cp -r Libs/ACE package/WoWThreads/
+          cp -r Libs/LibStub package/WoWThreads/
+          cp -r Locales package/WoWThreads/
+          cp -r Sources package/WoWThreads/
           cd package
           zip -r ../WoWThreads.zip WoWThreads
 
