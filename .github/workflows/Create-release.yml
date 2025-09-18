@@ -1,10 +1,10 @@
 name: Create Release and Upload Asset for WoWThreads
 
 on:
-  workflow_dispatch:  # Enables manual triggering
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   package:
@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4  # Latest version for compatibility
 
       - name: Retrieve version from WoWThreads.toc
         id: get_version
@@ -34,22 +34,21 @@ jobs:
       - name: Package files
         run: |
           mkdir -p package/WoWThreads
-          # Copy specific files and directories to package/WoWThreads
-          cp WoWThreads.toc package/WoWThreads/
-          cp LICENSE package/WoWThreads/
-          cp README.md package/WoWThreads/
-          # Copy directories if they exist, avoid failing if they don't
-          [ -d LibACE ] && cp -r LibACE package/WoWThreads/
-          [ -d Locales ] && cp -r Locales package/WoWThreads/
-          [ -d Sources ] && cp -r Sources package/WoWThreads/
-          [ -d Utils ] && cp -r Utils package/WoWThreads/
-          # Clean up unwanted files
+          # Copy relevant directories and files, excluding .git, Notes, Testing, and WoWThreads.code-workspace
+          cp -r WoWThreads package/WoWThreads/  # Assuming WoWThreads is a dependency or directory
+          cp -r LibACE package/WoWThreads/    # If applicable, adjust for your dependencies
+          cp -r Locales package/WoWThreads/   # Localization files
+          cp -r Sources package/WoWThreads/   # Core source files
+          cp -r Utils package/WoWThreads/     # Utility files
+          cp WoWThreads.toc package/WoWThreads/  # TOC file for WoWThreads
+          cp LICENSE package/WoWThreads/      # License file
+          cp README.md package/WoWThreads/    # Readme
+          # Exclude .git, Notes, Testing, .github and WoWThreads.code-workspace explicitly
           find package/WoWThreads -name ".git" -exec rm -rf {} +
           find package/WoWThreads -name ".github" -exec rm -rf {} +
           find package/WoWThreads -name "Notes" -exec rm -rf {} +
           find package/WoWThreads -name "Testing" -exec rm -rf {} +
           find package/WoWThreads -name "WoWThreads.code-workspace" -exec rm -rf {} +
-          # Create zip
           cd package
           zip -r ../WoWThreads.zip WoWThreads
 
