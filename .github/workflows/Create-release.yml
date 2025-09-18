@@ -56,22 +56,22 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Clean up previous builds
-        run: rm -rf WoWThreads.zip package
+        run: rm -rf WoWThreads-*.zip package
 
       - name: Package files
         run: |
-          mkdir -p package/WoWThreads/Libs
-          cp WoWThreads.toc package/WoWThreads/
-          cp LICENSE package/WoWThreads/
-          cp README.md package/WoWThreads/
-          cp -r Docs package/WoWThreads/
-          cp -r Libs/ACE package/WoWThreads/Libs/
-          cp -r Locales package/WoWThreads/
-          cp -r Sources package/WoWThreads/
+          mkdir -p package/WoWThreads-master/Libs
+          cp WoWThreads.toc package/WoWThreads-master/
+          cp LICENSE package/WoWThreads-master/
+          cp README.md package/WoWThreads-master/
+          cp -r Docs package/WoWThreads-master/
+          cp -r Libs/ACE package/WoWThreads-master/Libs/
+          cp -r Locales package/WoWThreads-master/
+          cp -r Sources package/WoWThreads-master/
           cd package
-          zip -r ../WoWThreads.zip WoWThreads
+          zip -r ../WoWThreads-v${{ env.VERSION }}-master.zip WoWThreads-master
           echo "Listing packaged files:"
-          unzip -l ../WoWThreads.zip
+          unzip -l ../WoWThreads-v${{ env.VERSION }}-master.zip
 
       - name: Check if token exists
         run: |
@@ -105,11 +105,11 @@ jobs:
         run: |
           tag_name="v${{ env.VERSION }}"
           release_name="WoWThreads Release $tag_name"
-          release_body="WoWThreads release for version ${{ env.VERSION }}"
+          release_body="WoWThreads release for version ${{ env.VERSION }}. Unzip the file and rename the 'WoWThreads-master' folder to 'WoWThreads' before placing it in your World of Warcraft AddOns directory."
           if gh release view $tag_name >/dev/null 2>&1; then
             echo "Release for $tag_name exists, deleting and recreating."
             gh release delete $tag_name --yes || { echo "Failed to delete existing release."; exit 1; }
           fi
-          gh release create $tag_name WoWThreads.zip --title "$release_name" --notes "$release_body" --target main
+          gh release create $tag_name WoWThreads-v${{ env.VERSION }}-master.zip --title "$release_name" --notes "$release_body" --target main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
