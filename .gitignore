@@ -5,8 +5,7 @@
 !README.md
 !Docs/
 !Docs/*
-!Libs/
-!Libs/**/*
+!Libs/ACE/*
 !Locales/
 !Locales/Localizations.lua
 !Sources/
