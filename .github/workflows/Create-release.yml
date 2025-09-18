@@ -18,6 +18,29 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for tag creation
 
+      - name: Debug directory structure
+        run: |
+          echo "Listing repository contents:"
+          ls -lR
+          echo "Checking for Locales directory:"
+          if [ -d "Locales" ]; then
+            echo "Locales directory exists."
+            ls -l Locales
+          else
+            echo "Locales directory does NOT exist."
+            exit 1
+          fi
+          echo "Checking for Libs/ACE directory:"
+          if [ -d "Libs/ACE" ]; then
+            echo "Libs/ACE directory exists."
+            ls -lR Libs/ACE
+          else
+            echo "Libs/ACE directory does NOT exist."
+            exit 1
+          fi
+          echo "Checking for case variations of Locales:"
+          find . -type d -name "[Ll][Oo][Cc][Aa][Ll][Ee][Ss]"
+
       - name: Retrieve version from WoWThreads.toc
         id: get_version
         run: |
@@ -43,11 +66,12 @@ jobs:
           cp README.md package/WoWThreads/
           cp -r Docs package/WoWThreads/
           cp -r Libs/ACE package/WoWThreads/
-          cp -r Libs/LibStub package/WoWThreads/
           cp -r Locales package/WoWThreads/
           cp -r Sources package/WoWThreads/
           cd package
           zip -r ../WoWThreads.zip WoWThreads
+          echo "Listing packaged files:"
+          unzip -l ../WoWThreads.zip
 
       - name: Check if token exists
         run: |
@@ -70,7 +94,7 @@ jobs:
           git config user.email "actions@github.com"
           if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
             echo "Tag $TAG_NAME already exists, updating to current commit."
-            git tag -f $TAG_NAME  # Force-update tag to current commit
+            git tag -f $TAG_NAME
             git push origin $TAG_NAME --force || { echo "Failed to push tag $TAG_NAME."; exit 1; }
           else
             git tag $TAG_NAME
@@ -82,12 +106,10 @@ jobs:
           tag_name="v${{ env.VERSION }}"
           release_name="WoWThreads Release $tag_name"
           release_body="WoWThreads release for version ${{ env.VERSION }}"
-          # Check if release exists for the tag
           if gh release view $tag_name >/dev/null 2>&1; then
             echo "Release for $tag_name exists, deleting and recreating."
             gh release delete $tag_name --yes || { echo "Failed to delete existing release."; exit 1; }
           fi
-          # Create new release
           gh release create $tag_name WoWThreads.zip --title "$release_name" --notes "$release_body" --target main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
