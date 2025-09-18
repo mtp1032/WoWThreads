@@ -1,14 +1,19 @@
-###  README.md (version 1.5.9)
+### README.md (version 1.6.0)
+
+**Latest Release**: [Download the latest release](https://github.com/mtp1032/WoWThreads/releases/latest)  
+**View this README on GitHub**: [README.md](https://github.com/mtp1032/WoWThreads/blob/main/README.md)
 
 ##### DESCRIPTION
 WoWThreads is a library whose services provide asynchronous, non-preemptive multithreading for WoW Addon developers. WoWThreads provides the major features you would expect in a threads package such as thread creation, signaling (including inter-thread communications), delay, yield, sleep, and so forth.
 
-The library is designed to enable an addon to execute asynchronously relative to the WoW game client's (WoW.exe) event provider. More specifically, developers can use WoWThreads to handle events delivered by the OnEvent service. For example, consider an addon that logs and displays combat log information (e.g., from the Combat Log Event [Unfiltered]). When the event fires, the WoW client sends a signal to one of the addon's threads waiting to handle the event and its payload. Once the handler thread is signaled, the WoW Client returns to the game loop to wait for more events to fire. In other words, the WoW client hands control to the addon and returns to the game. In the absence of WoWThreads, the WoW Client must wait for the addon to complete its handling before returning to the main game loop.
+The library is designed to enable an addon to execute threads asynchronously relative to the WoW game client's (WoW.exe) event provider. More specifically, developers can use WoWThreads to handle events delivered by the OnEvent service. For example, consider an addon that logs and displays combat log information (e.g., from the Combat Log Event [Unfiltered]). When the event fires, the WoW client sends a signal to one of the addon's threads waiting to handle the event and its payload. Once the handler thread is signaled, the WoW Client returns to the game loop to wait for more events to fire. In other words, the WoW client hands control to as addon's thread and returns to the game. In the absence of WoWThreads, the WoW Client must wait for the addon to complete its handling before returning to the main game loop.
 
 ##### INSTALLATION
 
-- Download and install WoWThreads from CurseForge.
-- In your Addon's .TOC file, add WoWThreads as a dependency for example:
+- Download and install WoWThreads-v1.6.0-master.zip
+- Unzip WoWThreads-v1.6.0-master.zip (produces WoWThreads-master)
+- Rename WoWThreads-master to WoWThreads.
+- To add WoWthreads to your addon, add WoWThreads as a dependence.
 ```
   ##Dependencies: WoWThreads
 ```
@@ -22,9 +27,7 @@ if not thread then
     print("Error: WoWThreads library not found!")
     return 
 end
-```
-Then, below the LibStub entry, add the following constants (signals):
-```
+
 local SIG_GET_PAYLOAD  = thread.SIG_GET_PAYLOAD
 local SIG_SEND_PAYLOAD = thread.SIG_SEND_PAYLOAD
 local SIG_BEGIN        = thread.SIG_BEGIN
