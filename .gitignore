@@ -12,5 +12,4 @@
 !Sources/*
 !LICENSE
 !WoWThreads*.toc
-# Allow the Testing directory and the clone_repo.py script
 !.gitignore
