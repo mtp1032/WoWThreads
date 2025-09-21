@@ -11,7 +11,7 @@ The library is designed to enable an addon to execute threads asynchronously rel
 ##### INSTALLATION
 
 - Download and install WoWThreads-v1.6.7-master.zip
-- Unzip WoWThreads-v1.6.7-master.zip (produces WoWThreads-master)
+- Unzip WoWThreads-v1.6.8-master.zip (produces WoWThreads-master)
 - Rename WoWThreads-master to WoWThreads.
 - To add WoWthreads to your addon, add WoWThreads as a dependence.
 ```
