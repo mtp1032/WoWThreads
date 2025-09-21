@@ -15,61 +15,29 @@ end
 
 local mgmt      = WoWThreads.Mgmt
 local utils     = WoWThreads.UtilsLib
-local thread	= WoWThreads.ThreadLib
 
--- Registry of all managed threads
-mgmt.threadRegistry = {}
-
--- Register a thread by name
-function mgmt:register(name, handle)
-    self.threadRegistry[name] = handle
-    if utils:isDebuggingIsEnabled() then
-        DEFAULT_CHAT_FRAME:AddMessage(string.format("Thread '%s' registered.", name), 0.0, 1.0, 1.0)
-    end
+local thread = LibStub("WoWThreads")
+if not thread then
+    print("Error: WoWThreads library not found!")
+    return 
 end
 
--- Get a registered thread by name
-function mgmt:get(name)
-    return self.threadRegistry[name]
-end
+local SIG_GET_PAYLOAD  = thread.SIG_GET_PAYLOAD
+local SIG_SEND_PAYLOAD = thread.SIG_SEND_PAYLOAD
+local SIG_BEGIN        = thread.SIG_BEGIN
+local SIG_HALT         = thread.SIG_HALT
+local SIG_IS_COMPLETE  = thread.SIG_IS_COMPLETE
+local SIG_SUCCESS      = thread.SIG_SUCCESS
+local SIG_FAILURE      = thread.SIG_FAILURE
+local SIG_IS_READY       = thread.SIG_IS_READY
+local SIG_CALLBACK     = thread.SIG_CALLBACK
+local SIG_THREAD_DEAD  = thread.SIG_THREAD_DEAD
+local SIG_ALERT        = thread.SIG_ALERT
+local SIG_WAKEUP       = thread.SIG_WAKEUP
+local SIG_TERMINATE    = thread.SIG_TERMINATE
+local SIG_NONE_PENDING = thread.SIG_NONE_PENDING
 
--- Send a signal to a named thread
-function mgmt:send(name, signal, ...) 
-    local h = self:get(name)
-    if h then
-        return thread:sendSignal(h, signal, ...)
-    else
-        return nil, "Thread not found: " .. tostring(name)
-    end
-end
+local morgue = WoWThreads.morgue
 
--- Shutdown all threads by sending SIG_TERMINATE
-function mgmt:shutdownAll()
-    for name, h in pairs(self.threadRegistry) do
-        local wasSent, result = thread:sendSignal(h, thread.SIG_TERMINATE)
-        if not wasSent then
-            utils:postResult( result )
-        end
-    end
-end
-
--- Handle a signal entry
-function mgmt:handleSignal(sigEntry)
-    local signal = sigEntry[1]
-    if signal == thread.SIG_TERMINATE then
-        self:shutdownAll()
-    elseif signal == thread.SIG_ALERT then
-        -- Optional: define alert behavior
-    else
-        -- Optional: handle other signal types
-    end
-end
-
--- List all active threads
-function mgmt:list()
-    for name, h in pairs(self.threadRegistry) do
-        DEFAULT_CHAT_FRAME:AddMessage(string.format("Thread '%s' is registered.", name), 0.0, 1.0, 0.0)
-    end
-end
 
 WoWThreads.Mgmt.loaded = true
