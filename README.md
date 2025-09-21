@@ -43,8 +43,12 @@ local SIG_WAKEUP       = thread.SIG_WAKEUP
 local SIG_TERMINATE    = thread.SIG_TERMINATE
 local SIG_NONE_PENDING = thread.SIG_NONE_PENDING
 ```
+### NOTE
+
+For Addon modules that use only a subset of signals, e.g., many of my test applications use only these two signals.
+
 ##### USAGE
-The WoWThreads package has passed its regression tests on _classic_, _classic_era_, _retail_ expansions.
+The WoWThreads package has passed its regression tests on all playable expansions (TWW, MOP Classic, Vanilla Classic, aniversary realms) and on TWW v11.2.5, PTR (Mop Classic) v 5.5 1, and Mists of Pandaria Classic v5.5.0. WoWThreads has not been tested on other test releases due to the absence of realms.
 
 When you begin incorporating WoWThreads into your addon, I recommend (emphatically) that you enable error logging. To do this, click on the addon's threads minimap icon to bring up the options menu which offers two options:
 
@@ -52,11 +56,12 @@ When you begin incorporating WoWThreads into your addon, I recommend (emphatical
 - Check to collect system overhead data.
 
 ##### KNOWN BUGS
-None Yet!
+While the WoWThreads minimap icon is fully functional, the thread image does not show.
 
 ##### TODO
 - Continue to update the documentation - both the README.md (this doc) and the Programmer's guide (WoWThreads-Complete.md 
 in the Docs directory).
+- The SIG_WAKEUP signal has been deprecated and in the next minor release will not be supported.
 
 ##### LOCALIZATION
 User-visible code has been localized in German, French, Russian, Norwegian, Japanese, Mandarin Chinese, Spanish, and Klingon
@@ -74,5 +79,3 @@ supported by WoWThreads. Click the URL below to access the manual.
 
 https://github.com/mtp1032/WoWThreads/blob/main/Docs/WoWThreads-API-Reference-Manual.md.
 
-
-Finally, if you have specific questions. comments, or suggestions you may want to join the WoWThreads' discord server, https://discord.gg/K4QhU458SQ
