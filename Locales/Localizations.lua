@@ -26,19 +26,28 @@ if LOCALE == "enUS" then
 
     L["ADDON_LOADED_MESSAGE"] = string.format("%s v%s, %s loaded.", addonName, addonVersion, addonExpansion )
 
-    --                      Minimap Options Menu Localizations
-    -- L["ACCEPT_BUTTON_LABEL"]    = "Accept"
-    -- L["DISMISS_BUTTON_LABEL"]   = "Dismiss"
-
-    -- L["ENABLE_DATA_COLLECTION"] = "Check to collect system overhead data."
-    -- L["TOOTIP_DATA_COLLECTION"] = "If checked, the system overhead per thread will be collected."
-
-    -- L["ENABLE_ERROR_LOGGING"]   = "Check to enable error logging."
-    -- L["TOOLTIP_DEBUGGING"]      = "If checked, writes additional error information to the Chat Window."
-
     --                          Generic Error MessageS
 	L["INVALID_TYPE"]		= "ERROR: Datatype unexpected "
     L["PARAMETER_NIL"]  	= "ERROR: Parameter nil "
+
+    --                      Minimap Options Menu Localizations
+    L["NOTIFICATION_FRAME_TITLE"]   = string.format( "Notifications - %s ",  L["WOWTHREADS_VERSION"])
+    L["LINE1"] = "    WoWThreads is a library of services that enable developers"
+    L["LINE2"] = "to incorporate asynchronous, non-preemptive multithreading into"
+    L["LINE3"] = "their addons. You can read more about thread programming generally,"
+    L["LINE4"] = "and WoWThreads specifically. See, WoWThreads-complete.md in the"
+    L["LINE5"] = "Docs subdirectory."
+
+    L["ACCEPT_BUTTON_LABEL"]    = "Accept"
+    L["DISMISS_BUTTON_LABEL"]   = "Dismiss"
+
+    L["ENABLE_DATA_COLLECTION"] = "Check to enable data collection."
+    L["TOOTIP_DATA_COLLECTION"] = "If checked, the system overhead per thread will be collected."
+
+    L["ENABLE_ERROR_LOGGING"]   = "Check to enable debugging info."
+    L["TOOLTIP_DEBUGGING"]      = "If checked, writes additional error information to the Chat Window."
+	 L["TOOLTIP_DATA_COLLECTION"] = "If checked, the system overhead per thread will be collected."
+
 
 	--                          Thread-specific messages
 	L["THREAD_HANDLE_NIL"] 		    = "ERROR: Thread handle nil "
