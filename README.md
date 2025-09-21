@@ -10,8 +10,8 @@ The library is designed to enable an addon to execute threads asynchronously rel
 
 ##### INSTALLATION
 
-- Download and install WoWThreads-v1.6.0-master.zip
-- Unzip WoWThreads-v1.6.0-master.zip (produces WoWThreads-master)
+- Download and install WoWThreads-v1.6.7-master.zip
+- Unzip WoWThreads-v1.6.7-master.zip (produces WoWThreads-master)
 - Rename WoWThreads-master to WoWThreads.
 - To add WoWthreads to your addon, add WoWThreads as a dependence.
 ```
@@ -48,19 +48,18 @@ The WoWThreads package has passed its regression tests on _classic_, _classic_er
 
 When you begin incorporating WoWThreads into your addon, I recommend (emphatically) that you enable error logging. To do this, click on the addon's threads minimap icon to bring up the options menu which offers two options:
 
-- Check to enable error logging
+- Check to enable debug logs.
 - Check to collect system overhead data.
 
 ##### KNOWN BUGS
 None Yet!
 
 ##### TODO
-- Localize debugging log strings.
 - Continue to update the documentation - both the README.md (this doc) and the Programmer's guide (WoWThreads-Complete.md 
 in the Docs directory).
 
 ##### LOCALIZATION
-Localization entries have been generated for 12 languages recommended by Blizzard. However, the translations were done using an AI Chatbot (ChatGPT Code Pilot), so I'm sure they could be improved. I would invite people to review and correct the translations.
+User-visible code has been localized in German, French, Russian, Norwegian, Japanese, Mandarin Chinese, Spanish, and Klingon
 
 
 ##### SUPPORT
