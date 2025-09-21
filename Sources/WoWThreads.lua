@@ -22,13 +22,19 @@ local thread, oldVersion = LibStub:NewLibrary(libStubAddonName, gitVersion)
 if not thread then return end  -- no upgrade needed
 --=======================================================
 
+WOWTHREADS_SAVED_VARS = {
+	debuggingIsEnabled = nil,
+	dataCollectionIsEnabled = nil
+}
 --                                  LOCAL DATA
-local DEBUGGING_ENABLED     = true
-local DATA_COLLECTION       = false
 local CURRENT_RUNNING_THREAD = nil
 local DEFAULT_YIELD_TICKS    = 1
 local THREAD_SEQUENCE_ID     = 4 -- a number representing the order in which the thread was created
 local ACCUMULATED_TICKS      = 0 -- The system-wide, total number of clock ticks
+
+
+WoWThreads.morgue	= {}
+local morgue = WoWThreads.morgue
 
 local threadControlBlock    = {} -- Table to hold all running and suspended threads
 local threadSleepTable      = {} -- Table to hold sleeping threads
@@ -146,11 +152,13 @@ local function transformErrorString(errorString)
     return errorMsg
 end 
 local function dbgLog( msg ) -- use debugstack(2)
-    local newMsg = string.format("[LOG] %s \n", msg )
-	if DEBUGGING_ENABLED then
-		DEFAULT_CHAT_FRAME:AddMessage( newMsg, 1.0, 1.0, 0.0 )
-	    utils:postMsg( newMsg )
-    	DEFAULT_CHAT_FRAME:AddMessage( newMsg, 0.0, 1.0, 1.0 )
+    if WOWTHREADS_SAVED_VARS.debuggingIsEnabled then
+
+		local newMsg = string.format("[LOG] %s \n", msg )
+		if WOWTHREADS_SAVED_VARS.debuggingIsEnabled then
+			utils:postMsg( newMsg )
+			-- DEFAULT_CHAT_FRAME:AddMessage( newMsg, 0.0, 1.0, 1.0 )
+		end
 	end
 end
 
@@ -167,13 +175,7 @@ local function setResult(errorMsg, fname, stackTrace)
 	stackTrace = utils:simplifyStackTrace(stackTrace)
 	msg = string.format("%s occurred in %s:\nStack: %s\n\n", errorMsg, fname, stackTrace )
 	result = { msg, fname, stackTrace }
-    
-    if not DEBUGGING_ENABLED then
-		DEBUGGING_ENABLED = true
-        dbgLog( msg )
-		DEBUGGING_ENABLED = false
-    end
-
+    dbgLog( msg )
     return result
 end
 local function coroutineIsDead(H)
@@ -193,7 +195,7 @@ local function isHandleInMorgue( H )
             return true
         end
     end
-return false
+	return false
 end
 local function wakeupThread(H)
     local isInTable = false
@@ -206,10 +208,8 @@ local function wakeupThread(H)
         if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
             table.remove( threadSleepTable, i )
             table.insert( threadControlBlock, H )
-            if DEBUGGING_ENABLED then 
-                local resultStr = string.format("%s Moved thread[%d] from sleep to TCB.", utils:dbgPrefix(), H[TH_UNIQUE_ID])
-                dbgLog( resultStr )
-            end
+			local resultStr = string.format("%s Moved thread[%d] from sleep to TCB.", utils:dbgPrefix(), H[TH_UNIQUE_ID])
+			dbgLog( resultStr )
         
             H[TH_REMAINING_TICKS] = 1
             isInTable = true
@@ -260,14 +260,14 @@ local function moveToMorgue( H, normalCompletion )
             table.remove(threadControlBlock, i)
             table.insert( morgue, H)
 
-            if DEBUGGING_ENABLED then
+            if WOWTHREADS_SAVED_VARS.debuggingIsEnabled then
                 local msg = nil
                 if normalCompletion == false then
                     msg = string.format("*** ABNORMAL *** termination. Moved thread[%d] from TCB to morgue", H[TH_UNIQUE_ID])
                 else
-                    msg = string.format("%s Normal termination. Moved thread[%d] from TCB to morgue", H[TH_UNIQUE_ID])
+                    msg = string.format("Thread[%d] Normal termination. Moved thread from TCB to morgue", H[TH_UNIQUE_ID])
                 end
-                -- dbgLog( msg )
+                dbgLog( msg )
                 -- utils:postMsg( msg )
             end
             break
@@ -285,20 +285,15 @@ local function moveToSleepTable( H )
             table.remove(threadControlBlock, i)
             table.insert( threadSleepTable, H )
             successful = true
-            if DEBUGGING_ENABLED then
-                local msg = string.format("%s Thread[%d] removed from TCB, inserted into sleep table.\n", utils:dbgPrefix(), H[TH_UNIQUE_ID])
-                dbgLog( msg )
-            end
+            dbgLog( string.format("%s Thread[%d] removed from TCB, inserted into sleep table.\n", utils:dbgPrefix(), H[TH_UNIQUE_ID]) )
             return successful, nil
         end
     end
 
     if not successful then
         errorMsg = L["THREAD_NOT_FOUND"]
-        if DEBUGGING_ENABLED then
             local msg = string.format("%s Thread[%d] not found in TCB.\n", utils:dbgPrefix(), H[TH_UNIQUE_ID])
             dbgLog( msg )
-        end
     end
         
     return successful, errorMsg
@@ -354,10 +349,7 @@ end
 local function resumeThread(H)
     local co = H[TH_COROUTINE]
     local args = H[TH_COROUTINE_ARGS] or {} -- Ensure args is a table
-
-    if DEBUGGING_ENABLED then
-        dbgLog(string.format("%s Resuming Thread[%d]", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
-    end
+	dbgLog(string.format("%s Resuming Thread[%d]", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
 
     -- Define error handler for xpcall using debugstack
     local function errorHandler(err)
@@ -371,25 +363,21 @@ local function resumeThread(H)
 
     local xpcallSucceeded = xpcallResults[1]
     if not xpcallSucceeded then
-        if DEBUGGING_ENABLED then
-            dbgLog(string.format("%s Thread[%d] xpcall failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(xpcallResults[2])))
-        end
+        dbgLog(string.format("%s Thread[%d] XPCALL failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(xpcallResults[2])))
         moveToMorgue(H, true)
         return false, xpcallResults[2]
     end
 
     local coroutineSucceeded = xpcallResults[2]
     if not coroutineSucceeded then
-        if DEBUGGING_ENABLED then
-			dbgLog(string.format("%s Thread[%d] xpcall failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(xpcallResults[2]):gsub("\n", "\n  ")))        end
+		dbgLog(string.format("%s Thread[%d] XPCALL failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(xpcallResults[2]):gsub("\n", "\n  ")))        
+
         moveToMorgue(H, true)
         return false, xpcallResults[3]
     end
 
     if coroutine.status(co) == "dead" then
-        if DEBUGGING_ENABLED then
-            dbgLog(string.format("%s Thread[%d] completed", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
-        end
+            dbgLog(string.format("%s Thread[%d] has has completed", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
         moveToMorgue(H, true)
         return true, nil
     end
@@ -407,9 +395,7 @@ local function scheduleThreads()
                 table.remove(threadDelayTable, i)
                 table.insert(threadControlBlock, H)
                 H[TH_REMAINING_TICKS] = H[TH_YIELD_TICKS]
-                if DEBUGGING_ENABLED then
-                    dbgLog(string.format("%s Thread[%d] delay expired, moved to TCB.", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
-                end
+                dbgLog(string.format("%s Thread[%d] delay expired, moved to TCB.", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
             end
         end
     end
@@ -429,21 +415,15 @@ local function scheduleThreads()
                 local success, result = resumeThread(H)
                 ---------------------------------------
                 if not success then
-                    if DEBUGGING_ENABLED then
-                        dbgLog(string.format("%s Thread[%d] error: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(result)))
-                    end
+                    dbgLog(string.format("%s Thread[%d] error: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(result)))
                 elseif result then
-                    if DEBUGGING_ENABLED then
-                        dbgLog(string.format("%s Thread[%d] yielded: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(result)))
-                    end
+                    dbgLog(string.format("%s Thread[%d] yielded: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(result)))
                     -- Handle yielded value as a delay (mimics thread:delay(ticks))
                     if type(result) == "number" then
                         H[TH_REMAINING_TICKS] = result
                         table.remove(threadControlBlock, i)
                         table.insert(threadDelayTable, H)
-                        if DEBUGGING_ENABLED then
-                            dbgLog(string.format("%s Thread[%d] delayed for %d ticks", utils:dbgPrefix(), H[TH_UNIQUE_ID], result))
-                        end
+                        dbgLog(string.format("%s Thread[%d] delayed for %d ticks", utils:dbgPrefix(), H[TH_UNIQUE_ID], result))
                     end
                 end
             end
@@ -474,23 +454,28 @@ end
 --==================== PUBLIC (EXPORTED) SERVICES ================
 --================================================================
 
-function thread:isDebuggingEnabled()
-    return DEBUGGING_ENABLED
+function thread:debuggingIsEnabled()
+    return WOWTHREADS_SAVED_VARS.debuggingIsEnabled
 end
 function thread:enableDebugging()
-    DEBUGGING_ENABLED = true
+    WOWTHREADS_SAVED_VARS.debuggingIsEnabled = true
+	-- utils:postMsg( string.format("%s\n", "Error logging enabled\n"))
 end
 function thread:disableDebugging()
-    DEBUGGING_ENABLED = false
+    WOWTHREADS_SAVED_VARS.debuggingIsEnabled = false
+	-- utils:postMsg( string.format("%s\n","Error logging disabled\n"))
 end
 function thread:dataCollectionIsEnabled()
-    return DATA_COLLECTION
+    return WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled
 end
 function thread:enableDataCollection()
-    DATA_COLLECTION = true
+    WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled = true
+	-- utils:postMsg( string.format("%s\n","Data collection enabled\n"))
+
 end
 function thread:disableDataCollection()
-    DATA_COLLECTION = false
+   WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled= false
+	-- utils:postMsg( string.format("%s\n","Data collection disabled\n"))
 end
 
 --[[@Begin 
@@ -559,9 +544,7 @@ function thread:create( yieldTicks, threadFunction,... )
     local H = createHandle( addonName, parent_h, yieldTicks, threadFunction, ... )
 
     table.insert( threadControlBlock, H )
-    if DEBUGGING_ENABLED then
-        dbgLog( string.format("%s Thread[%d] inserted into TCB.", utils:dbgPrefix(),  H[TH_UNIQUE_ID]))
-    end
+    dbgLog( string.format("%s Thread[%d] inserted into TCB.", utils:dbgPrefix(),  H[TH_UNIQUE_ID]))
     return H, nil
 end
 --[[@Begin 
@@ -631,7 +614,7 @@ function thread:yield()
     coroutine.yield()  
 
 	H = getHandleOfCallingThread()
-    if DATA_COLLECTION then  
+    if WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled then  
         H[TH_RESUMPTIONS] = H[TH_RESUMPTIONS] + 1
         H[TH_ACCUM_YIELD_TICKS] = H[TH_ACCUM_YIELD_TICKS] + (ACCUMULATED_TICKS - beforeTicks)
     end
@@ -1099,11 +1082,11 @@ function thread:getSignal()
     end
 
     sigEntry = H[TH_SIGNAL_QUEUE]:dequeue()
-	if sigEntry[1] == SIG_HAS_PAYLOAD then
-		utils:dbgPrint( type[sigEntry[1]])
-		utils:dbgPrint( type[sigEntry[2]])
-		utils:dbgPrint( type[sigEntry[3]])
-	end
+	-- if sigEntry[1] == SIG_HAS_PAYLOAD then
+	-- 	-- utils:dbgPrint( type[sigEntry[1]])
+	-- 	-- utils:dbgPrint( type[sigEntry[2]])
+	-- 	-- utils:dbgPrint( type[sigEntry[3]])
+	-- end
     return sigEntry, nil
 end
 
@@ -1165,20 +1148,24 @@ function thread:getNumPendingSignals()
     return H[TH_SIGNAL_QUEUE]:size(), nil
 end
 
+-- Event handling
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGOUT")
+eventFrame:RegisterEvent("PLAYER_LOGIN")
 
 local function OnEvent(self, event, ...)
     local ADDON_NAME = select(1, ...)
     local addonName = core:getAddonInfo()
     if event == "ADDON_LOADED" and ADDON_NAME == addonName then
-        DEFAULT_CHAT_FRAME:AddMessage(L["ADDON_LOADED_MESSAGE"], 0.0, 1.0, 0)
+		if not WOWTHREADS_SAVED_VARS.debuggingIsEnabled then WOWTHREADS_SAVED_VARS.debuggingIsEnabled = false end
+        if not WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled then WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled = false end
+
+		DEFAULT_CHAT_FRAME:AddMessage(L["ADDON_LOADED_MESSAGE"], 0.0, 1.0, 0)
         eventFrame:UnregisterEvent("ADDON_LOADED")
-        WoWThreadsLibInit()
+        WoWThreadsLibInit() -- Assuming this is defined elsewhere
     end
 end
-
 eventFrame:SetScript("OnEvent", OnEvent)
 
 WoWThreads.loaded = true
