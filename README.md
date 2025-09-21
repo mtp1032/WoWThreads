@@ -1,4 +1,4 @@
-### README.md (version 1.6.0)
+### README.md (version 1.6.8)
 
 **Latest Release**: [Download the latest release](https://github.com/mtp1032/WoWThreads/releases/latest)  
 **View this README on GitHub**: [README.md](https://github.com/mtp1032/WoWThreads/blob/main/README.md)
@@ -10,7 +10,7 @@ The library is designed to enable an addon to execute threads asynchronously rel
 
 ##### INSTALLATION
 
-- Download and install WoWThreads-v1.6.7-master.zip
+- Download and install WoWThreads-v1.6.8-master.zip
 - Unzip WoWThreads-v1.6.8-master.zip (produces WoWThreads-master)
 - Rename WoWThreads-master to WoWThreads.
 - To add WoWthreads to your addon, add WoWThreads as a dependence.
@@ -35,7 +35,7 @@ local SIG_HALT         = thread.SIG_HALT
 local SIG_IS_COMPLETE  = thread.SIG_IS_COMPLETE
 local SIG_SUCCESS      = thread.SIG_SUCCESS.
 local SIG_FAILURE      = thread.SIG_FAILURE
-local SIG_IS_READY        = thread.SIG_IS_READY
+local SIG_IS_READY     = thread.SIG_IS_READY
 local SIG_CALLBACK     = thread.SIG_CALLBACK
 local SIG_THREAD_DEAD  = thread.SIG_THREAD_DEAD
 local SIG_ALERT        = thread.SIG_ALERT
@@ -44,8 +44,7 @@ local SIG_TERMINATE    = thread.SIG_TERMINATE
 local SIG_NONE_PENDING = thread.SIG_NONE_PENDING
 ```
 ### NOTE
-
-For Addon modules that use only a subset of signals, e.g., many of my test applications use only these two signals.
+For efficiency you might consider only importing the signals to be used in the file  you're editing. For example, in one of my files I use for testing I only import SIG_GET_PAYLOAD, SIG_SEND_PAYLOAD, SIG_ALERT, SIG_TERMINATE, and SIG_NONE_PENDING.
 
 ##### USAGE
 The WoWThreads package has passed its regression tests on all playable expansions (TWW, MOP Classic, Vanilla Classic, aniversary realms) and on TWW v11.2.5, PTR (Mop Classic) v 5.5 1, and Mists of Pandaria Classic v5.5.0. WoWThreads has not been tested on other test releases due to the absence of realms.
