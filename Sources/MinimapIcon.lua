@@ -1,67 +1,75 @@
---=================================================================================
--- Filename: MinimapIcon.lua
--- Date: 13 March, 2021 (Updated: 13 June, 2024)
--- AUTHOR: Michael Peterson
--- ORIGINAL DATE: 13 March, 2021
---=================================================================================
-WoWThreads = WoWThreads or {}
-WoWThreads.MinimapIcon = WoWThreads.MinimapIcon or {}
+-- MinimapIcon.lua
 
-if not WoWThreads.OptionsPanel.loaded then
-    DEFAULT_CHAT_FRAME:AddMessage("OptionsPanel not loaded.", 1, 0, 0 )
-end
-
-local core = WoWThreads.Core
-local icon = WoWThreads.Icon
+local addonName = WoWThreads.Core:getAddonInfo()
+local LDB = LibStub("LibDataBroker-1.1")
+local LDBIcon = LibStub("LibDBIcon-1.0")
+local AceConsole = LibStub("AceConsole-3.0")
+local utils = WoWThreads.UtilsLib
 local options = WoWThreads.OptionsPanel
-local L = WoWThreads.Locales
 
--- Minimap icon implementation starts here!
-local addonName = core:getAddonInfo()
-local dataObject = addonName
-local addon = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0")
+-- Version for debugging
+local ADDON_VERSION = "1.6.0"
 
-local WoWThreadsIconDB = LibStub("LibDataBroker-1.1"):NewDataObject(dataObject, 
-{
-    type = "data source",
-    text = dataObject,
-    icon = 3528459,
-    OnTooltipShow = function(tooltip)
-        tooltip:AddLine("Left Click to open options window")
-        tooltip:AddLine("Right Click for more options")
-    end,
+-- Saved variables for minimap icon
+local minimapDB = {
+    hide = false,
+    minimapPos = 120, -- Default to 4:00 (120°, clockwise from 12:00 = 0°)
+    lock = false,
+}
+
+-- LDB data object for the minimap icon
+local dataObject = LDB:NewDataObject(addonName, {
+    type = "launcher",
+    icon = 3528459, -- Your icon texture
     OnClick = function(self, button)
-        -- LEFT CLICK - Displays the options menu
-        if button == "LeftButton" and not IsShiftKeyDown() then
-            options:showOptionsPanel()
+        if button == "LeftButton" then
+            if options then
+                options:showOptionsPanel()
+                -- -- utils:dbgPrint(addonName .. ": MinimapButton left-clicked - toggling options panel")
+            else
+                -- -- utils:dbgPrint(addonName .. ": Options panel not found!")
+            end
+        elseif button == "RightButton" then
+            -- -- utils:dbgPrint(addonName .. ": Right-clicked minimap icon")
         end
+    end,
+    OnTooltipShow = function(tooltip)
+        tooltip:SetText(addonName)
+        tooltip:AddLine("Left-click: Toggle Options Panel\nRight-click and drag: Move icon", nil, nil, nil, true)
+        tooltip:Show()
     end,
 })
 
-local icon = LibStub("LibDBIcon-1.0")
-function addon:OnInitialize()
-    self.db = LibStub("AceDB-3.0"):New("WoWThreadsIconDB", 
-    { profile = { 
-                    minimap = { 
-                        hide = false, 
-                    }, 
-                }, 
-            }
-    )
-    if not icon:IsRegistered(dataObject) then
-        icon:Register(dataObject, WoWThreadsIconDB, self.db.profile.minimap)
-    end
+-- Initialize the minimap icon
+local function InitializeMinimapIcon()
+    -- Load or initialize saved variables
+    WOWTHREADS_MINIMAP_DB = WOWTHREADS_MINIMAP_DB or minimapDB
+    -- utils:postMsg(addonName .. ": WOWTHREADS_MINIMAP_DB initialized - minimapPos: " .. tostring(WOWTHREADS_MINIMAP_DB.minimapPos))
 
-    local addonName = core:getAddonInfo()
-    self:RegisterChatCommand(addonName, "iconCommands") 
-end -- terminates OnInitialize
-function addon:iconCommands() 
-    self.db.profile.minimap.hide = not self.db.profile.minimap.hide 
-    if self.db.profile.minimap.hide then 
-        icon:Hide(dataObject) 
-    else 
-        icon:Show(dataObject) 
-    end 
+    -- Register with LibDBIcon
+    LDBIcon:Register(addonName, dataObject, WOWTHREADS_MINIMAP_DB)
+    -- -- utils:dbgPrint(addonName .. ": Minimap icon registered with LibDBIcon-1.0, version " .. ADDON_VERSION)
+
+    -- Log minimap center and dimensions
+    local minimapX, minimapY = Minimap:GetCenter()
+    -- utils:postMsg(addonName .. ": Minimap center - x: " .. minimapX .. ", y: " .. minimapY .. ", width: " .. Minimap:GetWidth() .. ", height: " .. Minimap:GetHeight())
 end
 
-addon:OnInitialize()
+-- Reset command
+AceConsole:RegisterChatCommand("wtreset", function()
+    WOWTHREADS_MINIMAP_DB = minimapDB
+    LDBIcon:Refresh(addonName, WOWTHREADS_MINIMAP_DB)
+    -- utils:postMsg(addonName .. ": Minimap position reset to default - minimapPos: 120")
+end)
+
+-- Initialize on PLAYER_LOGIN
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("PLAYER_LOGIN")
+frame:SetScript("OnEvent", function(self, event)
+    if event == "PLAYER_LOGIN" then
+        -- -- utils:dbgPrint(addonName .. ": PLAYER_LOGIN event fired")
+        InitializeMinimapIcon()
+        -- utils:dbgPrint(addonName .. ": MinimapButton initialized via PLAYER_LOGIN")
+        self:UnregisterEvent("PLAYER_LOGIN")
+    end
+end)
