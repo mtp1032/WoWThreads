@@ -28,9 +28,6 @@ if LOCALE == "enUS" then
     L["ADDON_LOADED_MESSAGE"] = addonLoadedMessage
 
     --                          Generic Error MessageS
-	L["INVALID_TYPE"]		= "ERROR: Datatype unexpected "
-    L["PARAMETER_NIL"]  	= "ERROR: Parameter nil "
-
     --                      Minimap Options Menu Localizations
     L["NOTIFICATION_FRAME_TITLE"]   = string.format( "Notifications - %s ",  L["WOWTHREADS_VERSION"])
     L["LINE1"] = "    WoWThreads is a library of services that enable developers"
@@ -51,6 +48,9 @@ if LOCALE == "enUS" then
 
 
 	--                          Thread-specific messages
+	L["INVALID_TYPE"]				= "ERROR: Datatype unexpected "
+    L["PARAMETER_NIL"]  			= "ERROR: Parameter nil "
+	L["INVALID_OPERATION"]			= "ERROR: Operation not permitted (e.g., invalid state) "
 	L["THREAD_HANDLE_NIL"] 		    = "ERROR: Thread handle nil "
 	L["THREAD_NO_COROUTINE"]        = "ERROR: Handle does not reference a coroutine "
     L["THREAD_INVALID_CONTEXT"]     = "ERROR: Caller is likely the WoW client (WoW.exe) "
