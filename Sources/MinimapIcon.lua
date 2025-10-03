@@ -73,3 +73,4 @@ frame:SetScript("OnEvent", function(self, event)
         self:UnregisterEvent("PLAYER_LOGIN")
     end
 end)
+return WoWThreads.MinimapIcon
