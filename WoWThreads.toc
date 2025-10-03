@@ -22,6 +22,5 @@ Locales\Localizations.lua
 Sources\UtilsLib.lua
 Sources\SignalQueue.lua
 Sources\WoWThreads.lua
-Sources\WoWThreadsMgmt.lua
 Sources\OptionsPanel.lua
 Sources\MinimapIcon.lua
