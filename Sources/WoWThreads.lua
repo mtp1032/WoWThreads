@@ -50,14 +50,13 @@ local TH_COROUTINE          = 1 -- the coroutine created to execute the thread's
 local TH_UNIQUE_ID          = 2 -- a number representing the order in which the thread was created
 local TH_SIGNAL_QUEUE       = 3 -- a table of all currently pending signals
 local TH_YIELD_TICKS        = 4 -- the number of clock ticks for which a thread must suspend after a yield.
-local TH_REMAINING_TICKS    = 5 -- decremented on every clock tick. When 0 the thread is queued.
-local TH_ACCUM_YIELD_TICKS  = 6 -- The total number of yield ticks for which the thread is suspended.
-local TH_LIFETIME_TICKS     = 7
-local TH_RESUMPTIONS        = 8 -- the number of times a thread yields
-local TH_CHILDREN           = 9
-local TH_PARENT_HANDLE      = 10
-local TH_ADDON_NAME       	= 11
-local TH_COROUTINE_ARGS     = 12
+local TH_REMAINING_TICKS    = 6
+local TH_RESUMPTIONS        = 7 -- the number of times a thread yields
+local TH_CHILDREN           = 8
+local TH_PARENT_HANDLE      = 9
+local TH_ADDON_NAME       	= 10
+local TH_COROUTINE_ARGS     = 11
+local TH_ELAPSED_TICKS		= 12
 local TH_ELAPSED_TIME       = 13 -- the time the thread was created, in seconds since epoch
 local TH_NUM_HANDLE_ELEMENTS = TH_ELAPSED_TIME
 
@@ -66,14 +65,14 @@ local TH_NUM_HANDLE_ELEMENTS = TH_ELAPSED_TIME
 -- Example: sigTable = {signalValue, sender_h, ... }
 --
 -- These constants are the signal values found in sigTable[1]
-thread.SIG_HAS_PAYLOAD     = 1 -- TBD
+thread.SIG_HAS_PAYLOAD  = 1 -- TBD
 thread.SIG_SEND_PAYLOAD = 2 -- TBD
 thread.SIG_BEGIN        = 3 -- TBD
 thread.SIG_HALT         = 4 -- TBD
 thread.SIG_IS_COMPLETE  = 5 -- info: thread is complete
 thread.SIG_SUCCESS      = 6 -- info: thread completed successfully
 thread.SIG_FAILURE      = 7 -- info: thread completed with failure
-thread.SIG_IS_READY        = 8
+thread.SIG_IS_READY     = 8
 thread.SIG_CALLBACK     = 9  -- info: Signal entry contains a callback function in Sig[3]
 thread.SIG_THREAD_DEAD  = 10 -- info: thread has completed or failed.
 thread.SIG_ALERT        = 11 -- schedule for immediate execution
@@ -155,10 +154,8 @@ local function dbgLog( msg ) -- use debugstack(2)
     if WOWTHREADS_SAVED_VARS.debuggingIsEnabled then
 
 		local newMsg = string.format("[LOG] %s \n", msg )
-		if WOWTHREADS_SAVED_VARS.debuggingIsEnabled then
-			utils:postMsg( newMsg )
+		utils:postMsg( newMsg )
 			-- DEFAULT_CHAT_FRAME:AddMessage( newMsg, 0.0, 1.0, 1.0 )
-		end
 	end
 end
 
@@ -188,35 +185,41 @@ local function coroutineIsDead(H)
     return dead
 end
 local function isHandleInMorgue( H )
-    if #morgue == 0 then return false end
+    if #morgue == 0 then return nil end
 
     for _, entry in ipairs(morgue) do
         if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
-            return true
+            return H
         end
     end
-	return false
+	return nil
 end
 local function wakeupThread(H)
-    local isInTable = false
-
     if #threadSleepTable == 0 then 
-        return isInTable
+        return nil, L["THREAD_NOT_FOUND"]
     end
 
     for i, entry in ipairs(threadSleepTable) do
         if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
             table.remove( threadSleepTable, i )
-            table.insert( threadControlBlock, H )
-			local resultStr = string.format("%s Moved thread[%d] from sleep to TCB.", utils:dbgPrefix(), H[TH_UNIQUE_ID])
-			dbgLog( resultStr )
-        
+            table.insert( threadControlBlock, H )			        
             H[TH_REMAINING_TICKS] = 1
-            isInTable = true
-            return isInTable
+			local logStr = string.format("%s thread[%d] is awake. Returned to TCB", utils:dbgPrefix(), H[TH_UNIQUE_ID])
+			dbgLog( logStr )
+            return H, nil
         end
     end
-    return isInTable
+        return nil, L["THREAD_NOT_FOUND"]
+end
+local function inSleepTable( H )
+	if #threadSleepTable == 0 then return nil end
+
+	for _, entry in ipairs( threadSleepTable ) do
+		if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
+			return H
+		end
+	end
+	return nil
 end
 -- deprecated
 local function getHandleOfCallingThread()
@@ -235,8 +238,7 @@ local function createHandle( addonName, parent_h, yieldTicks, threadFunction, ..
         [TH_SIGNAL_QUEUE]       = sig.new(),
         [TH_YIELD_TICKS]        = yieldTicks,
         [TH_REMAINING_TICKS]    = 1,
-        [TH_ACCUM_YIELD_TICKS]  = 0,
-        [TH_LIFETIME_TICKS]     = ACCUMULATED_TICKS,
+        [TH_ELAPSED_TICKS]      = ACCUMULATED_TICKS,
         [TH_RESUMPTIONS]        = 0,
         [TH_CHILDREN]           = {},
         [TH_PARENT_HANDLE]      = parent_h,
@@ -253,26 +255,30 @@ end
 
 -- returns true if successful, false otherwise + errorMsg
 local function moveToMorgue( H, normalCompletion )
-    H[TH_LIFETIME_TICKS] = ACCUMULATED_TICKS - H[TH_LIFETIME_TICKS]
-    H[TH_ELAPSED_TIME] = debugprofilestop() - H[TH_ELAPSED_TIME]
-    for i, handle in ipairs( threadControlBlock ) do
-        if H[TH_UNIQUE_ID] == handle[TH_UNIQUE_ID] then
-            table.remove(threadControlBlock, i)
-            table.insert( morgue, H)
+	local msg = nil
+		for i, handle in ipairs( threadControlBlock ) do
+			if H[TH_UNIQUE_ID] == handle[TH_UNIQUE_ID] then
+				table.remove(threadControlBlock, i)
+				if normalCompletion then
+					table.insert( morgue, H)
+					msg = string.format("Thread[%d] Normal termination. Moved thread from TCB to morgue.", H[TH_UNIQUE_ID] )
+					if WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled then
+						H[TH_ELAPSED_TIME] = debugprofilestop() - H[TH_ELAPSED_TIME]
+						H[TH_ELAPSED_TICKS] = ACCUMULATED_TICKS - H[TH_ELAPSED_TICKS]
+					end
+				else
+					msg = string.format("*** ABNORMAL termination ***. Thread[%d] no longer exists.", H[TH_UNIQUE_ID])
+					H[TH_COROUTINE] = nil
+					wipe( H[TH_CHILDREN] )
+					wipe( H[TH_SIGNAL_QUEUE])
+					wipe( H )
+				end
+			end
+		end
 
-            if WOWTHREADS_SAVED_VARS.debuggingIsEnabled then
-                local msg = nil
-                if normalCompletion == false then
-                    msg = string.format("*** ABNORMAL *** termination. Moved thread[%d] from TCB to morgue", H[TH_UNIQUE_ID])
-                else
-                    msg = string.format("Thread[%d] Normal termination. Moved thread from TCB to morgue", H[TH_UNIQUE_ID])
-                end
-                dbgLog( msg )
-                -- utils:postMsg( msg )
-            end
-            break
-        end
-    end
+		if WOWTHREADS_SAVED_VARS.debuggingIsEnabled then
+			dbgLog( msg )
+		end
 end
 -- returns true if successful, false otherwise + errorMsg
 local function moveToSleepTable( H )
@@ -288,12 +294,12 @@ local function moveToSleepTable( H )
             dbgLog( string.format("%s Thread[%d] removed from TCB, inserted into sleep table.\n", utils:dbgPrefix(), H[TH_UNIQUE_ID]) )
             return successful, nil
         end
+		return nil, string.format("%s Sleep failed. Thread[%d] not put to sleep.", utils:dbgPrefix(), H[TH_UNIQUE_ID] )
     end
 
     if not successful then
         errorMsg = L["THREAD_NOT_FOUND"]
-            local msg = string.format("%s Thread[%d] not found in TCB.\n", utils:dbgPrefix(), H[TH_UNIQUE_ID])
-            dbgLog( msg )
+		dbgLog( errorMsg )
     end
         
     return successful, errorMsg
@@ -309,12 +315,6 @@ local function handleIsValid(H)
 		print("312")
         return isValid, errorMsg
     end
-    -- if #H ~= TH_NUM_HANDLE_ELEMENTS then
-    --     errorMsg = L["THREAD_HANDLE_ILL_FORMED"]
-    --     isValid = false
-	-- 	print("318", #H )
-    --     return isValid, errorMsg
-    -- end
     if type(H[TH_SIGNAL_QUEUE]) ~= "table" then
         errorMsg = L["INVALID_TYPE"]
         isValid = false
@@ -364,20 +364,19 @@ local function resumeThread(H)
     local xpcallSucceeded = xpcallResults[1]
     if not xpcallSucceeded then
         dbgLog(string.format("%s Thread[%d] XPCALL failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(xpcallResults[2])))
-        moveToMorgue(H, true)
-        return false, xpcallResults[2]
+        moveToMorgue(H, false )
+		local result = setResult( xpcallResults[2], "resumeThread()", debugstack(2))
+        return false, result
     end
 
     local coroutineSucceeded = xpcallResults[2]
     if not coroutineSucceeded then
 		dbgLog(string.format("%s Thread[%d] XPCALL failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(xpcallResults[2]):gsub("\n", "\n  ")))        
-
-        moveToMorgue(H, true)
         return false, xpcallResults[3]
     end
 
     if coroutine.status(co) == "dead" then
-            dbgLog(string.format("%s Thread[%d] has has completed", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
+        dbgLog(string.format("%s Thread[%d] has has completed", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
         moveToMorgue(H, true)
         return true, nil
     end
@@ -412,20 +411,11 @@ local function scheduleThreads()
             if H[TH_REMAINING_TICKS] <= 0 then
                 H[TH_REMAINING_TICKS] = H[TH_YIELD_TICKS]
 				---------------------------------------
-                local success, result = resumeThread(H)
+                local success, errorString = resumeThread(H)
                 ---------------------------------------
                 if not success then
-                    dbgLog(string.format("%s Thread[%d] error: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(result)))
-                elseif result then
-                    dbgLog(string.format("%s Thread[%d] yielded: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(result)))
-                    -- Handle yielded value as a delay (mimics thread:delay(ticks))
-                    if type(result) == "number" then
-                        H[TH_REMAINING_TICKS] = result
-                        table.remove(threadControlBlock, i)
-                        table.insert(threadDelayTable, H)
-                        dbgLog(string.format("%s Thread[%d] delayed for %d ticks", utils:dbgPrefix(), H[TH_UNIQUE_ID], result))
-                    end
-                end
+                    dbgLog(string.format("%s Thread[%d] error: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], errorString ))
+				end
             end
         end
     end
@@ -474,7 +464,7 @@ function thread:enableDataCollection()
 
 end
 function thread:disableDataCollection()
-   WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled= false
+   WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled = false
 	-- utils:postMsg( string.format("%s\n","Data collection disabled\n"))
 end
 
@@ -605,71 +595,90 @@ Usage:
 	end
 @End]]
 function thread:yield()
-    local fname = "thread:yield()"
-    local beforeTicks = ACCUMULATED_TICKS
-    local H = nil
-    local errorMsg = nil
-	local result = nil
 
     coroutine.yield()  
 
-	H = getHandleOfCallingThread()
     if WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled then  
+		H = CURRENT_RUNNING_THREAD
         H[TH_RESUMPTIONS] = H[TH_RESUMPTIONS] + 1
-        H[TH_ACCUM_YIELD_TICKS] = H[TH_ACCUM_YIELD_TICKS] + (ACCUMULATED_TICKS - beforeTicks)
     end
 end
 
---[[@Begin
-Signature: local overhead, errorMsg = thread:getMetrics( thread_h )
-Description: Gets some some basic execution metrics; the runtime (ms) and   
-congestion (how long the thread had to wait to begin execution after having
-been resumed). Note: at this point, only completed threads can be queried.
-Parameters:
-- thread_h (thread_handle): the thread handle whose metrics are to be returned.
-Returns:
-- Success: then the thread's elapsed time and congestion metrics are returned and the result is set to nil.
-- Failure: the runtime and congestion metrics are nil, and the result parameter contains an error message (result[1])
-and a stack trace (result[2]).
-Usage:
-    local elapsedTime, congestion, result = thread:getMetrics( thread_h )
-    if runtime == nil then 
-        print( result[1], result[2]) 
-        return 
-    end
-@End]]
-function thread:getMetrics( thread_h )
-    local fname = "thread:getMetrics()"
+-- Signature: hasCompleted, result - thread:hasCompleted( thread_h )
+function thread:hasCompleted( thread_h )
+    local fname = "thread:hasCompleted()"
     local errorMsg = nil
     local result = nil
 
     if thread_h == nil then
         errorMsg = L["THREAD_HANDLE_NIL"]
         result = setResult( errorMsg, fname, debugstack(2))
-        return nil, nil, result
+        return false, result
     end
 
     local isValid = handleIsValid(thread_h)
     if not isValid then
         result = setResult(  L["THREAD_INVALID_CONTEXT"], fname, debugstack(2))
-        return nil, nil, result
+        return false, result
+    end
+
+    local hasCompleted = isHandleInMorgue( thread_h )
+	return hasCompleted, result
+end
+
+--[[@Begin
+local metrics = { threadId, lifeTimeMS, lifetimeTicks, yieldReumptions}
+Signature: metrics, result  = thread:getMetrics( thread_h )
+Description: Gets some some basic execution metrics; the runtime (ms) and   
+congestion (how long the thread had to wait to begin execution after having
+been resumed). Note: at this point, only completed threads can be queried.
+Parameters:
+- thread_h (thread_handle): the thread handle whose metrics are to be returned.
+Returns:
+- metrics (table): containing the following elements
+- metrics.threadId: The thread's unique identifier
+- metrics.lifeTimeMS: total time thread was running in milliseconds.
+- metrics.lifeTimeTicks: total time thread was running in clock ticks.
+- metrics.yieldTicks: The thread's yield interval is ticks (1/framerate)
+- metrics.resumptions: number of times the thread resumed from a yield.
+- result - nil if successful otherwise r[1] is an error message, r[2] is the function, r[3] is a stack trace.
+Usage:
+    local metrics,result = thread:getMetrics( thread_h )
+@End]]
+function thread:getMetrics( thread_h )
+    local fname = "thread:getMetrics()"
+    local result = nil
+
+	if not WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled then
+		local msg = string.format("Data collection not enabled (see Options Menu).")
+		local result = setResult( msg, fname, debugstack(2))
+		return nil, result
+	end
+
+    if thread_h == nil then
+        result = setResult( L["THREAD_HANDLE_NIL"], fname, debugstack(2))
+        return nil, result
+    end
+
+    local isValid = handleIsValid(thread_h)
+    if not isValid then
+        result = setResult(  L["THREAD_INVALID_CONTEXT"], fname, debugstack(2))
+        return nil, result
     end
 
     if not isHandleInMorgue( thread_h ) then
         result = setResult( L["THREAD_NOT_COMPLETED"], fname, debugstack(2))
-        return nil, nil, result
+        return nil, result
     end
 
-    local ms_per_tick      = CLOCK_INTERVAL -- ms per tick
-    local elapsedTicks     = thread_h[TH_LIFETIME_TICKS]
+	local metrics = {}
+	metrics.threadId 				= thread_h[TH_UNIQUE_ID]
+	metrics.elapsedLifetimeMS 		= thread_h[TH_ELAPSED_TIME]
+	metrics.elapsedLifetimeTicks	= thread_h[TH_ELAPSED_TICKS]
+	metrics.yieldTicks 				= thread_h[TH_YIELD_TICKS]
+	metrics.resumptions 			= thread_h[TH_RESUMPTIONS]
 
-    local idealYieldTicks   = thread_h[TH_RESUMPTIONS] * thread_h[TH_YIELD_TICKS]
-    local actualYieldTicks  = thread_h[TH_ACCUM_YIELD_TICKS]
-
-    local congestion  = (actualYieldTicks -idealYieldTicks) / idealYieldTicks
-    local elapsedTime = ms_per_tick * elapsedTicks
-
-    return elapsedTime, congestion
+	return metrics, result
 end
 
 --[[@Begin
@@ -717,11 +726,8 @@ function thread:delay(delayTicks)
 end
 
 --[[@Begin
-Signature: thread:sleep()
+Signature: thread_h, result = thread:sleep()
 Description: Suspends the calling thread for an indeterminate amount of time.
-Note, unlike thread:yield(), this call doesn't  return until awakened by receipt 
-of a SIG_WAKEUP signal. Note, thread:sleep() is always fatal if the caller is not
-a thread.
 Parameters:
 - None
 Returns:
@@ -731,26 +737,99 @@ it is resumed), and the result parameter is set to nil.
 when the target thread is not in the thread sleep queue.
 Usage:
     local thread_h, result = thread:sleep()
-    if thread_h == false then                 -- the thread was never put to sleep. 
+    if thread_h == nil then                 -- the thread was never put to sleep. 
         print( result[1], result[2])
     end
 @End]]
-function thread:sleep()
+function thread:sleep(...)
     local fname = "thread:sleep()"
-    local errorMsg = nil
-    local successful = false
-    local result = nil
+	local result = nil
+	local success = true
 
-    H = getHandleOfCallingThread()
-    successful, errorMsg = moveToSleepTable(H)
-    if not successful then
-        result = setResult( errorMsg, fname, debugstack(2) )
-        return nil, result
+	H = CURRENT_RUNNING_THREAD
+	if not H then
+		result = setResult( L["THREAD+THREAD_INVALID_CONTEXT"], fname, debugstack(2))
+		return nil, result
+	end
+	
+	return moveToSleepTable(H)
+end
+--[[@Begin
+Signature: success, result = thread:wakup( thread_h )
+Description: Awakens a thread put to sleep by a previous call to thread:sleep().
+Parameters:
+- thread_h  (thread handle): the thread to be awakened.
+Returns:
+- Success: a boolean true and nil result if the operation was successful.
+- Failure: a boolean false and the result parameter contains an error message. 
+Usage:
+    local success, result = thread:wakeup( thread_h )
+    if not success  then 
+        print( result[1], result[3])
+    end
+@End]]
+function thread:wakeup( thread_h)
+	local fname = "thread:wakeup"
+	local result = nil 
+	local isAwake = false
+
+	if thread_h == nil then
+		local result = setResult( L["THREAD_HANDLE_NIL"], fname, debugstack(2))
+		return nil, result
+	end
+    if not handleIsValid(thread_h) then
+        result = setResult(  L["THREAD_INVALID_CONTEXT"], fname, debugstack(2) )
+		return nil, result
     end
 
-    local co = H[TH_COROUTINE]
-    coroutine.yield( co )
-    return H, result
+	local status = coroutine.status( thread_h[TH_COROUTINE])
+	if status ~= "suspended" then
+		result = setResult( L["INVALID_OPERATION"], fname, debugstack(2))
+		return nil, result
+	end
+
+	if not inSleepTable( thread_h ) then
+		result = setResult( L["INVALID_OPERATION"], fname, debugstack(2))
+		return nil, result
+	end
+
+	local errorMsg = nil
+	thread_h, errorMsg = wakeupThread( thread_h ) 
+	if not thread_h then 
+		result = setResult(errorMsg, fname, debugstack(2))
+		return nil, result
+	end
+	return thread_h, result
+end
+--[[@Begin
+Signature: success, result = thread:isSleeping( thread_h )
+Description: Returns the thread handle if found in the threadSleepTable.
+Parameters:
+- thread_h  (thread handle): the thread to be found.
+Returns:
+- Success: the thread handle and nil result
+- Failure: nil and the result parameter containing an error message. 
+Usage:
+To be supplied.
+@End]]
+function thread:isSleeping( thread_h )
+	local fname = thread:isSleeping()
+
+		if thread_h == nil then
+		local result = setResult( L["THREAD_HANDLE_NIL"], fname, debugstack(2))
+		return nil, result
+	end
+    if not handleIsValid(thread_h) then
+        local result = setResult(  L["THREAD_INVALID_CONTEXT"], fname, debugstack(2) )
+		return nil, result
+    end
+
+	if inSleepTable( thread_h ) then
+		return thread_h, nil
+	end
+
+	local result = setResult( L["THREAD_NOT_FOUND"], fname, debugstack(2))
+	return nil, L["THREAD_NOT_FOUND"]
 end
 
 --[[@Begin
@@ -801,6 +880,7 @@ function thread:getId(thread_h)
     isValid = handleIsValid(thread_h)
     if not isValid then
         result = setResult(  L["THREAD_INVALID_CONTEXT"], fname, debugstack(2) )
+		return nil, result
     end
     
     if isHandleInMorgue(thread_h) then
@@ -957,14 +1037,12 @@ Parameters:
 - ... (varargs, optional) Data (including functions) to be passed to the receiving thread.
 Returns:
 1. If successful: value = true or false. A 'true' value means that...
-- The signal was inserted into the target thread's signal queue, or
-- The target thread was dormant and the signal was SIG_WAKEUP.
+- The signal was inserted into the target thread's signal queue.
 A value = false can mean one of two alternatives:
 - The target thread was dead (completed or faulted).
-- The target thread was dormant (sleeping) the signal was NOT SIG_WAKEUP.
 2. If failed: nil is returned indicating the signal was not delivered. Usually
-this means that the target's thread handle was was not found in the sleep queue. The 
-result parameter contains an error message (result[1]) and a stack trace (result[2]).
+this means that the target's thread handle was was not found, sleeping, or completed ("dead").
+The result parameter contains an error message (result[1]) and a stack trace (result[2]).
 Usage:
     local wasSent, result = thread:sendSignal( target_h, thread.signal, data )
     if wasSent == nil then 
@@ -1013,15 +1091,6 @@ function thread:sendSignal( target_h, signal, ... )
 	if isHandleInMorgue( target_h ) then
         return false, nil 
     end
-
-	if signal == thread.SIG_WAKEUP then
-        if wakeupThread( target_h ) then
-            return true, nil
-        else
-            return false, nil
-        end
-    end
-
 	-- Initialize and insert an entry into the recipient thread's signalTable
     local sender_h = getHandleOfCallingThread()
 	local sigEntry = {signal, sender_h, ... }
@@ -1034,7 +1103,6 @@ function thread:sendSignal( target_h, signal, ... )
 
 	return wasSent, result
 end
-
 --[[@Begin
 Signature: local sigEntry, result = thread:getSignal()
 Description: The retrieval semantics of the thread's signal queue is FIFO. So, getting a
@@ -1082,11 +1150,6 @@ function thread:getSignal()
     end
 
     sigEntry = H[TH_SIGNAL_QUEUE]:dequeue()
-	-- if sigEntry[1] == SIG_HAS_PAYLOAD then
-	-- 	-- utils:dbgPrint( type[sigEntry[1]])
-	-- 	-- utils:dbgPrint( type[sigEntry[2]])
-	-- 	-- utils:dbgPrint( type[sigEntry[3]])
-	-- end
     return sigEntry, nil
 end
 
@@ -1139,9 +1202,6 @@ Usage:
         print( result[1], result[2]) return end
 @End]]
 function thread:getNumPendingSignals()
-    local fname = "thread:getNumPendingSignals()"
-	local errorMsg = nil
-	local result = nil
 
     local H = getHandleOfCallingThread()
 
@@ -1169,3 +1229,4 @@ end
 eventFrame:SetScript("OnEvent", OnEvent)
 
 WoWThreads.loaded = true
+return WoWThreads
