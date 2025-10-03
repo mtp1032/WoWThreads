@@ -41,3 +41,4 @@ function core:getAddonInfo()
 end
 
 WoWThreads.Core.loaded = true
+return WoWThreads.Core
