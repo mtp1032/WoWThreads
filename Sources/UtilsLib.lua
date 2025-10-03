@@ -311,4 +311,4 @@ function utils:dbgPrint(...)
 end
 
 WoWThreads.UtilsLib.loaded = true
-
+return WoWThreads.UtilsLib
