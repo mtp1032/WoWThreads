@@ -72,3 +72,4 @@ function SignalQueue:size()
     return self.rear - self.front + 1
 end
 WoWThreads.SignalQueue.loaded = true
+return WoWThreads.SignalQueue
