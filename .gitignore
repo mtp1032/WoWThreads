@@ -1,5 +1,6 @@
 
 # Ignore everything
+WoWThreads.code-workspace
 *
 # But not these files...
 !README.md
