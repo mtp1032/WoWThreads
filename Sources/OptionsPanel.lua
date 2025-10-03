@@ -3,8 +3,8 @@
 WoWThreads = WoWThreads or {}
 WoWThreads.OptionsPanel = WoWThreads.OptionsPanel or {}
 
-if not WoWThreads.Mgmt.loaded then
-    DEFAULT_CHAT_FRAME:AddMessage("WoWThreadsMgmt.lua not loaded.", 1, 0, 0)
+if not WoWThreads.loaded then
+    DEFAULT_CHAT_FRAME:AddMessage("WoWThreads.lua not loaded.", 1, 0, 0)
     return
 end
 
@@ -180,3 +180,4 @@ local function hideOptionsPanel()
 end
 
 WoWThreads.OptionsPanel.loaded = true
+return WoWThreads.OptionsPanel
