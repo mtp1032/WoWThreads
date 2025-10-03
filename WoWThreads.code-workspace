@@ -33,7 +33,8 @@
 			"LE_EXPANSION_LEGION",
 			"LE_EXPANSION_BATTLE_FOR_AZEROTH",
 			"LE_EXPANSION_WAR_WITHIN",
-			"UISpecialFrames"
+			"UISpecialFrames",
+			"HP"
 		]
 	}
 }
