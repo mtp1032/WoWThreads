@@ -14,7 +14,7 @@ local function getExpansionName( )
         [LE_EXPANSION_CATACLYSM]                = "Classic (Cataclysm)",
         [LE_EXPANSION_WRATH_OF_THE_LICH_KING]   = "Classic (WotLK)",
         [LE_EXPANSION_CLASSIC]                  = "Classic (Vanilla)",
-
+        [LE_EXPANSION_BURNING_CRUSADE]          = "Classic (Burning Crusade)",
         [LE_EXPANSION_MISTS_OF_PANDARIA]        = "Classic (Mists of Pandaria",
         [LE_EXPANSION_LEGION]                   = "Classic (Legion)",
         [LE_EXPANSION_BATTLE_FOR_AZEROTH]       = "Classic (Battle for Azeroth)",
@@ -39,6 +39,5 @@ function core:getAddonInfo()
     local tocVersion, gitVersion = getVersions()
     return addonName, tocVersion, addonExpansion, gitVersion
 end
-
 WoWThreads.Core.loaded = true
 return WoWThreads.Core
