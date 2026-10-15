@@ -1,10 +1,13 @@
-## Interface: 11507, 20504, 30405, 40402, 50500, 30505, 110200, 110205
+## Interface: 120007
 ## Title: WoWThreads Library
 ## Notes: An Asynchronous Multithreading Library for AddOn development.
 ## Author: Michael Peterson
 ## IconTexture: 3528459
 ## SavedVariablesPerCharacter: WOWTHREADS_MINIMAP_DB, WOWTHREADS_SAVED_VARS
-## Version: 2.0.0
+## X-MAJOR: 2
+## X-MINOR: 0
+## X-PATCH: 0
+## XX Version: 2.0.0
 ## Category: Development Tools
 ## X-github: https://github.com/mtp1032/WoWThreads
 ## OptionalDeps: LibSharedMedia-3.0, LibDBIcon-1.0, LibDataBroker-1.1

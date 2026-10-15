@@ -17,8 +17,8 @@ local sig	= WoWThreads.SignalQueue
 
 --=============== Create As A Libstub Library ===========
 -- Configure WoWThreads as a LibStub managed library
-local libStubAddonName, _, _, gitVersion = core:getAddonInfo()
-local thread, oldVersion = LibStub:NewLibrary(libStubAddonName, gitVersion)
+local libName, _, _, gitVersion = core:getAddonInfo()
+local thread, oldVersion = LibStub:NewLibrary(libName, gitVersion)
 if not thread then return end  -- no upgrade needed
 --=======================================================
 
@@ -312,7 +312,6 @@ local function handleIsValid(H)
     if type(H) ~= "table" then
         errorMsg =L["INVALID_TYPE"]
         isValid = false
-		print("312")
         return isValid, errorMsg
     end
     if type(H[TH_SIGNAL_QUEUE]) ~= "table" then
