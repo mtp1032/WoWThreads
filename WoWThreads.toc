@@ -1,4 +1,4 @@
-## Interface: 120007
+## Interface: 120007 
 ## Title: WoWThreads Library
 ## Notes: An Asynchronous Multithreading Library for AddOn development.
 ## Author: Michael Peterson
